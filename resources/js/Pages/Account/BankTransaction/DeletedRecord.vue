@@ -1,0 +1,129 @@
+<script setup>
+import { ref, onMounted } from 'vue';
+import axios from 'axios';
+import AppLayout from '../../../Layouts/AppLayout.vue';
+import { useToast } from '../../../lib/toast';
+import { confirmDialog, errorMessageFrom } from '../../../lib/confirm';
+
+defineOptions({ layout: AppLayout });
+
+const toast = useToast();
+
+const search = ref('');
+const transactions = ref([]);
+const isLoading = ref(null);
+const restoringId = ref(null);
+
+async function showReport() {
+    isLoading.value = false;
+    try {
+        const res = await axios.post('/get-deleted-bankTransaction', { search: search.value });
+        transactions.value = res.data;
+    } catch (error) {
+        toast.error(errorMessageFrom(error, 'Failed to load deleted bank transactions'));
+    } finally {
+        isLoading.value = true;
+    }
+}
+
+async function restoreTransaction(item) {
+    const confirmed = await confirmDialog({
+        title: 'Restore Bank Transaction',
+        text: `Restore bank transaction "${item.invoice}"?`,
+        icon: 'question',
+        confirmButtonText: 'Restore',
+    });
+    if (!confirmed) return;
+
+    restoringId.value = item.id;
+    try {
+        const res = await axios.post('/restore-bankTransaction', { id: item.id });
+        if (res.data.status) {
+            toast.success(res.data.message);
+            transactions.value = transactions.value.filter((t) => t.id !== item.id);
+        } else {
+            toast.error(res.data.message || 'Failed to restore bank transaction');
+        }
+    } catch (error) {
+        toast.error(errorMessageFrom(error, 'Failed to restore bank transaction'));
+    } finally {
+        restoringId.value = null;
+    }
+}
+
+onMounted(showReport);
+</script>
+
+<template>
+    <div class="mx-auto p-4">
+        <div class="mb-3 flex items-center gap-2">
+            <i class="bi bi-arrow-counterclockwise text-xl text-brand-500"></i>
+            <h1 class="text-lg font-semibold text-slate-800">Deleted Bank Transaction Record</h1>
+        </div>
+
+        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <form @submit.prevent="showReport" class="flex flex-wrap items-end gap-3">
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-slate-600">Invoice</label>
+                    <input
+                        type="text"
+                        v-model="search"
+                        placeholder="Search by invoice"
+                        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-400"
+                    />
+                </div>
+                <button type="submit" class="flex items-center gap-1.5 rounded-md bg-brand-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-600">
+                    <i class="bi bi-search"></i> Show
+                </button>
+            </form>
+        </div>
+
+        <div v-if="isLoading" class="mt-3 rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
+                <span class="text-sm text-slate-500">{{ transactions.length }} record(s) found</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                            <th class="px-2 py-2 font-medium">SL</th>
+                            <th class="px-2 py-2 font-medium">Invoice</th>
+                            <th class="px-2 py-2 font-medium">Date</th>
+                            <th class="px-2 py-2 font-medium">Type</th>
+                            <th class="px-2 py-2 font-medium">Bank</th>
+                            <th class="px-2 py-2 font-medium">Amount</th>
+                            <th class="px-2 py-2 font-medium">Deleted By</th>
+                            <th class="px-2 py-2 font-medium">Deleted At</th>
+                            <th class="px-2 py-2 font-medium">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item, index) in transactions" :key="item.id" class="border-b border-slate-100 hover:bg-slate-50">
+                            <td class="px-2 py-1.5">{{ index + 1 }}</td>
+                            <td class="px-2 py-1.5">{{ item.invoice }}</td>
+                            <td class="px-2 py-1.5">{{ item.date }}</td>
+                            <td class="px-2 py-1.5">{{ item.type }}</td>
+                            <td class="px-2 py-1.5">{{ item.bank ? item.bank.name : '' }}</td>
+                            <td class="px-2 py-1.5">{{ item.amount }}</td>
+                            <td class="px-2 py-1.5">{{ item.deleted_by_name }}</td>
+                            <td class="px-2 py-1.5">{{ item.deleted_at }}</td>
+                            <td class="px-2 py-1.5">
+                                <button
+                                    type="button"
+                                    :disabled="restoringId === item.id"
+                                    @click="restoreTransaction(item)"
+                                    class="flex items-center gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                                >
+                                    <i class="bi bi-arrow-counterclockwise"></i> Restore
+                                </button>
+                            </td>
+                        </tr>
+                        <tr v-if="transactions.length === 0">
+                            <td colspan="9" class="px-2 py-6 text-center text-slate-400">No deleted bank transactions found</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</template>

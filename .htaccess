@@ -1,0 +1,14 @@
+# Block direct access to the Laravel app's internal files/folders in case
+# a request ever reaches this directory without going through the rewrite
+# below (e.g. mod_rewrite disabled on the host).
+RewriteEngine On
+RewriteRule ^(app|bootstrap|config|database|resources|routes|storage|tests|vendor)(/.*)?$ - [F,L]
+RewriteRule ^\.env$ - [F,L]
+RewriteRule ^\.env\..*$ - [F,L]
+
+Options -Indexes
+
+# Everything else is served from the public/ folder, which is Laravel's
+# actual document root.
+RewriteCond %{REQUEST_URI} !^/public/
+RewriteRule ^(.*)$ public/$1 [L]

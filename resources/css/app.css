@@ -1,0 +1,495 @@
+@import "tailwindcss";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --color-brand-50: #e6f4f4;
+    --color-brand-100: #c3e4e5;
+    --color-brand-500: #036569;
+    --color-brand-600: #05868b;
+    --color-brand-700: #024f52;
+    --color-brand-800: #013a3c;
+    --color-brand-900: #01282a;
+    --color-brand-950: #000000;
+}
+
+/*
+ * Pages across the app were written with plain (non dark:-prefixed) Tailwind
+ * utilities like bg-white / text-slate-600 / border-slate-200, so adding a
+ * `dark:` variant to every one of those classes in every .vue file isn't
+ * practical. These global overrides retro-theme the whole app in one place
+ * by repainting those same utility classes wherever they appear under a
+ * .dark ancestor — new pages automatically get dark mode for free as long
+ * as they stick to this same slate/white palette.
+ */
+.dark {
+    color-scheme: dark;
+    --dark-bg: #1a1a1a;
+    --dark-surface: #161616;
+    --dark-surface-raised: #24272b;
+    --dark-border: #34373c;
+    --dark-border-strong: #4a4e55;
+     --color-brand-700: #101111;
+}
+.dark .bg-white {
+    background-color: var(--dark-surface);
+}
+.dark .bg-slate-50 {
+    background-color: var(--dark-bg);
+}
+.dark .bg-slate-100 {
+    background-color: var(--dark-bg);
+}
+.dark .bg-slate-200 {
+    background-color: var(--dark-surface-raised);
+}
+.dark .border-slate-100 {
+    border-color: var(--dark-border);
+}
+.dark .border-slate-200 {
+    border-color: var(--dark-border);
+}
+.dark .border-slate-300 {
+    border-color: var(--dark-border-strong);
+}
+.dark .text-slate-900 {
+    color: var(--color-slate-50);
+}
+.dark .text-slate-800 {
+    color: var(--color-slate-100);
+}
+.dark .text-slate-700 {
+    color: var(--color-slate-200);
+}
+.dark .text-slate-600 {
+    color: var(--color-slate-300);
+}
+.dark .bg-slate-50\/60{
+    background-color: color-mix(in srgb, var(--dark-surface) 60%, var(--dark-bg) 40%);
+}
+.dark .disabled\:bg-slate-50:disabled {
+    background-color: var(--dark-surface-raised);
+}
+.dark .text-slate-500 {
+    color: var(--color-slate-400);
+}
+.dark .text-slate-400 {
+    color: var(--color-slate-500);
+}
+.dark .placeholder\:text-slate-400::placeholder {
+    color: var(--color-slate-500);
+}
+.dark .hover\:bg-slate-50:hover {
+    background-color: var(--dark-surface-raised);
+}
+.dark .hover\:bg-slate-100:hover {
+    background-color: var(--dark-surface-raised);
+}
+.dark .hover\:bg-white:hover {
+    background-color: var(--dark-surface-raised);
+}
+.dark .hover\:text-slate-600:hover {
+    color: var(--color-slate-200);
+}
+.dark .hover\:text-slate-700:hover {
+    color: var(--color-slate-100);
+}
+.dark .hover\:text-slate-800:hover {
+    color: var(--color-slate-50);
+}
+.dark .hover\:border-slate-300:hover {
+    border-color: var(--color-slate-500);
+}
+
+/* App shell: use fully neutral dark surfaces; brand colors remain accents only. */
+.dark header.bg-brand-600,
+.dark aside.bg-brand-600 {
+    background-color: #0d0d0d;
+}
+.dark aside .bg-brand-700,
+.dark aside .hover\:bg-brand-700\/60:hover,
+.dark aside .hover\:bg-brand-700:hover {
+    background-color: var(--dark-surface-raised);
+}
+.dark aside .bg-brand-700\/40 {
+    background-color: color-mix(in srgb, var(--dark-surface-raised) 60%, transparent);
+}
+.dark aside .bg-brand-800 {
+    background-color: var(--color-brand-700);
+}
+.dark .text-brand-100 {
+    color: var(--color-slate-300);
+}
+.dark .border-white\/10 {
+    border-color: var(--dark-border);
+}
+
+/* Gradient page-header banners (from-brand- / to-brand- utilities): tone the gradient
+   down so it reads as part of a dark page instead of a bright, disconnected patch. */
+.dark [class*="from-brand-"][class*="to-brand-"] {
+    --tw-gradient-from: var(--dark-bg) var(--tw-gradient-from-position);
+    --tw-gradient-to: var(--dark-surface) var(--tw-gradient-to-position);
+}
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-xl,
+.dark .shadow-2xl {
+    --tw-shadow-color: rgb(0 0 0 / 0.4);
+}
+
+/* Accent/status colors (badges, alerts, pills): retint light-mode chips so they
+   read as muted, legible tints against the dark surface instead of bright pastel
+   patches punched into a dark page. */
+.dark .bg-amber-50,
+.dark .bg-amber-100 {
+    background-color: color-mix(in srgb, var(--color-amber-500) 20%, var(--dark-surface) 80%);
+}
+.dark .hover\:bg-amber-50:hover,
+.dark .hover\:bg-amber-100:hover {
+    background-color: color-mix(in srgb, var(--color-amber-500) 28%, var(--dark-surface) 72%);
+}
+.dark .text-amber-400,
+.dark .text-amber-500,
+.dark .text-amber-600,
+.dark .text-amber-700 {
+    color: var(--color-amber-300);
+}
+.dark .text-amber-800 {
+    color: var(--color-amber-200);
+}
+.dark .hover\:text-amber-500:hover,
+.dark .hover\:text-amber-600:hover,
+.dark .hover\:text-amber-700:hover,
+.dark .hover\:text-amber-800:hover {
+    color: var(--color-amber-200);
+}
+.dark .border-amber-200 {
+    border-color: color-mix(in srgb, var(--color-amber-500) 40%, var(--dark-border) 60%);
+}
+.dark .border-amber-300 {
+    border-color: color-mix(in srgb, var(--color-amber-500) 55%, var(--dark-border) 45%);
+}
+.dark .border-amber-400 {
+    border-color: var(--color-amber-500);
+}
+.dark .bg-blue-50,
+.dark .bg-blue-100 {
+    background-color: color-mix(in srgb, var(--color-blue-500) 20%, var(--dark-surface) 80%);
+}
+.dark .hover\:bg-blue-50:hover,
+.dark .hover\:bg-blue-100:hover {
+    background-color: color-mix(in srgb, var(--color-blue-500) 28%, var(--dark-surface) 72%);
+}
+.dark .text-blue-400,
+.dark .text-blue-500,
+.dark .text-blue-600,
+.dark .text-blue-700 {
+    color: var(--color-blue-300);
+}
+.dark .text-blue-800 {
+    color: var(--color-blue-200);
+}
+.dark .hover\:text-blue-500:hover,
+.dark .hover\:text-blue-600:hover,
+.dark .hover\:text-blue-700:hover,
+.dark .hover\:text-blue-800:hover {
+    color: var(--color-blue-200);
+}
+.dark .border-blue-200 {
+    border-color: color-mix(in srgb, var(--color-blue-500) 40%, var(--dark-border) 60%);
+}
+.dark .border-blue-300 {
+    border-color: color-mix(in srgb, var(--color-blue-500) 55%, var(--dark-border) 45%);
+}
+.dark .border-blue-400 {
+    border-color: var(--color-blue-500);
+}
+.dark .bg-cyan-50,
+.dark .bg-cyan-100 {
+    background-color: color-mix(in srgb, var(--color-cyan-500) 20%, var(--dark-surface) 80%);
+}
+.dark .hover\:bg-cyan-50:hover,
+.dark .hover\:bg-cyan-100:hover {
+    background-color: color-mix(in srgb, var(--color-cyan-500) 28%, var(--dark-surface) 72%);
+}
+.dark .text-cyan-400,
+.dark .text-cyan-500,
+.dark .text-cyan-600,
+.dark .text-cyan-700 {
+    color: var(--color-cyan-300);
+}
+.dark .text-cyan-800 {
+    color: var(--color-cyan-200);
+}
+.dark .hover\:text-cyan-500:hover,
+.dark .hover\:text-cyan-600:hover,
+.dark .hover\:text-cyan-700:hover,
+.dark .hover\:text-cyan-800:hover {
+    color: var(--color-cyan-200);
+}
+.dark .border-cyan-200 {
+    border-color: color-mix(in srgb, var(--color-cyan-500) 40%, var(--dark-border) 60%);
+}
+.dark .border-cyan-300 {
+    border-color: color-mix(in srgb, var(--color-cyan-500) 55%, var(--dark-border) 45%);
+}
+.dark .border-cyan-400 {
+    border-color: var(--color-cyan-500);
+}
+.dark .bg-emerald-50,
+.dark .bg-emerald-100 {
+    background-color: color-mix(in srgb, var(--color-emerald-500) 20%, var(--dark-surface) 80%);
+}
+.dark .hover\:bg-emerald-50:hover,
+.dark .hover\:bg-emerald-100:hover {
+    background-color: color-mix(in srgb, var(--color-emerald-500) 28%, var(--dark-surface) 72%);
+}
+.dark .text-emerald-400,
+.dark .text-emerald-500,
+.dark .text-emerald-600,
+.dark .text-emerald-700 {
+    color: var(--color-emerald-300);
+}
+.dark .text-emerald-800 {
+    color: var(--color-emerald-200);
+}
+.dark .hover\:text-emerald-500:hover,
+.dark .hover\:text-emerald-600:hover,
+.dark .hover\:text-emerald-700:hover,
+.dark .hover\:text-emerald-800:hover {
+    color: var(--color-emerald-200);
+}
+.dark .border-emerald-200 {
+    border-color: color-mix(in srgb, var(--color-emerald-500) 40%, var(--dark-border) 60%);
+}
+.dark .border-emerald-300 {
+    border-color: color-mix(in srgb, var(--color-emerald-500) 55%, var(--dark-border) 45%);
+}
+.dark .border-emerald-400 {
+    border-color: var(--color-emerald-500);
+}
+.dark .bg-indigo-50,
+.dark .bg-indigo-100 {
+    background-color: color-mix(in srgb, var(--color-indigo-500) 20%, var(--dark-surface) 80%);
+}
+.dark .hover\:bg-indigo-50:hover,
+.dark .hover\:bg-indigo-100:hover {
+    background-color: color-mix(in srgb, var(--color-indigo-500) 28%, var(--dark-surface) 72%);
+}
+.dark .text-indigo-400,
+.dark .text-indigo-500,
+.dark .text-indigo-600,
+.dark .text-indigo-700 {
+    color: var(--color-indigo-300);
+}
+.dark .text-indigo-800 {
+    color: var(--color-indigo-200);
+}
+.dark .hover\:text-indigo-500:hover,
+.dark .hover\:text-indigo-600:hover,
+.dark .hover\:text-indigo-700:hover,
+.dark .hover\:text-indigo-800:hover {
+    color: var(--color-indigo-200);
+}
+.dark .border-indigo-200 {
+    border-color: color-mix(in srgb, var(--color-indigo-500) 40%, var(--dark-border) 60%);
+}
+.dark .border-indigo-300 {
+    border-color: color-mix(in srgb, var(--color-indigo-500) 55%, var(--dark-border) 45%);
+}
+.dark .border-indigo-400 {
+    border-color: var(--color-indigo-500);
+}
+.dark .bg-orange-50,
+.dark .bg-orange-100 {
+    background-color: color-mix(in srgb, var(--color-orange-500) 20%, var(--dark-surface) 80%);
+}
+.dark .hover\:bg-orange-50:hover,
+.dark .hover\:bg-orange-100:hover {
+    background-color: color-mix(in srgb, var(--color-orange-500) 28%, var(--dark-surface) 72%);
+}
+.dark .text-orange-400,
+.dark .text-orange-500,
+.dark .text-orange-600,
+.dark .text-orange-700 {
+    color: var(--color-orange-300);
+}
+.dark .text-orange-800 {
+    color: var(--color-orange-200);
+}
+.dark .hover\:text-orange-500:hover,
+.dark .hover\:text-orange-600:hover,
+.dark .hover\:text-orange-700:hover,
+.dark .hover\:text-orange-800:hover {
+    color: var(--color-orange-200);
+}
+.dark .border-orange-200 {
+    border-color: color-mix(in srgb, var(--color-orange-500) 40%, var(--dark-border) 60%);
+}
+.dark .border-orange-300 {
+    border-color: color-mix(in srgb, var(--color-orange-500) 55%, var(--dark-border) 45%);
+}
+.dark .border-orange-400 {
+    border-color: var(--color-orange-500);
+}
+.dark .bg-purple-50,
+.dark .bg-purple-100 {
+    background-color: color-mix(in srgb, var(--color-purple-500) 20%, var(--dark-surface) 80%);
+}
+.dark .hover\:bg-purple-50:hover,
+.dark .hover\:bg-purple-100:hover {
+    background-color: color-mix(in srgb, var(--color-purple-500) 28%, var(--dark-surface) 72%);
+}
+.dark .text-purple-400,
+.dark .text-purple-500,
+.dark .text-purple-600,
+.dark .text-purple-700 {
+    color: var(--color-purple-300);
+}
+.dark .text-purple-800 {
+    color: var(--color-purple-200);
+}
+.dark .hover\:text-purple-500:hover,
+.dark .hover\:text-purple-600:hover,
+.dark .hover\:text-purple-700:hover,
+.dark .hover\:text-purple-800:hover {
+    color: var(--color-purple-200);
+}
+.dark .border-purple-200 {
+    border-color: color-mix(in srgb, var(--color-purple-500) 40%, var(--dark-border) 60%);
+}
+.dark .border-purple-300 {
+    border-color: color-mix(in srgb, var(--color-purple-500) 55%, var(--dark-border) 45%);
+}
+.dark .border-purple-400 {
+    border-color: var(--color-purple-500);
+}
+.dark .bg-red-50,
+.dark .bg-red-100 {
+    background-color: color-mix(in srgb, var(--color-red-500) 20%, var(--dark-surface) 80%);
+}
+.dark .hover\:bg-red-50:hover,
+.dark .hover\:bg-red-100:hover {
+    background-color: color-mix(in srgb, var(--color-red-500) 28%, var(--dark-surface) 72%);
+}
+.dark .text-red-400,
+.dark .text-red-500,
+.dark .text-red-600,
+.dark .text-red-700 {
+    color: var(--color-red-300);
+}
+.dark .text-red-800 {
+    color: var(--color-red-200);
+}
+.dark .hover\:text-red-500:hover,
+.dark .hover\:text-red-600:hover,
+.dark .hover\:text-red-700:hover,
+.dark .hover\:text-red-800:hover {
+    color: var(--color-red-200);
+}
+.dark .border-red-200 {
+    border-color: color-mix(in srgb, var(--color-red-500) 40%, var(--dark-border) 60%);
+}
+.dark .border-red-300 {
+    border-color: color-mix(in srgb, var(--color-red-500) 55%, var(--dark-border) 45%);
+}
+.dark .border-red-400 {
+    border-color: var(--color-red-500);
+}
+.dark .bg-rose-50,
+.dark .bg-rose-100 {
+    background-color: color-mix(in srgb, var(--color-rose-500) 20%, var(--dark-surface) 80%);
+}
+.dark .hover\:bg-rose-50:hover,
+.dark .hover\:bg-rose-100:hover {
+    background-color: color-mix(in srgb, var(--color-rose-500) 28%, var(--dark-surface) 72%);
+}
+.dark .text-rose-400,
+.dark .text-rose-500,
+.dark .text-rose-600,
+.dark .text-rose-700 {
+    color: var(--color-rose-300);
+}
+.dark .text-rose-800 {
+    color: var(--color-rose-200);
+}
+.dark .hover\:text-rose-500:hover,
+.dark .hover\:text-rose-600:hover,
+.dark .hover\:text-rose-700:hover,
+.dark .hover\:text-rose-800:hover {
+    color: var(--color-rose-200);
+}
+.dark .border-rose-200 {
+    border-color: color-mix(in srgb, var(--color-rose-500) 40%, var(--dark-border) 60%);
+}
+.dark .border-rose-300 {
+    border-color: color-mix(in srgb, var(--color-rose-500) 55%, var(--dark-border) 45%);
+}
+.dark .border-rose-400 {
+    border-color: var(--color-rose-500);
+}
+.dark .bg-teal-50,
+.dark .bg-teal-100 {
+    background-color: color-mix(in srgb, var(--color-teal-500) 20%, var(--dark-surface) 80%);
+}
+.dark .hover\:bg-teal-50:hover,
+.dark .hover\:bg-teal-100:hover {
+    background-color: color-mix(in srgb, var(--color-teal-500) 28%, var(--dark-surface) 72%);
+}
+.dark .text-teal-400,
+.dark .text-teal-500,
+.dark .text-teal-600,
+.dark .text-teal-700 {
+    color: var(--color-teal-300);
+}
+.dark .text-teal-800 {
+    color: var(--color-teal-200);
+}
+.dark .hover\:text-teal-500:hover,
+.dark .hover\:text-teal-600:hover,
+.dark .hover\:text-teal-700:hover,
+.dark .hover\:text-teal-800:hover {
+    color: var(--color-teal-200);
+}
+.dark .border-teal-200 {
+    border-color: color-mix(in srgb, var(--color-teal-500) 40%, var(--dark-border) 60%);
+}
+.dark .border-teal-300 {
+    border-color: color-mix(in srgb, var(--color-teal-500) 55%, var(--dark-border) 45%);
+}
+.dark .border-teal-400 {
+    border-color: var(--color-teal-500);
+}
+.dark .bg-yellow-50,
+.dark .bg-yellow-100 {
+    background-color: color-mix(in srgb, var(--color-yellow-500) 20%, var(--dark-surface) 80%);
+}
+.dark .hover\:bg-yellow-50:hover,
+.dark .hover\:bg-yellow-100:hover {
+    background-color: color-mix(in srgb, var(--color-yellow-500) 28%, var(--dark-surface) 72%);
+}
+.dark .text-yellow-400,
+.dark .text-yellow-500,
+.dark .text-yellow-600,
+.dark .text-yellow-700 {
+    color: var(--color-yellow-300);
+}
+.dark .text-yellow-800 {
+    color: var(--color-yellow-200);
+}
+.dark .hover\:text-yellow-500:hover,
+.dark .hover\:text-yellow-600:hover,
+.dark .hover\:text-yellow-700:hover,
+.dark .hover\:text-yellow-800:hover {
+    color: var(--color-yellow-200);
+}
+.dark .border-yellow-200 {
+    border-color: color-mix(in srgb, var(--color-yellow-500) 40%, var(--dark-border) 60%);
+}
+.dark .border-yellow-300 {
+    border-color: color-mix(in srgb, var(--color-yellow-500) 55%, var(--dark-border) 45%);
+}
+.dark .border-yellow-400 {
+    border-color: var(--color-yellow-500);
+}

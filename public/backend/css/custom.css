@@ -1,0 +1,398 @@
+.panel {
+    padding-bottom: 10px;
+}
+
+.panel .card-body .icon i {
+    font-size: 50px;
+}
+
+.panel .card-body p {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+@media only screen and (min-width: 320px) and (max-width: 620px) {
+    .panel {
+        padding-bottom: 5px;
+    }
+
+    .panel .card-body .icon i {
+        font-size: 40px;
+    }
+
+    .panel .card-body p {
+        font-size: 14px;
+        font-weight: 700;
+    }
+}
+
+
+.form-control {
+    width: 100%;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1;
+    padding: .20rem .5rem;
+    box-shadow: none !important;
+}
+
+.form-select {
+    width: 100%;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1;
+    box-shadow: none !important;
+}
+
+.col-form-label {
+    font-size: 13px !important;
+    font-weight: 600;
+}
+
+.form-label {
+    font-size: 13px !important;
+    font-weight: 600;
+}
+
+.btn {
+    --bs-btn-padding-x: 1rem;
+    --bs-btn-padding-y: 0.2rem;
+}
+
+.table {
+    margin: 0;
+}
+
+.table>:not(caption)>*>* {
+    padding: 1px 3px !important;
+    font-size: 12px;
+}
+
+
+.form-inline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.form-inline .form-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+@media (min-width: 320px) and (max-width: 620px) {
+    .form-inline {
+        display: block;
+    }
+
+    .form-inline .form-group {
+        margin-bottom: 4px;
+    }
+}
+
+.form-inline .form-group label {
+    font-size: 14px;
+}
+
+.form-inline .form-group .form-select {
+    min-width: 130px;
+}
+
+.form-inline .form-group .form-control {
+    min-width: 160px;
+}
+
+/* image show style */
+
+.ImageBackground {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    transition: 0.01ms ease-in-out;
+}
+
+.imageContainer {
+    position: relative;
+    width: 115px;
+}
+
+.imageShow {
+    display: block;
+    height: 105px;
+    width: 115px;
+    border: 1px solid #cccccc;
+    box-sizing: border-box;
+    margin-bottom: 5px;
+    border-radius: 5px;
+}
+
+.ImageBackground input {
+    display: none;
+}
+
+.ImageBackground label {
+    visibility: hidden;
+    background: #41add6;
+    width: 115px;
+    color: white;
+    padding: 1px 5px;
+    text-align: center;
+    cursor: pointer;
+    font-family: ui-monospace;
+    text-transform: uppercase;
+    border-radius: 3px;
+    font-size: 13px !important;
+    position: absolute;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.ImageBackground:hover label {
+    visibility: visible;
+}
+
+.close-btn {
+    position: absolute;
+    top: -10px;
+    right: -18px;
+    background-color: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 20px;
+    text-align: center;
+}
+
+
+/* v-select style */
+.v-select .dropdown-toggle {
+    height: 28px !important;
+    padding: 0 !important;
+}
+
+.v-select .vs__selected-options {
+    display: flex;
+    flex-basis: 100%;
+    flex-grow: 1;
+    flex-wrap: nowrap !important;
+    padding: 0 2px;
+    position: relative;
+    overflow: hidden !important;
+}
+
+.v-select input[type=search],
+.v-select input[type=search]:focus {
+    font-size: 13px !important;
+    margin: 0 !important;
+    padding: 0 7px;
+}
+
+.v-select .dropdown-toggle .clear {
+    font-size: 20px !important;
+    margin-right: 6px;
+}
+
+.dropdown-toggle::after {
+    border-top: none !important;
+    margin-left: 0 !important;
+    vertical-align: 0 !important;
+}
+
+.v-select .selected-tag {
+    display: inline-block !important;
+    margin: 0px 2px 0 !important;
+    font-size: 13px;
+    line-height: 1.7 !important;
+    white-space: nowrap !important;
+    padding: 0 !important;
+}
+
+.v-select li>a {
+    padding: 3px 10px !important;
+    font-size: 13px !important;
+}
+
+.v-select .dropdown-menu {
+    padding: 0px !important;
+}
+
+.v-select .dropdown-menu>.highlight>a {
+    font-size: 12.5px !important;
+}
+
+.v-select .open-indicator:before {
+    border-width: 2px 2px 0 0 !important;
+    height: 8px !important;
+    width: 8px !important;
+    margin-top: -4px !important;
+}
+
+.v-select .vs__actions {
+    padding: 0 0px 0 3px !important;
+}
+
+
+/* Preloader styles */
+.preloader {
+    position: fixed;
+    top: 50%;
+    left: 55%;
+    transform: translate(-50%, -50%);
+    z-index: 999;
+}
+
+.spinner {
+    border: 10px solid #f3f3f3;
+    border-top: 10px solid #3498db;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 2s linear infinite;
+}
+
+/* Keyframes for spinner animation */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+input[readonly] {
+    background-color: #fafafa;
+}
+
+input[readonly]:focus {
+    background-color: #fafafa;
+}
+
+.filterBtn {
+    border: 1px solid #c1c1c1;
+    padding: 1px 5px;
+    height: 25px;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* Common easy-select box (replacement for vue-select) */
+.easy-select {
+    width: 100%;
+    font-size: 13px;
+}
+
+.easy-select-toggle {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 38px;
+    padding: 6px 10px;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.easy-select-toggle:hover {
+    border-color: #6bb9e6;
+}
+
+.easy-select.is-open .easy-select-toggle {
+    border-color: #6bb9e6;
+    box-shadow: 0 0 0 3px rgba(0, 126, 187, 0.15);
+}
+
+.easy-select-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: none;
+    outline: none;
+    padding: 0;
+    font-size: inherit;
+    background: transparent;
+}
+
+.easy-select.is-disabled .easy-select-toggle {
+    background-color: #f8f8f8;
+    cursor: not-allowed;
+}
+
+.easy-select-label {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #333;
+}
+
+.easy-select-label.text-muted {
+    color: #6c757d;
+}
+
+.easy-select-clear {
+    flex: 0 0 auto;
+    margin-right: 8px;
+    color: #adb5bd;
+    cursor: pointer;
+}
+
+.easy-select-clear:hover {
+    color: #dc3545;
+}
+
+.easy-select-caret {
+    flex: 0 0 auto;
+    color: #adb5bd;
+    pointer-events: none;
+}
+
+/* Anchored dropdown panel — no backdrop, capped to the box's own width */
+.easy-select-panel {
+    z-index: 2000;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+.easy-select-panel-list {
+    max-height: inherit;
+    overflow-y: auto;
+    margin: 0;
+    padding: 4px 0;
+    list-style: none;
+}
+
+.easy-select-panel-option {
+    padding: 7px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.easy-select-panel-option.is-highlighted {
+    background: #007ebb;
+    color: #fff;
+}
+
+.easy-select-panel-msg {
+    padding: 10px 12px;
+    text-align: center;
+    color: #6c757d;
+    font-size: 12px;
+}
