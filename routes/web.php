@@ -8,7 +8,10 @@ use App\Http\Controllers\BankTransactionController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerPanelController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ResellerController;
+use App\Http\Controllers\ResellerPanelController;
 use App\Http\Controllers\PwaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
@@ -67,6 +70,22 @@ Route::group(['prefix' => 'panel'], function () {
     });
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/{panel}', [DashboardController::class, 'panel'])->name('panel.access');
+});
+
+// reseller portal route (self-service, guarded by the 'reseller' auth guard)
+Route::group(['prefix' => 'reseller', 'middleware' => 'auth:reseller'], function () {
+    Route::get('/dashboard', [ResellerPanelController::class, 'dashboard'])->name('reseller.dashboard');
+    Route::get('/profile', [ResellerPanelController::class, 'profile'])->name('reseller.profile');
+    Route::post('/update-profile', [ResellerPanelController::class, 'updateProfile'])->name('reseller.profile.update');
+    Route::get('/logout', [ResellerPanelController::class, 'logout'])->name('reseller.logout');
+});
+
+// customer portal route (self-service, guarded by the 'customer' auth guard)
+Route::group(['prefix' => 'customer-portal', 'middleware' => 'auth:customer'], function () {
+    Route::get('/dashboard', [CustomerPanelController::class, 'dashboard'])->name('customerPortal.dashboard');
+    Route::get('/profile', [CustomerPanelController::class, 'profile'])->name('customerPortal.profile');
+    Route::post('/update-profile', [CustomerPanelController::class, 'updateProfile'])->name('customerPortal.profile.update');
+    Route::get('/logout', [CustomerPanelController::class, 'logout'])->name('customerPortal.logout');
 });
 
 // ============================= Control Panel Route ==============================
@@ -139,6 +158,13 @@ Route::post('/get-customer-ledger', [CustomerController::class, 'getCustomerLedg
 Route::get('/deleted-customer-record', [CustomerController::class, 'deletedCustomerRecord'])->name('customer.record.deleted');
 Route::post('/get-deleted-customer', [CustomerController::class, 'getDeletedCustomer'])->name('get.deleted.customer');
 Route::post('/restore-customer', [CustomerController::class, 'restoreCustomer'])->name('customer.restore');
+
+// reseller route
+Route::get('/reseller', [ResellerController::class, 'create'])->name('reseller.create');
+Route::match(['get', 'post'], '/get-reseller', [ResellerController::class, 'index'])->name('reseller.index');
+Route::post('/reseller', [ResellerController::class, 'store'])->name('reseller.store');
+Route::post('/update-reseller', [ResellerController::class, 'update'])->name('reseller.update');
+Route::post('/delete-reseller', [ResellerController::class, 'destroy'])->name('reseller.delete');
 
 // ============================= Account Panel Route ==============================
 // account head route

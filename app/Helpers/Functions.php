@@ -49,6 +49,7 @@ function appMenuGroups()
             'items' => [
                 ['access' => 'customer', 'uri' => '/customer', 'match' => 'customer', 'icon' => 'bi-person', 'label' => 'Customer'],
                 ['access' => 'customerRestore', 'uri' => '/deleted-customer-record', 'match' => 'deleted-customer-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Customer Record'],
+                ['access' => 'reseller', 'uri' => '/reseller', 'match' => 'reseller', 'icon' => 'bi-people', 'label' => 'Reseller'],
                 ['access' => 'area', 'uri' => '/area', 'match' => 'area', 'icon' => 'bi-globe', 'label' => 'Area Entry'],
                 ['access' => 'areaRestore', 'uri' => '/deleted-area-record', 'match' => 'deleted-area-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Area Record'],
                 ['access' => 'company', 'uri' => '/company', 'match' => 'company', 'icon' => 'bi-plus-circle', 'label' => 'Company Entry'],

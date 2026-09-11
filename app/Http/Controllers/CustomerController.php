@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -29,7 +30,7 @@ class CustomerController extends Controller
 
     public function index(Request $request)
     {
-        $customers = Customer::with('adUser', 'upUser', 'area')->where('branch_id', $this->branchId);
+        $customers = Customer::with('adUser', 'upUser', 'area', 'reseller')->where('branch_id', $this->branchId);
         if (!empty($request->customerId)) {
             $customers = $customers->where('id', $request->customerId);
         }
@@ -88,6 +89,10 @@ class CustomerController extends Controller
                     })
                     ->whereNull('deleted_at'),
             ],
+            'username' => [
+                'nullable',
+                Rule::unique('customers')->whereNull('deleted_at'),
+            ],
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
@@ -99,9 +104,12 @@ class CustomerController extends Controller
             } else {
                 $data = new Customer();
                 $data->code = generateCode('Customer', 'CI');
-                $dataKey = $request->except('id', 'image');
+                $dataKey = $request->except('id', 'image', 'password');
                 foreach ($dataKey as $key => $value) {
                     $data[$key] = $value;
+                }
+                if (!empty($request->password)) {
+                    $data->password = Hash::make($request->password);
                 }
                 if ($request->hasFile('image')) {
                     $data->image = imageUpload($request, 'image', 'uploads/customer', $data->code . '_' . $this->branchId);
@@ -132,13 +140,20 @@ class CustomerController extends Controller
                     })
                     ->whereNull('deleted_at'),
             ],
+            'username' => [
+                'nullable',
+                Rule::unique('customers')->ignore($request->id)->whereNull('deleted_at'),
+            ],
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
             $data = Customer::find($request->id);
-            $dataKey = $request->except('id', 'image');
+            $dataKey = $request->except('id', 'image', 'password');
             foreach ($dataKey as $key => $value) {
                 $data[$key] = $value;
+            }
+            if (!empty($request->password)) {
+                $data->password = Hash::make($request->password);
             }
             if ($request->hasFile('image')) {
                 deleteUploadedFile($data->image);

@@ -31,12 +31,16 @@ function emptyForm() {
         amount: 0,
         status: 'a',
         image: '',
+        username: '',
+        password: '',
     };
 }
 
 const form = reactive(emptyForm());
 const areas = ref([]);
 const selectedArea = ref(null);
+const resellers = ref([]);
+const selectedReseller = ref(null);
 const rows = ref([]);
 const currentPage = ref(1);
 const perPage = 10;
@@ -59,6 +63,12 @@ function openLedger(row) {
 function getAreas() {
     axios.post('/get-area').then((res) => {
         areas.value = res.data;
+    });
+}
+
+function getResellers() {
+    axios.post('/get-reseller', { forSearch: true }).then((res) => {
+        resellers.value = res.data;
     });
 }
 
@@ -307,6 +317,7 @@ async function startImport() {
 function resetForm() {
     Object.assign(form, emptyForm());
     selectedArea.value = null;
+    selectedReseller.value = null;
     imageSrc.value = '/noImage.jpg';
     onProgress.value = false;
 }
@@ -315,7 +326,11 @@ async function saveData() {
     const url = form.id != '' ? '/update-customer' : '/customer';
     onProgress.value = true;
     try {
-        const res = await axios.post(url, { ...form, area_id: selectedArea.value ? selectedArea.value.id : '' });
+        const res = await axios.post(url, {
+            ...form,
+            area_id: selectedArea.value ? selectedArea.value.id : '',
+            reseller_id: selectedReseller.value ? selectedReseller.value.id : '',
+        });
         toast.success(res.data.message);
         resetForm();
         load();
@@ -345,8 +360,11 @@ function editRow(row) {
         amount: row.amount,
         status: row.status,
         image: row.image,
+        username: row.username ?? '',
+        password: '',
     });
     selectedArea.value = { id: row.area_id, name: row.area?.name };
+    selectedReseller.value = row.reseller_id ? { id: row.reseller_id, name: row.reseller?.name } : null;
     imageSrc.value = row.image ? '/' + row.image : '/noImage.jpg';
 }
 
@@ -372,6 +390,7 @@ async function onImageChange(e) {
 
 onMounted(() => {
     getAreas();
+    getResellers();
     load();
 });
 </script>
@@ -407,11 +426,31 @@ onMounted(() => {
                         <label class="mb-1 block text-xs font-medium text-slate-600">Mobile</label>
                         <input type="text" autocomplete="off" v-model="form.phone" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                     </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Reseller <span class="font-normal text-slate-400">(Optional)</span></label>
+                        <SearchSelect :options="resellers" v-model="selectedReseller" label="name" placeholder="Select reseller" />
+                    </div>
                 </div>
                 <div class="space-y-3 md:col-span-5">
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Email <span class="font-normal text-slate-400">(Optional)</span></label>
                         <input type="email" autocomplete="off" v-model="form.email" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Portal Username <span class="font-normal text-slate-400">(Optional)</span></label>
+                            <input type="text" autocomplete="off" v-model="form.username" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
+                        <div class="flex-1">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Portal Password</label>
+                            <input
+                                type="password"
+                                autocomplete="new-password"
+                                v-model="form.password"
+                                :placeholder="form.id == '' ? '' : 'Leave blank to keep current'"
+                                class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                            />
+                        </div>
                     </div>
                     <div class="flex gap-3">
                         <div class="flex-1">

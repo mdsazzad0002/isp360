@@ -30,8 +30,8 @@ async function login() {
     errors.password = '';
     generalError.value = '';
     try {
-        await axios.post('/login', form);
-        window.location.href = '/panel/dashboard';
+        const res = await axios.post('/login', form);
+        window.location.href = res.data.redirect || '/panel/dashboard';
     } catch (err) {
         submitting.value = false;
         const r = err.response?.data;

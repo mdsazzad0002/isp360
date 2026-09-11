@@ -18,18 +18,25 @@ class RedirectIfAuthenticated
      * @param  string|null  ...$guards
      * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
      */
+    // guard => panel home path
+    protected $portalHome = [
+        'web' => '/panel/dashboard',
+        'reseller' => '/reseller/dashboard',
+        'customer' => '/customer-portal/dashboard',
+    ];
+
     public function handle(Request $request, Closure $next, ...$guards)
     {
         $guards = empty($guards) ? [null] : $guards;
 
         foreach ($guards as $guard) {
             if (Auth::guard($guard)->check()) {
-                return redirect(RouteServiceProvider::HOME);
+                return redirect($this->portalHome[$guard] ?? RouteServiceProvider::HOME);
             }
         }
 
         $company = CompanyProfile::first();
-        if ($company->url != request()->getHost()) {
+        if ($company && $company->url != request()->getHost()) {
             $company->url = request()->getHost();
             $company->update();
         }

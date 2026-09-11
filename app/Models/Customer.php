@@ -3,17 +3,27 @@
 namespace App\Models;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
-class Customer extends Model
+class Customer extends Authenticatable
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes;
 
     public $timestamps = false;
 
     protected $guarded = ['id'];
+
+    protected $hidden = [
+        'password',
+    ];
+
+    public function reseller()
+    {
+        return $this->belongsTo(Reseller::class, 'reseller_id', 'id')->select('id', 'name', 'username')->withTrashed();
+    }
 
     public function adUser()
     {
