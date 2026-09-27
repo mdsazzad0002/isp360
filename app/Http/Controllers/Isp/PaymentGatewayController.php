@@ -10,7 +10,7 @@ use App\Services\Isp\OnlinePaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-// Admin setup of the customer payment methods (bKash, Nagad, Rocket, SSLCommerz, Stripe).
+// Admin setup of the customer payment methods (bKash, Nagad, Rocket, SSLCommerz, Stripe, PayPal).
 class PaymentGatewayController extends IspController
 {
     public function create()
@@ -55,7 +55,7 @@ class PaymentGatewayController extends IspController
                 'currencies' => $meta['currencies'],
                 'currency_ok' => PaymentGateway::supportsCurrency($key, $currency),
                 // Stripe: the endpoint to add in the Stripe dashboard (Developers > Webhooks), once saved
-                'webhook_url' => $key === 'stripe' && $row ? url("/api/payment/webhook/stripe/{$row->id}") : null,
+                'webhook_url' => in_array($key, ['stripe', 'paypal'], true) && $row ? url("/api/payment/webhook/{$key}/{$row->id}") : null,
             ];
         })->values();
 

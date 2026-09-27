@@ -6,6 +6,8 @@ use App\Models\GatewayEvent;
 use App\Models\PaymentGateway;
 use App\Services\Isp\OnlinePaymentService;
 use App\Services\Isp\Payments\StripeDriver;
+use App\Services\Isp\Payments\PaypalDriver;
+use App\Models\OnlinePayment;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -42,6 +44,48 @@ class PaymentCallbackController extends Controller
         } catch (ModelNotFoundException $e) {
             return response()->json(['status' => 'unknown'], 404);
         }
+    }
+
+    // PayPal webhook, one URL per configured gateway (its webhook id lives on that row). PayPal is
+    // asked whether the event is genuine; the payment's state is then read from PayPal as usual.
+    public function paypalWebhook(Request $request, int $id)
+    {
+        $gateway = PaymentGateway::where('id', $id)->where('gateway', 'paypal')->first();
+        if (! $gateway) {
+            return response()->json(['error' => 'unknown webhook'], 404);
+        }
+        $event = json_decode($request->getContent(), true);
+        if (! is_array($event) || empty($event['id']) || empty($event['event_type'])) {
+            return response()->json(['error' => 'invalid event'], 400);
+        }
+        $headers = collect($request->headers->all())->map(fn ($v) => $v[0] ?? null)->all();
+        try {
+            if (! (new PaypalDriver($gateway))->verifyWebhook($headers, $event)) {
+                Log::warning('PayPal webhook failed verification', ['gateway' => $id, 'ip' => $request->ip()]);
+                return response()->json(['error' => 'invalid signature'], 400);
+            }
+        } catch (\Throwable $e) {
+            Log::error($e);
+            return response()->json(['error' => 'could not verify, retry'], 500);
+        }
+        $type = $event['event_type'];
+        if (! str_starts_with($type, 'CHECKOUT.ORDER.') && ! str_starts_with($type, 'PAYMENT.CAPTURE.')) {
+            return response()->json(['received' => true, 'ignored' => $type]);
+        }
+        // orders carry our ref on the purchase unit, captures in custom_id or via their order id
+        $resource = $event['resource'] ?? [];
+        $ref = $resource['custom_id'] ?? data_get($resource, 'purchase_units.0.custom_id') ?? data_get($resource, 'purchase_units.0.reference_id');
+        if (! $ref && ($orderId = data_get($resource, 'supplementary_data.related_ids.order_id') ?? (str_starts_with($type, 'CHECKOUT.ORDER.') ? ($resource['id'] ?? null) : null))) {
+            $ref = OnlinePayment::where('gateway', 'paypal')->where('gateway_payment_id', $orderId)->value('ref');
+        }
+        try {
+            $done = OnlinePaymentService::handleEvent('paypal', $event['id'], $type, $ref ? (string) $ref : null,
+                ['type' => $type, 'resource' => ['id' => $resource['id'] ?? null, 'status' => $resource['status'] ?? null]]);
+        } catch (\Throwable $e) {
+            Log::error($e);
+            $done = false;
+        }
+        return $done ? response()->json(['received' => true]) : response()->json(['error' => 'not confirmed yet, retry'], 500);
     }
 
     // Stripe webhook, one URL per configured gateway (its signing secret lives on that row).

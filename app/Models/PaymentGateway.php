@@ -64,6 +64,15 @@ class PaymentGateway extends Model
             'method' => 'card',
             'currencies' => ['*'],
         ],
+        // PayPal Checkout (Orders v2): PayPal balance and cards on PayPal's page.
+        'paypal' => [
+            'label' => 'PayPal',
+            'modes' => ['api'],
+            'fields' => ['client_id' => 'Client ID', 'client_secret' => 'Client secret', 'webhook_id' => 'Webhook ID'],
+            'secret' => ['client_secret'],
+            'method' => 'gateway',
+            'currencies' => \App\Services\Isp\Payments\PaypalDriver::CURRENCIES,
+        ],
     ];
 
     public static function supportsCurrency(string $gateway, string $currency): bool

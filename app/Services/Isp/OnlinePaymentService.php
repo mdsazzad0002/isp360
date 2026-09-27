@@ -12,6 +12,7 @@ use App\Services\Isp\Payments\GatewayDriver;
 use App\Services\Isp\Payments\NagadDriver;
 use App\Services\Isp\Payments\SslcommerzDriver;
 use App\Services\Isp\Payments\StripeDriver;
+use App\Services\Isp\Payments\PaypalDriver;
 use App\Models\GatewayEvent;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +21,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 
-// Customer self-service payments (bKash, Nagad, Rocket, SSLCommerz, Stripe).
+// Customer self-service payments (bKash, Nagad, Rocket, SSLCommerz, Stripe, PayPal).
 //
 //  API mode     start() -> gateway checkout -> handleCallback() verifies server to server -> complete()
 //  manual mode  submitManual() -> admin checks the TrxID in their wallet app -> approve() / reject()
@@ -35,6 +36,7 @@ class OnlinePaymentService
         'nagad' => NagadDriver::class,
         'sslcommerz' => SslcommerzDriver::class,
         'stripe' => StripeDriver::class,
+        'paypal' => PaypalDriver::class,
     ];
 
     // Gateways a customer of this branch can use right now, in display order.
@@ -216,6 +218,8 @@ class OnlinePaymentService
             // "completed" with payment_status unpaid = a method that settles later (async_payment_* follows)
             'stripe' => ($type === 'checkout.session.completed' && data_get($payload, 'data.object.payment_status') !== 'unpaid')
                 || in_array($type, ['checkout.session.async_payment_succeeded', 'checkout.session.async_payment_failed', 'checkout.session.expired'], true),
+            // an approved order is captured here; a pending capture (eCheck, review) completes later
+            'paypal' => in_array($type, ['CHECKOUT.ORDER.APPROVED', 'PAYMENT.CAPTURE.COMPLETED', 'PAYMENT.CAPTURE.DENIED', 'PAYMENT.CAPTURE.DECLINED'], true),
             default => true,
         };
     }

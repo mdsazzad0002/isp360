@@ -95,12 +95,12 @@ Built 2026-09-27. With no rates set, nothing changes.
 - [ ] P2: withholding tax on corporate customers' payments.
 - [ ] P2: e-invoicing connectors per country (see 4.14).
 
-### 2.4 Payment gateways are BD-only — P0, M — **Stripe done**
+### 2.4 Payment gateways are BD-only — P0, M — **Stripe and PayPal done**
 `GatewayDriver` is already pluggable; only drivers are missing.
 
 **Tasks**
 - [x] Stripe Checkout (`StripeDriver`, no SDK): hosted page, any company currency (Stripe minor units incl. IDR 2-dp, KWD/BHD/OMR/JOD 3-dp in steps of 0.010), idempotent session create (`Idempotency-Key`), result always re-read from Stripe's API, cancel expires the session, bank debits stay open until `async_payment_succeeded`, test/live key must match sandbox mode, recorded as a `card` payment.
-- [ ] PayPal (hosted checkout, same pattern).
+- [x] PayPal Checkout (`PaypalDriver`, Orders v2, no SDK): approve on PayPal, capture server side (idempotent `PayPal-Request-Id` on create and capture), result read back from PayPal, pending captures (eCheck/review) stay open until `PAYMENT.CAPTURE.COMPLETED`; currencies USD EUR GBP CAD AUD MYR SGD PHP THB BRL MXN JPY. Webhooks verified by PayPal's verify-webhook-signature API per gateway row, deduplicated in `gateway_events`; an approved order whose customer never came back is captured from the webhook.
 - [ ] Regional driver list (build per market demand):
   - India: Razorpay, PayU, UPI (Cashfree/PhonePe)
   - Pakistan: JazzCash, Easypaisa
@@ -379,7 +379,7 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 4. ~~Country packs, BD first (2.8)~~ — done 2026-09-27
 5. ~~Tax engine on invoices (2.3)~~ — done 2026-09-27
 6. Configurable billing rules: ~~grace, notice, late fee~~ (done 2026-09-28), postpaid option (2.7)
-7. ~~Stripe driver, webhook idempotency (2.4)~~ — done 2026-09-28 (PayPal still open)
+7. ~~Stripe + PayPal drivers, webhook idempotency (2.4)~~ — done 2026-09-28
 8. ~~Security basics: 2FA, rate limit, secret encryption (4.12)~~ — done 2026-09-28
 9. ~~Redis + queue + Horizon, incremental scheduler (4.13)~~ — done 2026-09-28
 10. i18n cleanup, RTL, E.164 phones, generic address (2.9)

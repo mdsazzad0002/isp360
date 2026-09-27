@@ -136,6 +136,12 @@ onMounted(load);
                         <p v-if="g.gateway === 'sslcommerz'" class="text-xs text-slate-500 md:col-span-2">
                             IPN URL for the SSLCommerz merchant panel: <code class="rounded bg-slate-100 px-1.5 py-0.5">{{ ipnUrl }}</code>
                         </p>
+                        <p v-if="g.gateway === 'paypal'" class="text-xs text-slate-500 md:col-span-2">
+                            Create a REST app in the PayPal developer dashboard (sandbox app in sandbox mode) and copy its client ID and secret.
+                            <template v-if="g.webhook_url">Add a webhook to the app with the URL <code class="break-all rounded bg-slate-100 px-1.5 py-0.5">{{ g.webhook_url }}</code> and the events
+                                <code>CHECKOUT.ORDER.APPROVED</code>, <code>PAYMENT.CAPTURE.COMPLETED</code>, <code>PAYMENT.CAPTURE.DENIED</code>, then paste its Webhook ID above. It finishes payments whose customer closed the browser before returning.</template>
+                            <template v-else>Save once to get the webhook URL.</template>
+                        </p>
                         <p v-if="g.gateway === 'stripe'" class="text-xs text-slate-500 md:col-span-2">
                             <template v-if="g.webhook_url">
                                 In the Stripe dashboard (Developers → Webhooks) add the endpoint <code class="break-all rounded bg-slate-100 px-1.5 py-0.5">{{ g.webhook_url }}</code>

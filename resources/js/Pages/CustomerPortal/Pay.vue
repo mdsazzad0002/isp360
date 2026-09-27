@@ -189,6 +189,7 @@ const RESULT = {
                             <span class="text-sm font-medium text-slate-800">{{ g.label }}</span>
                             <span v-if="g.gateway === 'sslcommerz'" class="text-[10px] text-slate-400">Card / bank / wallet</span>
                             <span v-else-if="g.gateway === 'stripe'" class="text-[10px] text-slate-400">Card</span>
+                            <span v-else-if="g.gateway === 'paypal'" class="text-[10px] text-slate-400">PayPal / card</span>
                         </button>
                     </div>
                 </div>
