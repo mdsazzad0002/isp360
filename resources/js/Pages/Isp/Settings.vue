@@ -218,6 +218,11 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                         <input v-model="s.init_bonus_days" type="number" min="0" max="365" :class="input" />
                     </div>
                     <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Billing day <span class="text-slate-400">(0 = each line's own start date)</span></label>
+                        <input v-model="s.bill_day" type="number" min="0" max="28" :class="input" />
+                    </div>
+                    <label class="flex items-center gap-2 pt-5 text-sm"><input v-model="s.terminate_credit_unused" type="checkbox" /> Terminating a line credits its unused paid days</label>
+                    <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Postpaid packages: bill due, days into its period</label>
                         <input v-model="s.postpaid_due_days" type="number" min="0" max="60" :class="input" />
                     </div>
@@ -226,6 +231,7 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                         <input v-model="s.due_days" type="number" min="0" max="90" :class="input" />
                     </div>
                 </div>
+                <p v-if="s.bill_day > 0" class="mt-2 text-xs text-slate-500">A new line's first bill also covers the days up to the {{ s.bill_day }}. of the month, at the package's daily price, so every line renews on that day (prepaid lines stay aligned when paid on the day they are billed).</p>
                 <p class="mt-2 text-xs text-slate-500">A package bill buys one billing cycle (1, 3, 6 or 12 months). The time starts the moment the bill is fully paid — or when the current paid time ends, if that is later — and runs to the same date and time. A new connection is billed when it is created.</p>
             </section>
 

@@ -139,8 +139,8 @@ The current rules (prepaid, no grace, instant suspend) fit BD home broadband. Ot
 
 **Tasks**
 - [x] Billing mode per package (`packages.billing_mode`, inherited by reseller copies): `prepaid` (default, unchanged) or `postpaid`: each period's bill starts its time at once on credit, falls due `postpaid_due_days` into the period, the next period is billed even if earlier bills are unpaid, and the line is suspended ("Overdue") only when a bill is past due plus the grace days; paying the overdue bills brings it back.
-- [ ] Postpaid billed in arrears / aligned to a calendar day (needs proration).
-- [ ] Optional proration on start, stop and package change (calendar or day-based).
+- [ ] Postpaid billed in arrears (after the period) — today a postpaid bill is issued at the start of its period and due later.
+- [x] Proration: on package change (day-wise, existed); on start with a branch billing day (`bill_day` 1–28: a new line's first bill = one cycle + pro-rata days to that day, `invoices.service_days`, so lines renew on the same day); on stop (`terminate_credit_unused` or per termination: unused paid days back to the customer's balance with their tax).
 - [x] Grace period (`grace_days`): the line stays on that many days after its paid time; staff can still switch it on inside the grace.
 - [x] Notice before suspension (`notice_days` + `sms_tpl_notice` with `{expire_date}` `{suspend_date}`): one SMS per paid time, recorded on the connection and in its history. With `notice_required` a line is never suspended sooner than `notice_days` after its notice (for countries that forbid disconnecting without notice).
 - [x] Late fee (fixed or percent of the unpaid amount before earlier fees, once or every 30 days up to a cap, N days after the due date), posted as an untaxed debit note; charged under a row lock so it can't double; credit notes waive it.
@@ -379,7 +379,7 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 3. ~~Per-currency rounding for 0/3-decimal currencies (2.1)~~ — done 2026-09-27
 4. ~~Country packs, BD first (2.8)~~ — done 2026-09-27
 5. ~~Tax engine on invoices (2.3)~~ — done 2026-09-27
-6. Configurable billing rules: ~~grace, notice, late fee, postpaid~~ (done 2026-09-28), proration, deposit (2.7)
+6. Configurable billing rules: ~~grace, notice, late fee, postpaid, proration~~ (done 2026-09-28), deposit (2.7)
 7. ~~Stripe + PayPal drivers, webhook idempotency (2.4)~~ — done 2026-09-28
 8. ~~Security basics: 2FA, rate limit, secret encryption (4.12)~~ — done 2026-09-28
 9. ~~Redis + queue + Horizon, incremental scheduler (4.13)~~ — done 2026-09-28

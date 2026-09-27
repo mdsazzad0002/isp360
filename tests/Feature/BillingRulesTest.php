@@ -245,4 +245,43 @@ class BillingRulesTest extends TestCase
         $this->assertSame('active', $connection->fresh()->status);
         $this->artisan('isp:ledger-check')->assertSuccessful();
     }
+
+    public function test_first_bill_is_prorated_to_the_billing_day(): void
+    {
+        $this->settings(['bill_day' => 1]);
+        $connection = $this->paidConnection(pay: false); // activated 15 Sep 10:00
+        $bill = Invoice::with('items')->where('connection_id', $connection->id)->firstOrFail();
+        // one month (15 Sep → 15 Oct, 30 days) + 17 days to 1 Nov at 1000/30 a day
+        $this->assertSame([1, 17], [$bill->service_months, $bill->service_days]);
+        $this->assertEquals([1000.0, 566.67], $bill->items->pluck('unit_price')->map(fn ($v) => (float) $v)->all());
+        $this->assertEquals(1566.67, (float) $bill->total);
+
+        $this->api('/isp/payment', ['customer_id' => $connection->customer_id, 'amount' => 1566.67, 'method' => 'cash', 'payment_date' => '2026-09-15'])->assertOk();
+        $this->assertSame('2026-11-01 10:00:00', $connection->fresh()->expire_at->toDateTimeString());
+
+        // later bills are whole cycles, from the billing day
+        $this->runAt('2026-10-29 10:00:00');
+        $next = Invoice::where('connection_id', $connection->id)->latest('id')->firstOrFail();
+        $this->assertSame([1, 0, 1000.0], [$next->service_months, $next->service_days, (float) $next->total]);
+        $this->api('/isp/payment', ['customer_id' => $connection->customer_id, 'amount' => 1000, 'method' => 'cash', 'payment_date' => '2026-10-29'])->assertOk();
+        $this->assertSame('2026-12-01 10:00:00', $connection->fresh()->expire_at->toDateTimeString());
+        $this->artisan('isp:ledger-check')->assertSuccessful();
+    }
+
+    public function test_termination_can_credit_the_unused_days(): void
+    {
+        $connection = $this->paidConnection(); // 1000 for 15 Sep → 15 Oct (30 days)
+        Carbon::setTestNow('2026-09-25 10:00:00');
+        $res = $this->api('/isp/connection-action', ['id' => $connection->id, 'action' => 'terminate', 'reason' => 'Moving away', 'credit_unused' => true])->assertOk();
+        $this->assertStringContainsString('unused time credited', $res->json('message'));
+        $this->assertSame('terminated', $connection->fresh()->status);
+        // 20 whole days left of 30: 666.67 back as advance credit
+        $this->assertEquals(-666.67, (float) Customer::find($connection->customer_id)->ledger_balance);
+        $this->artisan('isp:ledger-check')->assertSuccessful();
+
+        // off by default: nothing credited
+        $other = $this->paidConnection();
+        $this->api('/isp/connection-action', ['id' => $other->id, 'action' => 'terminate', 'reason' => 'Closed'])->assertOk();
+        $this->assertEquals(0.0, (float) Customer::find($other->customer_id)->ledger_balance);
+    }
 }

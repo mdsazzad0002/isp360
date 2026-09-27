@@ -27,32 +27,7 @@ class PackageChangeService
     {
         $connection->loadMissing('package');
         $now = now();
-        $running = self::runningBills($connection, $now);
-
-        $days = 0;
-        $credit = 0.0;
-        $companyCredit = 0.0; // reseller lines: the company's share of that credit
-        $lines = [];
-        $current = $connection->package;
-        foreach ($running as $bill) {
-            $left = $bill->days_left;
-            if ((int) $bill->package_id === (int) $current?->id) {
-                // bought on this package: value the days at what the bill actually charged
-                $paidDays = max(1, $bill->paid_days);
-                $total = (float) $bill->total - (float) $bill->tax_total; // net of tax
-                $companyTotal = $bill->reseller_id && $bill->reseller_cost !== null ? (float) $bill->reseller_cost : $total;
-            } else {
-                // bought on an earlier package and already adjusted once: value at the current package
-                $paidDays = max(1, (int) round($bill->period_start->diffInDays($bill->period_start->copy()->addMonthsNoOverflow($current->cycleMonths()))));
-                $total = TaxService::net($connection->monthlyCharge(), TaxService::forPackage($current));
-                $companyTotal = self::companyCost($current, $paidDays, $paidDays, $total);
-            }
-            $value = Money::round($total / $paidDays * $left);
-            $days += $left;
-            $credit += $value;
-            $companyCredit += Money::round($companyTotal / $paidDays * $left);
-            $lines[] = ['invoice_no' => $bill->invoice_no, 'total' => $total, 'paid_days' => $paidDays, 'days_left' => $left, 'value' => $value];
-        }
+        [$days, $credit, $companyCredit, $lines] = self::unusedDays($connection, $now);
 
         $newRates = TaxService::forPackage($new);
         $newCharge = TaxService::net(max(0, Money::round((float) $new->price - (float) $connection->discount)), $newRates);
@@ -84,6 +59,66 @@ class PackageChangeService
             'company_cost' => self::companyCost($new, $cycleDays, $days, $cost),
             'rebill' => $rebill->map->only(['id', 'invoice_no', 'total', 'paid', 'due'])->values()->all(),
         ];
+    }
+
+    /**
+     * The whole paid days still left on the line and what they are worth (net of tax), valued at
+     * what their bills charged: [days, credit, company's share of it, lines]. Used for a package
+     * change and for the credit at termination.
+     */
+    public static function unusedDays(Connection $connection, ?Carbon $now = null): array
+    {
+        $connection->loadMissing('package');
+        $now ??= now();
+        $running = self::runningBills($connection, $now);
+        $days = 0;
+        $credit = 0.0;
+        $companyCredit = 0.0; // reseller lines: the company's share of that credit
+        $lines = [];
+        $current = $connection->package;
+        foreach ($running as $bill) {
+            $left = $bill->days_left;
+            if ((int) $bill->package_id === (int) $current?->id) {
+                // bought on this package: value the days at what the bill actually charged
+                $paidDays = max(1, $bill->paid_days);
+                $total = (float) $bill->total - (float) $bill->tax_total; // net of tax
+                $companyTotal = $bill->reseller_id && $bill->reseller_cost !== null ? (float) $bill->reseller_cost : $total;
+            } else {
+                // bought on an earlier package and already adjusted once: value at the current package
+                $paidDays = max(1, (int) round($bill->period_start->diffInDays($bill->period_start->copy()->addMonthsNoOverflow($current->cycleMonths()))));
+                $total = TaxService::net($connection->monthlyCharge(), TaxService::forPackage($current));
+                $companyTotal = self::companyCost($current, $paidDays, $paidDays, $total);
+            }
+            $value = Money::round($total / $paidDays * $left);
+            $days += $left;
+            $credit += $value;
+            $companyCredit += Money::round($companyTotal / $paidDays * $left);
+            $lines[] = ['invoice_no' => $bill->invoice_no, 'total' => $total, 'paid_days' => $paidDays, 'days_left' => $left, 'value' => $value];
+        }
+
+        return [$days, Money::round($credit), Money::round($companyCredit), $lines];
+    }
+
+    // Termination: the unused paid days go back to the customer's balance (advance credit), with
+    // their tax. Returns the receipt, or null when nothing is left.
+    public static function creditUnused(Connection $connection, ?string $reason = null): ?CustomerPayment
+    {
+        [$days, $credit] = self::unusedDays($connection);
+        if ($credit < Money::unit()) {
+            return null;
+        }
+        $tax = TaxService::lineTax($credit, TaxService::forPackage($connection->package), false)['amount'];
+        $payment = CollectionService::receive(Customer::withTrashed()->findOrFail($connection->customer_id), [
+            'amount' => Money::round($credit + $tax),
+            'method' => 'adjustment',
+            'reference' => "Termination {$connection->code}",
+            'notes' => "Termination of {$connection->code}: {$days} unused paid day(s)" . ($reason ? ". {$reason}" : ''),
+        ]);
+        if ($tax > 0) {
+            CustomerPayment::whereKey($payment->id)->update(['tax_amount' => $tax]); // for the tax report
+        }
+        AuditLogger::log('connection.unused_credited', $connection, null, ['days' => $days, 'credit' => $credit, 'tax' => $tax], $reason);
+        return $payment;
     }
 
     // Applies the quote. Runs inside ConnectionService::changePackage's transaction, after the

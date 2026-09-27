@@ -181,18 +181,22 @@ class ConnectionController extends IspController
             'action' => 'required|in:activate,suspend,reactivate,deactivate,terminate',
             'reason' => 'required_unless:action,activate|nullable|max:255',
             'date' => 'nullable|date',
+            'credit_unused' => 'nullable|boolean',
         ])) return $r;
 
         try {
             $connection = Connection::where('branch_id', $this->branchId)->findOrFail($request->id);
+            $credited = null;
             $connection = match ($request->action) {
                 'activate' => ConnectionService::activate($connection, $request->date),
                 'suspend' => ConnectionService::suspend($connection, $request->reason),
                 'reactivate' => ConnectionService::reactivate($connection, $request->reason),
                 'deactivate' => ConnectionService::deactivate($connection, $request->reason),
-                'terminate' => ConnectionService::terminate($connection, $request->reason),
+                'terminate' => ConnectionService::terminate($connection, $request->reason,
+                    $request->has('credit_unused') ? $request->boolean('credit_unused') : null, $credited),
             };
-            return $this->ok("Connection {$connection->code} is now {$connection->status}" . ($request->action === 'activate' ? $this->billingSummary($connection) : ''));
+            return $this->ok("Connection {$connection->code} is now {$connection->status}" . ($request->action === 'activate' ? $this->billingSummary($connection) : '')
+                . ($credited ? '. ' . \App\Support\Money::format($credited->amount) . " of unused time credited to the customer ({$credited->receipt_no})" : ''));
         } catch (\Throwable $th) {
             return $this->fail($th);
         }

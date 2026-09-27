@@ -75,6 +75,8 @@ class SettingController extends IspController
             'sms_tpl_notice' => 'nullable|max:320',
             'grace_days' => 'nullable|integer|min:0|max:60',
             'postpaid_due_days' => 'nullable|integer|min:0|max:60',
+            'bill_day' => 'nullable|integer|min:0|max:28',
+            'terminate_credit_unused' => 'boolean',
             'notice_days' => 'nullable|integer|min:0|max:30',
             'notice_required' => 'boolean',
             'late_fee_type' => 'nullable|in:none,fixed,percent',

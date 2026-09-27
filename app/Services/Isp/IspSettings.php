@@ -27,6 +27,11 @@ class IspSettings
         'referral_commission' => '0',
         'auto_suspend' => true,
         'auto_reactivate' => true,
+        // proration: 1-28 = a new line's first bill also covers the days up to this day of the month,
+        // so lines renew on the same day (0 = each line renews on its own start date)
+        'bill_day' => 0,
+        // termination gives the unused paid days back to the customer's balance (day-wise)
+        'terminate_credit_unused' => false,
         // postpaid packages: a bill falls due this many days after its service period starts
         'postpaid_due_days' => 15,
         // grace: an expired line stays on this many days before it is suspended (0 = at once)

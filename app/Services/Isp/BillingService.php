@@ -98,25 +98,42 @@ class BillingService
             $speed = $package->download_mbps ? " ({$package->download_mbps} Mbps)" : '';
             $length = $months === 1 ? '1 month' : "{$months} months";
             $today = now()->startOfDay();
+            [$extraDays, $cycleDays] = self::proRataDays($connection, $months);
             $dueDate = $connection->expire_at && $connection->expire_at->isFuture() ? $connection->expire_at->copy()->startOfDay() : $today;
             if ($postpaid) {
                 // due some days into the period it pays for
                 $dueDate = $dueDate->copy()->addDays(IspSettings::get($connection->branch_id, 'postpaid_due_days'));
             }
 
-            $invoice = self::createInvoiceRecord($connection->customer, $connection->branch_id, [
-                'connection_id' => $connection->id,
-                'service_months' => $months,
-                'invoice_date' => $today,
-                'due_date' => $dueDate,
-                'source' => 'auto',
-            ] + self::resellerCost($connection, $amount), [[
+            $items = [[
                 'package_id' => $connection->package_id,
                 'description' => "{$package->name}{$speed} — {$length} internet",
                 'unit_price' => $amount,
                 'quantity' => 1,
                 'discount' => 0,
-            ]], true);
+            ]];
+            if ($extraDays) {
+                // first bill: the days up to the billing day, at the package's daily price
+                $items[] = [
+                    'package_id' => $connection->package_id,
+                    'description' => "{$package->name} — {$extraDays} day(s) pro-rata to the billing day",
+                    'unit_price' => Money::round($amount / $cycleDays * $extraDays),
+                    'quantity' => 1,
+                    'discount' => 0,
+                ];
+            }
+            $reseller = self::resellerCost($connection, $amount);
+            if ($extraDays && isset($reseller['reseller_cost'])) {
+                $reseller['reseller_cost'] = Money::round($reseller['reseller_cost'] * (1 + $extraDays / $cycleDays));
+            }
+            $invoice = self::createInvoiceRecord($connection->customer, $connection->branch_id, [
+                'connection_id' => $connection->id,
+                'service_months' => $months,
+                'service_days' => $extraDays,
+                'invoice_date' => $today,
+                'due_date' => $dueDate,
+                'source' => 'auto',
+            ] + $reseller, $items, true);
 
             if ($postpaid) {
                 // the period starts now, on credit (like "start on due", automatically)
@@ -159,7 +176,7 @@ class BillingService
         for ($cycles = max(1, $open->count()); $cycles <= 12; $cycles++) {
             $extra = $cycles - $open->count();
             $months = (int) $uncredited->sum('service_months') + $extra * $cycleMonths;
-            $until = $start?->copy()->addMonthsNoOverflow($months);
+            $until = $start?->copy()->addMonthsNoOverflow($months)->addDays((int) $uncredited->sum('service_days'));
             if ($until && $firstTime && $connection->bonus_days) {
                 $until->addDays($connection->bonus_days);
             }
@@ -209,11 +226,33 @@ class BillingService
         });
     }
 
+    /**
+     * Proration to the branch's billing day (bill_day 1-28), on a line's first service bill only:
+     * [extra days after the cycle up to the next billing day, days in one cycle]. [0, n] when off
+     * or not the first bill. The period counts from now: a prepaid bill paid later shifts it.
+     */
+    public static function proRataDays(Connection $connection, int $months): array
+    {
+        $start = collect([now(), $connection->activated_at])->filter()->max()->copy()->startOfDay();
+        $cycleDays = (int) round($start->diffInDays($start->copy()->addMonthsNoOverflow($months)));
+        $day = (int) IspSettings::get($connection->branch_id, 'bill_day');
+        if ($day < 1 || Invoice::where('connection_id', $connection->id)->whereNotNull('service_months')
+            ->whereNotIn('status', ['void', 'cancelled'])->exists()) {
+            return [0, $cycleDays];
+        }
+        $end = $start->copy()->addMonthsNoOverflow($months);
+        $target = $end->copy()->day(min($day, $end->daysInMonth));
+        if ($target->lt($end)) {
+            $target = $end->copy()->addMonthNoOverflow()->day(min($day, $end->copy()->addMonthNoOverflow()->daysInMonth));
+        }
+        return [(int) round($end->diffInDays($target)), $cycleDays];
+    }
+
     private static function openServiceInvoices(int $connectionId)
     {
         return Invoice::where('connection_id', $connectionId)->whereNotNull('service_months')
             ->whereIn('status', Invoice::OPEN_STATUSES)->where('due', '>', 0)
-            ->orderBy('id')->get(['id', 'invoice_no', 'due', 'service_months', 'status', 'credit_at']);
+            ->orderBy('id')->get(['id', 'invoice_no', 'due', 'service_months', 'service_days', 'status', 'credit_at']);
     }
 
     /**

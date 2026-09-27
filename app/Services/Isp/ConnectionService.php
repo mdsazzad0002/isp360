@@ -4,6 +4,7 @@ namespace App\Services\Isp;
 
 use App\Jobs\SyncConnectionToNetwork;
 use App\Models\Connection;
+use App\Models\CustomerPayment;
 use App\Models\ConnectionHistory;
 use App\Models\Invoice;
 use App\Models\Customer;
@@ -222,9 +223,14 @@ class ConnectionService
         return self::simpleTransition($connection, ['active', 'suspended'], 'inactive', 'deactivated', $reason);
     }
 
-    public static function terminate(Connection $connection, string $reason): Connection
+    // $creditUnused (default: the terminate_credit_unused setting) gives the unused paid days back
+    // to the customer's balance, day-wise; $credited gets that receipt.
+    public static function terminate(Connection $connection, string $reason, ?bool $creditUnused = null, ?CustomerPayment &$credited = null): Connection
     {
-        return DB::transaction(function () use ($connection, $reason) {
+        return DB::transaction(function () use ($connection, $reason, $creditUnused, &$credited) {
+            if ($creditUnused ?? IspSettings::get($connection->branch_id, 'terminate_credit_unused')) {
+                $credited = PackageChangeService::creditUnused(Connection::with('package')->findOrFail($connection->id), $reason);
+            }
             $connection = self::simpleTransition($connection, ['pending', 'active', 'suspended', 'inactive'], 'terminated', 'terminated', $reason);
             $connection->terminated_at = now();
             $connection->save();
@@ -302,13 +308,13 @@ class ConnectionService
             ->whereNotIn('status', ['draft', 'void', 'cancelled'])
             // a bill given "on due" counts from when it was granted, and paying it later doesn't move it
             ->orderByRaw('coalesce(credit_at, paid_at) is null, coalesce(credit_at, paid_at), id')
-            ->get(['id', 'status', 'paid_at', 'credit_at', 'service_months', 'period_start', 'period_end']);
+            ->get(['id', 'status', 'paid_at', 'credit_at', 'service_months', 'service_days', 'period_start', 'period_end']);
         foreach ($invoices as $invoice) {
             $start = $end = null;
             $from = $invoice->credit_at ?? ($invoice->status === 'paid' ? $invoice->paid_at : null);
             if ($from && $connection->activated_at) {
                 $start = collect([$from, $connection->activated_at, $cursor])->filter()->max()->copy();
-                $end = $start->copy()->addMonthsNoOverflow($invoice->service_months);
+                $end = $start->copy()->addMonthsNoOverflow($invoice->service_months)->addDays((int) $invoice->service_days); // + pro-rata days to the billing day
                 if (! $cursor && $connection->bonus_days) {
                     $end->addDays($connection->bonus_days); // first paid time only
                 }
