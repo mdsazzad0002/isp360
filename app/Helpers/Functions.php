@@ -68,7 +68,8 @@ function appMenuGroups()
             'label' => 'MikroTik & Packages',
             'icon' => 'bi-router',
             'items' => [
-                ['access' => 'router', 'uri' => '/isp/routers', 'match' => 'isp/routers', 'icon' => 'bi-router', 'label' => 'Routers (MikroTik)'],
+                ['access' => 'router', 'uri' => '/isp/routers', 'match' => 'isp/routers', 'icon' => 'bi-router', 'label' => 'Routers (MikroTik / RADIUS)'],
+                ['access' => 'ipPool', 'uri' => '/isp/ip-pools', 'match' => 'isp/ip-pools', 'icon' => 'bi-diagram-2', 'label' => 'IP Pools (IPAM / CGNAT)'],
                 ['access' => 'networkBlock', 'uri' => '/isp/blocks', 'match' => 'isp/blocks', 'icon' => 'bi-shield-x', 'label' => 'Site / IP Block'],
                 ['access' => 'package', 'uri' => '/isp/packages', 'match' => 'isp/packages', 'icon' => 'bi-speedometer2', 'label' => 'Packages'],
                 ['access' => 'bandwidth', 'uri' => '/isp/bandwidth', 'match' => 'isp/bandwidth', 'icon' => 'bi-cloud-download', 'label' => 'Bandwidth Purchase'],

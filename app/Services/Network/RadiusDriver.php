@@ -25,7 +25,7 @@ class RadiusDriver implements NetworkDriver
     public const TYPES = ['pppoe', 'hotspot'];
     // radcheck / radreply attributes this driver owns; anything else on a user is left alone
     public const CHECK_ATTRIBUTES = ['Cleartext-Password', 'Auth-Type', 'Calling-Station-Id'];
-    public const REPLY_ATTRIBUTES = ['Framed-IP-Address'];
+    public const REPLY_ATTRIBUTES = ['Framed-IP-Address', 'Delegated-IPv6-Prefix'];
     public const GROUP_ATTRIBUTES = ['Mikrotik-Rate-Limit', 'Huawei-Input-Average-Rate', 'Huawei-Output-Average-Rate', 'Cisco-AVPair'];
 
     public static function db(): ConnectionInterface
@@ -138,6 +138,10 @@ class RadiusDriver implements NetworkDriver
             $db->table('radreply')->where('username', $user)->whereIn('attribute', self::REPLY_ATTRIBUTES)->delete();
             if ($connection->static_ip) {
                 $db->table('radreply')->insert(['username' => $user, 'attribute' => 'Framed-IP-Address', 'op' => ':=', 'value' => $connection->static_ip]);
+            }
+            if ($connection->ipv6_prefix) {
+                // IPv6 prefix delegation (DHCPv6-PD) from the IPAM pool
+                $db->table('radreply')->insert(['username' => $user, 'attribute' => 'Delegated-IPv6-Prefix', 'op' => ':=', 'value' => $connection->ipv6_prefix]);
             }
 
             $db->table('radusergroup')->where('username', $user)->delete();

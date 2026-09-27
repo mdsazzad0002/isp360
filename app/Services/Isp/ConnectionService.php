@@ -25,6 +25,7 @@ class ConnectionService
         'pppoe_username' => 'username_changed',
         'pppoe_password' => 'password_changed',
         'static_ip' => 'ip_changed',
+        'ipv6_prefix' => 'ipv6_changed',
         'mac_address' => 'mac_changed',
         'box_id' => 'box_changed',
         'connection_type' => 'type_changed',
@@ -54,6 +55,7 @@ class ConnectionService
                 'pppoe_username' => $data['pppoe_username'] ?? null,
                 'pppoe_password' => $data['pppoe_password'] ?? null,
                 'static_ip' => $data['static_ip'] ?? null,
+                'ipv6_prefix' => $data['ipv6_prefix'] ?? null,
                 'mac_address' => $data['mac_address'] ?? null,
                 'discount' => $data['discount'] ?? 0,
                 'bonus_days' => (int) ($data['bonus_days'] ?? IspSettings::get($branchId, 'init_bonus_days')),
@@ -107,7 +109,7 @@ class ConnectionService
                 self::assertBoxHasRoom($data['box_id']);
             }
 
-            $allowed = ['connection_type', 'pppoe_username', 'static_ip', 'mac_address', 'box_id', 'router_id', 'discount', 'installation_date', 'notes'];
+            $allowed = ['connection_type', 'pppoe_username', 'static_ip', 'ipv6_prefix', 'mac_address', 'box_id', 'router_id', 'discount', 'installation_date', 'notes'];
             $changes = array_intersect_key($data, array_flip($allowed));
             if (! empty($data['pppoe_password'])) {
                 $changes['pppoe_password'] = $data['pppoe_password'];

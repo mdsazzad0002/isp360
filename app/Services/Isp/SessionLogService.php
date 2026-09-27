@@ -170,6 +170,10 @@ class SessionLogService
     {
         $log = SessionLog::firstOrNew(['source' => $source, 'source_key' => mb_substr($key, 0, 191)]);
         $log->fill($values);
+        // a private CGNAT address: its fixed public address + port block (IPAM), for lawful lookups
+        if (! $log->nat_ip && ($nat = IpamService::natLookup($log->branch_id, $log->framed_ip))) {
+            $log->fill($nat);
+        }
         $log->save();
         return $log;
     }

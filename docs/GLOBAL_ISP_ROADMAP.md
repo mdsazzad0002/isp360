@@ -271,7 +271,7 @@ No technician module exists today.
 ### 4.6 Network: OLT / ONU / monitoring — P1/P2, L
 - [ ] OLT drivers (SNMP/Telnet/SSH/API): Huawei, ZTE, VSOL, BDCOM, Nokia — read ONU list, optical power (Rx/Tx), status, auto-authorise ONU, map ONU to connection.
 - [ ] TR-069/ACS (GenieACS) for CPE: remote Wi-Fi name/password change, reboot, firmware.
-- [ ] IPAM: IP pools, static IP assignment, IPv6 prefix delegation, CGNAT port blocks (needed for the lawful logs in 2.6).
+- [x] IPAM (`ip_pools`, `IpamService`, Network → IP Pools): static IPv4 pools (next free address, one live connection per address), IPv6 prefix delegation (next free /56 etc., pushed as `Delegated-IPv6-Prefix` in RADIUS and `remote-ipv6-prefix` on MikroTik), and deterministic CGNAT (fixed public IP + port block per private IP, both-way lookup, RouterOS src-nat rules download, NAT fields filled in the session log so a public IP + port search finds the customer).
 - [ ] Monitoring: router/OLT/uplink up/down (ping/SNMP), interface traffic graphs, alerts to NOC.
 - [ ] Outage management: mark an outage for a zone/box/OLT port → auto-notify affected customers, auto-open/link tickets, optional compensation days.
 - [ ] Topology view: POP → OLT → PON port → splitter → box → customer.
@@ -390,9 +390,9 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 
 ### Phase B — Network and compliance (P0/P1) ≈ 6–8 weeks
 1. ~~RADIUS driver + CoA + accounting (2.5)~~ — done 2026-09-28
-2. Session/NAT log retention and export (2.6)
-3. KYC, consent, pseudonymised erasure, terms acceptance (2.6)
-4. IPAM + CGNAT port blocks (4.6)
+2. ~~Session/NAT log retention and export (2.6)~~ — done 2026-09-29
+3. ~~KYC, consent, pseudonymised erasure, terms acceptance (2.6)~~ — done 2026-09-29
+4. ~~IPAM + CGNAT port blocks (4.6)~~ — done 2026-09-29
 5. Notifications: e-mail, WhatsApp, reminders, templates per language (4.8)
 
 ### Phase C — Higher-level management (P1) ≈ 6–8 weeks

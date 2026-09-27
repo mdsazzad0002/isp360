@@ -457,6 +457,13 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/tax-rate', [Isp\TaxRateController::class, 'store'])->name('isp.tax_rate.store');
     Route::post('/get-tax-rates', [Isp\TaxRateController::class, 'index'])->name('isp.tax_rate.index');
 
+    Route::get('/ip-pools', [Isp\IpPoolController::class, 'create'])->name('isp.ip_pool');
+    Route::post('/get-ip-pools', [Isp\IpPoolController::class, 'index'])->name('isp.ip_pool.index');
+    Route::post('/ip-pool', [Isp\IpPoolController::class, 'store'])->name('isp.ip_pool.store');
+    Route::post('/delete-ip-pool', [Isp\IpPoolController::class, 'destroy'])->name('isp.ip_pool.delete');
+    Route::post('/ip-pool-next', [Isp\IpPoolController::class, 'next'])->name('isp.ip_pool.next');
+    Route::post('/cgnat-lookup', [Isp\IpPoolController::class, 'lookup'])->name('isp.cgnat.lookup');
+    Route::get('/cgnat-script/{id}', [Isp\IpPoolController::class, 'script'])->whereNumber('id')->name('isp.cgnat.script');
     Route::get('/session-log', [Isp\SessionLogController::class, 'create'])->name('isp.session_log');
     Route::post('/get-session-log', [Isp\SessionLogController::class, 'index'])->name('isp.session_log.index');
     Route::post('/session-log-export', [Isp\SessionLogController::class, 'export'])->name('isp.session_log.export');

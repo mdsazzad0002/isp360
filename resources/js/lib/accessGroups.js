@@ -29,6 +29,7 @@ export const accessGroups = [
             { value: 'ispSettings', label: 'ISP Billing Settings' },
             { value: 'ticket', label: 'Support Tickets (view / reply / assign)' },
             { value: 'auditLog', label: 'Audit Log' },
+            { value: 'ipPool', label: 'IP Pools (IPAM, IPv6, CGNAT)' },
             { value: 'kycVerify', label: 'Verify / reject KYC documents' },
             { value: 'customerDataRights', label: 'Customer data export & erasure' },
             { value: 'sessionLog', label: 'Session Log search & lawful export' },

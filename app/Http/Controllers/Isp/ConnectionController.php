@@ -82,7 +82,7 @@ class ConnectionController extends IspController
             if ($request->id) {
                 $connection = ConnectionService::update(
                     Connection::where('branch_id', $this->branchId)->findOrFail($request->id),
-                    $request->only(['connection_type', 'pppoe_username', 'pppoe_password', 'static_ip', 'mac_address', 'box_id', 'router_id', 'discount', 'installation_date', 'notes', 'reason'])
+                    $request->only(['connection_type', 'pppoe_username', 'pppoe_password', 'static_ip', 'ipv6_prefix', 'mac_address', 'box_id', 'router_id', 'discount', 'installation_date', 'notes', 'reason'])
                 );
                 return $this->ok('Connection updated successfully', ['id' => $connection->id]);
             }
@@ -360,7 +360,15 @@ class ConnectionController extends IspController
             'connection_type' => 'required|in:pppoe,hotspot,static,dhcp',
             'pppoe_username' => ['nullable', 'required_if:connection_type,pppoe,hotspot', 'max:100', Rule::unique('connections')->ignore($request->id)->where('branch_id', $branchId)],
             'pppoe_password' => 'nullable|max:100',
-            'static_ip' => ['nullable', 'required_if:connection_type,static', 'ip'],
+            // one live connection per address in a branch (IPAM)
+            'static_ip' => ['nullable', 'required_if:connection_type,static', 'ip', function ($attr, $value, $fail) use ($request, $branchId) {
+                try {
+                    \App\Services\Isp\IpamService::assertStaticFree($branchId, $value, $request->id ? (int) $request->id : null);
+                } catch (\RuntimeException $e) {
+                    $fail($e->getMessage());
+                }
+            }],
+            'ipv6_prefix' => ['nullable', 'max:64', 'regex:/^[0-9a-fA-F:]+\/\d{1,3}$/'],
             'mac_address' => 'nullable|max:32',
             'box_id' => 'nullable|integer|exists:boxes,id',
             'router_id' => 'nullable|integer|exists:routers,id',
