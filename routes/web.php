@@ -465,6 +465,13 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/ip-pool', [Isp\IpPoolController::class, 'store'])->name('isp.ip_pool.store');
     Route::post('/delete-ip-pool', [Isp\IpPoolController::class, 'destroy'])->name('isp.ip_pool.delete');
     Route::post('/ip-pool-next', [Isp\IpPoolController::class, 'next'])->name('isp.ip_pool.next');
+    Route::get('/company-dashboard', [Isp\CompanyDashboardController::class, 'create'])->name('isp.company_dashboard');
+    Route::post('/get-company-dashboard', [Isp\CompanyDashboardController::class, 'index'])->name('isp.company_dashboard.index');
+    Route::get('/company-dashboard-export', [Isp\CompanyDashboardController::class, 'export'])->name('isp.company_dashboard.export');
+    Route::get('/regions', [Isp\RegionController::class, 'create'])->name('isp.region');
+    Route::post('/get-regions', [Isp\RegionController::class, 'index'])->name('isp.region.index');
+    Route::post('/region', [Isp\RegionController::class, 'store'])->name('isp.region.store');
+    Route::post('/delete-region', [Isp\RegionController::class, 'destroy'])->name('isp.region.delete');
     Route::post('/cgnat-lookup', [Isp\IpPoolController::class, 'lookup'])->name('isp.cgnat.lookup');
     Route::get('/cgnat-script/{id}', [Isp\IpPoolController::class, 'script'])->whereNumber('id')->name('isp.cgnat.script');
     Route::get('/session-log', [Isp\SessionLogController::class, 'create'])->name('isp.session_log');

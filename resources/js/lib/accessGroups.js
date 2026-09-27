@@ -25,6 +25,8 @@ export const accessGroups = [
             { value: 'onlinePaymentReview', label: 'Approve / Reject Manual Online Payments' },
             { value: 'paymentGateway', label: 'Payment Gateway Settings (bKash / Nagad / Rocket / SSLCommerz)' },
             { value: 'ispReport', label: 'ISP Reports & Dashboard Figures' },
+            { value: 'companyDashboard', label: 'Company Dashboard (branches the user may see)' },
+            { value: 'region', label: 'Regions (group branches, regional managers)' },
             { value: 'bandwidth', label: 'Bandwidth Purchase (upstream cost)' },
             { value: 'ispSettings', label: 'ISP Billing Settings' },
             { value: 'ticket', label: 'Support Tickets (view / reply / assign)' },

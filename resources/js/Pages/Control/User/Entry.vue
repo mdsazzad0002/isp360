@@ -23,7 +23,7 @@ const canUserSwitch = computed(() => !!page.props.canUserSwitch);
 const currentUserId = computed(() => page.props.auth?.user?.id);
 
 function emptyForm() {
-    return { id: '', name: '', email: '', phone: '', role: '', username: '', password: '', status: 'a', is_employee: false, image: '', branch_id: props.currentBranchId, switchable_branches: [] };
+    return { id: '', name: '', email: '', phone: '', role: '', username: '', password: '', status: 'a', is_employee: false, image: '', branch_id: props.currentBranchId, switchable_branches: [], region_id: '' };
 }
 
 const form = reactive(emptyForm());
@@ -33,11 +33,14 @@ const imageSrc = ref('/noImage.jpg');
 const onProgress = ref(false);
 const showPassword = ref(false);
 
+const regions = ref([]);
 function load() {
     axios.post('/get-user').then((res) => {
         rows.value = res.data;
     });
 }
+// regions exist only for head-office users (the list is refused otherwise)
+axios.post('/isp/get-regions').then((r) => (regions.value = r.data.regions)).catch(() => {});
 
 function emptySearch() {
     return { keyword: '', role: '', branch_id: '', status: '' };
@@ -102,7 +105,7 @@ async function saveData() {
     const url = form.id != '' ? '/update-user' : '/user';
     onProgress.value = true;
     try {
-        const res = await axios.post(url, { ...form, switchable_branches: form.switchable_branches.join(',') });
+        const res = await axios.post(url, { ...form, switchable_branches: form.switchable_branches.join(','), region_id: form.region_id || null });
         toast.success(res.data.message);
         resetForm();
         load();
@@ -133,6 +136,7 @@ function editRow(row) {
         switchable_branches: row.switchable_branches
             ? String(row.switchable_branches).split(',').map((id) => parseInt(id, 10)).filter(Boolean)
             : [],
+        region_id: row.region_id || '',
     });
     imageSrc.value = row.image ? '/' + row.image : '/noImage.jpg';
 }
@@ -196,6 +200,14 @@ onMounted(() => {
                             </label>
                         </div>
                         <p class="mt-1 text-xs text-slate-400">Leave all unchecked to allow switching to every branch.</p>
+                    </div>
+                    <div v-if="showBranchField && regions.length">
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Regional manager of</label>
+                        <select v-model="form.region_id" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm">
+                            <option value="">— Head office / branch user —</option>
+                            <option v-for="r in regions" :key="r.id" :value="r.id">{{ r.name }}</option>
+                        </select>
+                        <p class="mt-1 text-xs text-slate-400">Limits the user to this region's branches (can switch between them).</p>
                     </div>
                 </div>
                 <div class="space-y-3 md:col-span-5">

@@ -123,6 +123,7 @@ function appMenuGroups()
             'label' => 'Billing Reports',
             'icon' => 'bi-graph-up',
             'items' => [
+                ['access' => 'companyDashboard', 'uri' => '/isp/company-dashboard', 'match' => 'isp/company-dashboard', 'icon' => 'bi-buildings', 'label' => 'Company Dashboard (all branches)'],
                 ['access' => 'ispReport', 'uri' => '/isp/due-report', 'match' => 'isp/due-report', 'icon' => 'bi-exclamation-triangle', 'label' => 'Due & Overdue'],
                 ['access' => 'ispReport', 'uri' => '/isp/collection-report', 'match' => 'isp/collection-report', 'icon' => 'bi-graph-up', 'label' => 'Collection Report'],
                 ['access' => 'ispReport', 'uri' => '/isp/tax-report', 'match' => 'isp/tax-report', 'icon' => 'bi-receipt-cutoff', 'label' => 'Tax Report'],
@@ -181,6 +182,7 @@ function appMenuGroups()
                 ['access' => 'companyProfile', 'uri' => '/companyProfile', 'match' => 'companyProfile', 'icon' => 'bi-house-fill', 'label' => 'Company Profile'],
                 ['access' => 'company', 'uri' => '/company', 'match' => 'company', 'icon' => 'bi-plus-circle', 'label' => 'Company Entry'],
                 ['access' => 'branch', 'uri' => '/branch', 'match' => 'branch', 'icon' => 'bi-shop', 'label' => 'Branch'],
+                ['access' => 'region', 'uri' => '/isp/regions', 'match' => 'isp/regions', 'icon' => 'bi-map', 'label' => 'Regions'],
                 ['access' => 'branchManage', 'uri' => '/branchManage', 'match' => 'branchManage', 'icon' => 'bi-diagram-3', 'label' => 'Branch Manage'],
                 ['access' => 'ispSettings', 'uri' => '/isp/settings', 'match' => 'isp/settings', 'icon' => 'bi-sliders', 'label' => 'ISP Billing Settings'],
                 ['access' => 'paymentGateway', 'uri' => '/isp/payment-gateways', 'match' => 'isp/payment-gateways', 'icon' => 'bi-credit-card', 'label' => 'Payment Gateways'],

@@ -49,21 +49,36 @@ class User extends Authenticatable
 
     /**
      * Branch ids this user may switch into, or null when unrestricted (every
-     * branch stays selectable). Kept as a plain comma-separated string on
-     * the column rather than a cast so the existing generic request->column
-     * assignment loop in UserController keeps working unchanged.
+     * branch stays selectable). switchable_branches is kept as a plain
+     * comma-separated string on the column rather than a cast so the existing
+     * generic request->column assignment loop in UserController keeps working.
+     * A regional manager (region_id set) is limited to that region's branches,
+     * narrowed further by switchable_branches when both are set.
      */
     public function allowedBranchIds(): ?array
     {
         $raw = trim((string) $this->switchable_branches);
-        if ($raw === '') {
-            return null;
-        }
-
-        return collect(explode(',', $raw))
+        $listed = $raw === '' ? null : collect(explode(',', $raw))
             ->map(fn ($id) => (int) trim($id))
             ->filter()
             ->values()
             ->all();
+
+        if (! $this->region_id) {
+            return $listed;
+        }
+        $region = Branch::where('region_id', $this->region_id)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        return $listed === null ? $region : array_values(array_intersect($region, $listed));
+    }
+
+    // Head-office user: sees every branch (no region and no switch list).
+    public function seesAllBranches(): bool
+    {
+        return $this->allowedBranchIds() === null;
+    }
+
+    public function region()
+    {
+        return $this->belongsTo(Region::class);
     }
 }

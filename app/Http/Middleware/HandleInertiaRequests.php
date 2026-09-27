@@ -70,7 +70,7 @@ class HandleInertiaRequests extends Middleware
             'appVersion' => config('app.version', '1.0.0'),
             'menuGroups' => fn () => $user ? $menuGroups : [],
             'currentBranch' => fn () => $user ? $request->session()->get('branch') : null,
-            'canSwitchBranch' => fn () => $user && in_array($user->role, ['Superadmin', 'admin']),
+            'canSwitchBranch' => fn () => $user && (in_array($user->role, ['Superadmin', 'admin']) || $user->region_id),
             'canUserSwitch' => fn () => $user && checkAccess('userSwitch'),
             'canCustomerLoginAs' => fn () => $user && checkAccess('customerLoginAs'),
             'canResellerLoginAs' => fn () => $user && checkAccess('resellerLoginAs'),

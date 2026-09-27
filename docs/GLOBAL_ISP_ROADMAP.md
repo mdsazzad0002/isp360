@@ -180,8 +180,8 @@ A country pack holds: currency, timezone(s), language, date/number format, phone
 Today the top of the tree is **Company → Branch**. One installation serves one company in one country (see the deployment model at the top), so there is no tenant/SaaS level. The levels to add sit inside the company.
 
 ### 3.1 Company level (owner / head office) — P1, M
-- [ ] Owner dashboard across all branches: subscribers, collection, due, profit per branch.
-- [ ] Head-office users who see every branch; branch users locked to their branch (switchable branches already exist).
+- [x] Owner dashboard across all branches (Reports → Company Dashboard, `CompanyReport`): active / new / churned subscribers, churn %, ARPU, revenue net of tax, collection and collection %, other income, expenses, upstream bandwidth cost, profit, due / overdue / advance per branch, with region subtotals, company total, date range and CSV export. Done 2026-09-30.
+- [x] Head-office users (admin, no region, no switch list) see every branch; regional managers see their region's branches; others stay locked to their branch. Also added the `company_profiles.multi_branch_status` column the switcher always read but the schema never had.
 - [ ] Company-wide settings (country, currency, timezone, tax, country pack) vs branch settings (prefixes, SMS, billing rules) kept clearly apart.
 - [ ] Installation backups and restore; full data export.
 - [ ] Separate installations per ISP; if one owner later runs ISPs in two countries, that is two installations (one per country) and a group report on top, not one mixed database.
@@ -189,10 +189,10 @@ Today the top of the tree is **Company → Branch**. One installation serves one
 ### 3.2 Region level inside the country — P1, M
 A larger ISP groups branches by division/state/city.
 
-- [ ] **Company → Region → Branch (POP) → Zone → Area → Box.** Add `regions` between company and branch.
-- [ ] Regional managers scoped to their region's branches.
+- [x] **Company → Region → Branch (POP) → Zone → Area → Box.** `regions` table, `branches.region_id` (Settings → Regions, head office only). Done 2026-09-30.
+- [x] Regional managers (`users.region_id`, set under User Entry by head office only) switch between and report on their region's branches only.
 - [ ] Inter-branch transfers (bandwidth sold between branches, shared upstream) as inter-branch ledger entries.
-- [ ] Consolidated P&L, balance sheet, subscriber count, ARPU, churn by region and branch (one currency, so no conversion needed).
+- [ ] Partly done: consolidated P&L (revenue, other income, expenses, bandwidth, profit), subscriber count, ARPU and churn by region and branch — done in the company dashboard. A consolidated balance sheet waits for the general ledger (4.10).
 
 ### 3.3 Multi-level reseller network — P1, L
 Today: company → reseller → customer (one level).
@@ -396,7 +396,7 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 5. ~~Notifications: e-mail, WhatsApp, reminders, templates per language (4.8)~~ — done 2026-09-29
 
 ### Phase C — Higher-level management (P1) ≈ 6–8 weeks
-1. Company owner dashboard + region level (3.1, 3.2)
+1. ~~Company owner dashboard + region level (3.1, 3.2)~~ — done 2026-09-30 (inter-branch transfers, company vs branch settings split, backups still open)
 2. Multi-level reseller tree, per-level commission, credit limit (3.3)
 3. Staff role templates and scopes (3.4)
 4. Approval workflows (3.5)
