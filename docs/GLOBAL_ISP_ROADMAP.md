@@ -167,8 +167,8 @@ A country pack holds: currency, timezone(s), language, date/number format, phone
 ### 2.9 Internationalisation of the UI — P0, M
 - [ ] Move every visible string to the lang files (check pages and PHP validation/flash messages; `resources/lang` has only `en`).
 - [x] RTL layout for Arabic: every physical left/right Tailwind utility in the UI converted to its logical form (ms/me, ps/pe, start/end, text-start/end, border-s/e, rounded-s/e; 737 class tokens), `lang`/`dir` set at load for the language in use, sidebars and slide-in panels mirrored, centered badges kept physical. Checked with screenshots in both directions.
-- [ ] Per-user language and per-customer language (SMS/email templates in the customer's language).
-- [ ] Locale-aware dates and numbers (`Intl.NumberFormat`, `Intl.DateTimeFormat`).
+- [x] Per-user language (switcher, stored per browser; company default from the country pack) and per-customer SMS language (`customers.language` + `sms_tpl_translations` per branch: each event's template in bn / hi / ar / en, falling back to the default). E-mail templates follow once e-mail exists (4.8).
+- [x] Locale-aware numbers and dates: the country pack's `number_locale` groups amounts in the UI (`Intl`) and on the server (`Money`, PHP intl): "1,00,000.00" in India, "1.234,50" in Brazil, unchanged in BD; dates read day-first or month-first per the pack's date format. Old POS report pages still use their own formatting.
 - [x] Phone numbers (`App\Support\Phone`, libphonenumber-lite): customer / reseller forms, portal profiles and imports accept any valid number of the company's country (any format) or any international `+` number; stored as national digits for the home country (BD unchanged: `01712345678`) and E.164 for others, so one number can't be entered twice in two spellings; `Phone::e164()` for providers that need it.
 - [x] Address: city, state and postcode on customers next to Zone/Area/Box, labelled from the country pack (Division / State / County, Post code / PIN / ZIP / CEP); postcode required where the pack says so.
 

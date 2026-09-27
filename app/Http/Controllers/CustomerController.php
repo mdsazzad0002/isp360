@@ -101,6 +101,7 @@ class CustomerController extends Controller
             // required where the country pack says so (IN PIN code, US ZIP, UK postcode...)
             'postcode' => (\App\Support\CountryPack::current()['address']['postcode_required'] ? 'required' : 'nullable') . '|max:20',
             'city' => 'nullable|max:100',
+            'language' => 'nullable|in:en,bn,hi,ar',
             'state' => 'nullable|max:100',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);

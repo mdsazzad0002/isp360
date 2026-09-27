@@ -26,12 +26,25 @@ class IspNotifier
             'currency' => Money::currency()['symbol'],
             'balance' => Money::number(max(0, LedgerService::balance($customer->id))),
         ], $vars);
-        $message = preg_replace_callback('/\{(\w+)\}/', fn ($m) => $vars[$m[1]] ?? $m[0], $settings['sms_tpl_' . $event] ?? '');
+        $message = preg_replace_callback('/\{(\w+)\}/', fn ($m) => $vars[$m[1]] ?? $m[0], self::template($settings, $event, $customer->language));
 
         try {
             SendSms::dispatch($branchId, $customer->phone, $message, $customer->id, 'isp_' . $event, Auth::guard('web')->id(), request()->ip())->afterCommit();
         } catch (\Throwable $e) {
             Log::warning('ISP SMS failed', ['event' => $event, 'customer' => $customer->id, 'error' => $e->getMessage()]);
         }
+    }
+
+    // The event's template in the customer's language when one is set, else the default one.
+    public static function template(array $settings, string $event, ?string $language): string
+    {
+        if ($language) {
+            $translations = json_decode((string) ($settings['sms_tpl_translations'] ?? ''), true) ?: [];
+            $text = trim((string) ($translations[$language][$event] ?? ''));
+            if ($text !== '') {
+                return $text;
+            }
+        }
+        return (string) ($settings['sms_tpl_' . $event] ?? '');
     }
 }

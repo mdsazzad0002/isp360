@@ -30,6 +30,7 @@ function emptyForm() {
         city: '',
         state: '',
         postcode: '',
+        language: '',
         previous_due: 0,
         credit_limit: 0,
         is_membership: 'no',
@@ -386,6 +387,7 @@ function editRow(row) {
         city: row.city ?? '',
         state: row.state ?? '',
         postcode: row.postcode ?? '',
+        language: row.language ?? '',
         previous_due: row.previous_due,
         credit_limit: row.credit_limit,
         is_membership: row.is_membership,
@@ -490,7 +492,14 @@ onMounted(() => {
                         <SearchSelect :options="boxes" v-model="selectedBox" label="display_name" placeholder="Select box" @update:model-value="onBoxChange" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-slate-600">Mobile</label>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Mobile <span class="font-normal text-slate-400">· SMS language</span></label>
+                        <select v-model="form.language" class="mb-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm">
+                            <option value="">Default templates</option>
+                            <option value="en">English</option>
+                            <option value="bn">বাংলা</option>
+                            <option value="hi">हिन्दी</option>
+                            <option value="ar">العربية</option>
+                        </select>
                         <input type="tel" autocomplete="off" v-model="form.phone" :placeholder="region.phone_example ? `${region.phone_example} or +${region.calling_code}…` : ''" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                     </div>
                     <div>

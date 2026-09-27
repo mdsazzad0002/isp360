@@ -12,14 +12,33 @@ const showError = useApiError();
 const s = ref(null);
 const saving = ref(false);
 
-onMounted(() => axios.post('/isp/get-settings').then((r) => (s.value = r.data)));
+// SMS templates in other languages, for customers who have one set: { bn: { invoice: '...' } }
+const smsEvents = [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension']];
+const smsLangs = [['bn', 'বাংলা'], ['hi', 'हिन्दी'], ['ar', 'العربية'], ['en', 'English']];
+const trLang = ref('bn');
+const translations = ref({});
+function setSettings(data) {
+    s.value = data;
+    try {
+        translations.value = JSON.parse(data.sms_tpl_translations || '{}') || {};
+    } catch (e) {
+        translations.value = {};
+    }
+    for (const [code] of smsLangs) translations.value[code] ??= {};
+}
+onMounted(() => axios.post('/isp/get-settings').then((r) => setSettings(r.data)));
 
 async function save() {
     saving.value = true;
     try {
+        // only languages with at least one template
+        const used = Object.fromEntries(Object.entries(translations.value)
+            .map(([l, t]) => [l, Object.fromEntries(Object.entries(t).filter(([, v]) => String(v || '').trim()))])
+            .filter(([, t]) => Object.keys(t).length));
+        s.value.sms_tpl_translations = Object.keys(used).length ? JSON.stringify(used) : '';
         const res = await axios.post('/isp/settings', s.value);
         toast.success(res.data.message);
-        s.value = (await axios.post('/isp/get-settings')).data;
+        setSettings((await axios.post('/isp/get-settings')).data);
         router.reload({ only: ['currency'] });
     } catch (err) {
         showError(err);
@@ -332,6 +351,21 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                     <div v-for="k in [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension']]" :key="k[0]" class="grid grid-cols-1 gap-2 md:grid-cols-5">
                         <label class="flex items-center gap-2 text-sm"><input v-model="s['sms_' + k[0]]" type="checkbox" /> {{ k[1] }}</label>
                         <textarea v-model="s['sms_tpl_' + k[0]]" rows="2" maxlength="320" class="md:col-span-4" :class="input"></textarea>
+                    </div>
+                </div>
+                            <div class="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <div class="mb-2 flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-semibold text-slate-700">Templates in another language</span>
+                        <select v-model="trLang" class="rounded-md border border-slate-300 px-2 py-1 text-xs">
+                            <option v-for="l in smsLangs" :key="l[0]" :value="l[0]">{{ l[1] }}</option>
+                        </select>
+                        <span class="text-xs text-slate-500">Used for customers whose language is set to it (customer form); an empty one falls back to the template above.</span>
+                    </div>
+                    <div class="space-y-2">
+                        <div v-for="k in smsEvents" :key="k[0]" class="grid grid-cols-1 gap-2 md:grid-cols-5">
+                            <span class="text-xs text-slate-600">{{ k[1] }}</span>
+                            <textarea v-model="translations[trLang][k[0]]" rows="2" maxlength="320" :dir="trLang === 'ar' ? 'rtl' : 'auto'" class="md:col-span-4" :class="input"></textarea>
+                        </div>
                     </div>
                 </div>
             </section>

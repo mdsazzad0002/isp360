@@ -56,6 +56,8 @@ class IspSettings
         'sms_tpl_payment' => 'Dear {name}, we received {currency} {amount} (receipt {receipt}). Current due: {currency} {balance}. Thank you.',
         'sms_tpl_suspend' => 'Dear {name}, your internet connection {connection} is suspended for unpaid bills. Due: {currency} {balance}.',
         'sms_tpl_reactivate' => 'Dear {name}, your internet connection {connection} is active again. Thank you.',
+        // the same templates in other languages, for customers with a language set: {"bn": {"invoice": "..."}}
+        'sms_tpl_translations' => '',
         'sms_tpl_notice' => 'Dear {name}, your internet connection {connection} will be suspended on {suspend_date} unless paid. Due: {currency} {balance}.',
     ];
 

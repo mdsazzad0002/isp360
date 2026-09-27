@@ -80,4 +80,34 @@ class RegionFormatTest extends TestCase
         $region = (new \App\Http\Middleware\HandleInertiaRequests)->share($request)['region']();
         $this->assertSame(['GB', 'County', 'Postcode', true, 'en-GB'], [$region['country'], $region['state_label'], $region['postcode_label'], $region['postcode_required'], $region['number_locale']]);
     }
+
+    public function test_amounts_are_grouped_the_country_way(): void
+    {
+        $this->assertSame('100,000.00', \App\Support\Money::number(100000)); // BD: as always
+        $this->country('IN');
+        CompanyProfile::query()->update(['currency_code' => 'INR']);
+        clearCompanyCache();
+        $this->assertSame('1,00,000.00', \App\Support\Money::number(100000));
+        $this->country('BR');
+        $this->assertSame('1.234,50', \App\Support\Money::number(1234.5));
+        CompanyProfile::query()->update(['currency_code' => 'BDT']);
+        clearCompanyCache();
+    }
+
+    public function test_sms_goes_out_in_the_customers_language(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+        \App\Services\Isp\IspSettings::save($this->branch->id, ['sms_invoice' => true,
+            'sms_tpl_translations' => json_encode(['bn' => ['invoice' => 'প্রিয় {name}, আপনার বিল {invoice}']])]);
+        $this->api('/customer', ['name' => 'Lang BN', 'phone' => '01712345671', 'language' => 'bn'])->assertOk();
+        $this->api('/customer', ['name' => 'Lang EN', 'phone' => '01712345672'])->assertOk();
+        foreach (['Lang BN', 'Lang EN'] as $name) {
+            \App\Services\Isp\IspNotifier::send($this->branch->id, Customer::where('name', $name)->firstOrFail(), 'invoice', ['invoice' => 'INV-9', 'amount' => '1', 'due_date' => 'x']);
+        }
+        $messages = collect(\Illuminate\Support\Facades\Queue::pushed(\App\Jobs\SendSms::class))->pluck('message')->all();
+        $this->assertSame('প্রিয় Lang BN, আপনার বিল INV-9', $messages[0]);
+        $this->assertStringStartsWith('Dear Lang EN', $messages[1]);
+        $this->api('/customer', ['name' => 'Lang X', 'phone' => '01712345673', 'language' => 'xx'])->assertStatus(422);
+        \App\Services\Isp\IspSettings::flush();
+    }
 }

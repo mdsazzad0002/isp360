@@ -35,6 +35,25 @@ class Money
     public static function flush(): void
     {
         self::$current = null;
+        self::$formatter = null;
+    }
+
+    private static ?\NumberFormatter $formatter = null;
+
+    // Digits grouped the country pack's way ("1,00,000.00" en-IN, "1.000,00" pt-BR);
+    // en-US (BD and the default) is plain number_format.
+    private static function digits(float $amount, int $decimals): string
+    {
+        $locale = CountryPack::current()['number_locale'] ?? 'en-US';
+        if ($locale === 'en-US' || ! class_exists(\NumberFormatter::class)) {
+            return number_format($amount, $decimals);
+        }
+        if (! self::$formatter || self::$formatter->getLocale() !== str_replace('-', '_', $locale) || self::$formatter->getAttribute(\NumberFormatter::MIN_FRACTION_DIGITS) !== $decimals) {
+            self::$formatter = new \NumberFormatter($locale, \NumberFormatter::DECIMAL);
+            self::$formatter->setAttribute(\NumberFormatter::MIN_FRACTION_DIGITS, $decimals);
+            self::$formatter->setAttribute(\NumberFormatter::MAX_FRACTION_DIGITS, $decimals);
+        }
+        return self::$formatter->format($amount);
     }
 
     // Digits after the point: 2 (BDT, USD), 0 (JPY), 3 (KWD). Money columns store up to STORAGE_DECIMALS.
@@ -70,13 +89,13 @@ class Money
         $amount = (float) $amount;
         $symbol = $currency['symbol'];
         $space = preg_match('/\p{L}$/u', $symbol) ? ' ' : '';
-        return ($amount < 0 ? '-' : '') . $symbol . $space . number_format(abs($amount), $currency['decimals']);
+        return ($amount < 0 ? '-' : '') . $symbol . $space . self::digits(abs($amount), $currency['decimals']);
     }
 
     // The number alone, "1,200.00", for SMS templates that print {currency} themselves.
     public static function number($amount): string
     {
-        return number_format((float) $amount, self::currency()['decimals']);
+        return self::digits((float) $amount, self::currency()['decimals']);
     }
 
     // Every stored amount is in the current currency, so it is fixed once any money is recorded.

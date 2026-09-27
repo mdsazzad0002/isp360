@@ -6,6 +6,22 @@ export function currency() {
     return usePage().props?.currency || { code: 'BDT', symbol: 'Tk', decimals: 2 };
 }
 
+// The company's country pack formats (HandleInertiaRequests "region"): number grouping locale
+// ("1,00,000.00" in en-IN, "1.000,00" in pt-BR) and whether dates read day-first or month-first.
+export function region() {
+    try {
+        return usePage().props?.region || {};
+    } catch (e) {
+        return {};
+    }
+}
+function numberLocale() {
+    return region().number_locale || 'en-US';
+}
+function dateLocale() {
+    return String(region().date_format || 'd/m/Y').startsWith('m') ? 'en-US' : 'en-GB';
+}
+
 // "Tk" / "$" — for labels like "Amount (Tk)".
 export function cur() {
     return currency().symbol;
@@ -38,7 +54,7 @@ export function invoiceTaxes(invoice) {
 export function money(value) {
     const n = Number(value || 0);
     const decimals = currency().decimals ?? 2;
-    return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    return n.toLocaleString(numberLocale(), { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 // With the symbol: "Tk 1,200.00", "$1,200.00", "-Tk 50.00" (letter symbols get a space).
@@ -52,7 +68,8 @@ export function fmtDate(value) {
     if (!value) return '';
     const d = new Date(String(value).length === 10 ? value + 'T00:00:00' : String(value).replace(' ', 'T'));
     if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    // "05 Nov 2026" (day first), "Nov 05, 2026" (month-first countries)
+    return d.toLocaleDateString(dateLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 // "05 Nov 2026, 2:30 PM" for server datetimes ("Y-m-d H:i:s", app timezone).
