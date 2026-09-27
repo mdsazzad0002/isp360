@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Model;
 
 // Admin-configured online payment method for one branch.
@@ -13,13 +14,14 @@ class PaymentGateway extends Model
         'is_active' => 'boolean',
         'sandbox' => 'boolean',
         'credentials' => 'encrypted:array',
-        'min_amount' => 'decimal:2',
-        'max_amount' => 'decimal:2',
+        'min_amount' => MoneyCast::class,
+        'max_amount' => MoneyCast::class,
     ];
 
     protected $hidden = ['credentials'];
 
-    // gateway => [label, modes it supports, credential fields for API mode, customer_payments.method]
+    // gateway => [label, modes it supports, credential fields for API mode, customer_payments.method,
+    // currencies it can take — a gateway is usable only when the company bills in one of them]
     public const GATEWAYS = [
         'bkash' => [
             'label' => 'bKash',
@@ -27,6 +29,7 @@ class PaymentGateway extends Model
             'fields' => ['app_key' => 'App Key', 'app_secret' => 'App Secret', 'username' => 'Username', 'password' => 'Password'],
             'secret' => ['app_secret', 'password'],
             'method' => 'bkash',
+            'currencies' => ['BDT'],
         ],
         'nagad' => [
             'label' => 'Nagad',
@@ -34,6 +37,7 @@ class PaymentGateway extends Model
             'fields' => ['merchant_id' => 'Merchant ID', 'merchant_number' => 'Merchant Number', 'merchant_private_key' => 'Merchant Private Key', 'nagad_public_key' => 'Nagad Public Key'],
             'secret' => ['merchant_private_key'],
             'method' => 'nagad',
+            'currencies' => ['BDT'],
         ],
         'rocket' => [
             'label' => 'Rocket',
@@ -41,6 +45,7 @@ class PaymentGateway extends Model
             'fields' => [],
             'secret' => [],
             'method' => 'rocket',
+            'currencies' => ['BDT'],
         ],
         'sslcommerz' => [
             'label' => 'SSLCommerz',
@@ -48,8 +53,14 @@ class PaymentGateway extends Model
             'fields' => ['store_id' => 'Store ID', 'store_password' => 'Store Password'],
             'secret' => ['store_password'],
             'method' => 'gateway',
+            'currencies' => ['BDT'],
         ],
     ];
+
+    public static function supportsCurrency(string $gateway, string $currency): bool
+    {
+        return in_array($currency, self::GATEWAYS[$gateway]['currencies'] ?? [], true);
+    }
 
     public function bank()
     {

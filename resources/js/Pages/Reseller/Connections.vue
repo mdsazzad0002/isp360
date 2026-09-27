@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
-import { money, fmtDate, label, expiryClass, fmtDateTime } from '../../lib/isp';
+import { money, fmtDate, label, expiryClass, fmtDateTime, fmtMoney } from '../../lib/isp';
 
 // Connections of the reseller's customers (read-only; the company creates and runs them).
 const props = defineProps({
@@ -75,7 +75,7 @@ const filtered = computed(() => {
                             </td>
                             <td class="px-3 py-2">
                                 {{ row.package?.name }}
-                                <div class="text-xs text-slate-400">{{ row.package?.download_mbps }} Mbps · Tk {{ money(row.package?.price - row.discount) }} / {{ label(row.package?.billing_cycle) }}</div>
+                                <div class="text-xs text-slate-400">{{ row.package?.download_mbps }} Mbps · {{ fmtMoney(row.package?.price - row.discount) }} / {{ label(row.package?.billing_cycle) }}</div>
                             </td>
                             <td class="px-3 py-2">{{ label(row.connection_type) }}<div class="text-xs text-slate-400">{{ row.pppoe_username }}</div></td>
                             <td class="px-3 py-2">{{ fmtDate(row.activation_date) || '—' }}</td>

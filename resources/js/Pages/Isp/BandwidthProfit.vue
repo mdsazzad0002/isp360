@@ -4,14 +4,14 @@ import axios from 'axios';
 import { Link } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import ProfitChart from '../../Components/Isp/ProfitChart.vue';
-import { money, useApiError } from '../../lib/isp';
+import { money, useApiError, fmtMoney, today } from '../../lib/isp';
 
 // Internet revenue billed vs the bandwidth bill, month by month, with profit merged in.
 defineOptions({ layout: AppLayout });
 const showError = useApiError();
 
 const ym = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-const now = new Date();
+const now = new Date(today() + 'T00:00:00'); // the company's date, not the browser's
 const filter = reactive({ from: ym(new Date(now.getFullYear(), now.getMonth() - 11, 1)), to: ym(now) });
 const data = ref(null);
 
@@ -43,15 +43,15 @@ onMounted(load);
             <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                     <div class="text-xs text-slate-500">Revenue billed</div>
-                    <div class="text-xl font-semibold text-slate-800">Tk {{ money(data.totals.revenue) }}</div>
+                    <div class="text-xl font-semibold text-slate-800">{{ fmtMoney(data.totals.revenue) }}</div>
                 </div>
                 <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                     <div class="text-xs text-slate-500">Bandwidth cost</div>
-                    <div class="text-xl font-semibold text-slate-800">Tk {{ money(data.totals.cost) }}</div>
+                    <div class="text-xl font-semibold text-slate-800">{{ fmtMoney(data.totals.cost) }}</div>
                 </div>
                 <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                     <div class="text-xs text-slate-500">Profit</div>
-                    <div class="text-xl font-semibold" :class="data.totals.profit < 0 ? 'text-red-600' : 'text-slate-800'">Tk {{ money(data.totals.profit) }}</div>
+                    <div class="text-xl font-semibold" :class="data.totals.profit < 0 ? 'text-red-600' : 'text-slate-800'">{{ fmtMoney(data.totals.profit) }}</div>
                 </div>
                 <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                     <div class="text-xs text-slate-500">Margin</div>

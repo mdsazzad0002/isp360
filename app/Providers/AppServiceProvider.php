@@ -33,6 +33,9 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
+        // the whole app (now(), "today", stored times, the scheduler) runs in the company's timezone
+        \App\Support\Region::apply();
+
         $data['company'] = CompanyProfile::first();
         $data['branches'] = Branch::latest()->get();
         view()->share($data);

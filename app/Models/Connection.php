@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
+use App\Support\Money;
 use App\Models\Concerns\HasAuditUsers;
 use Illuminate\Database\Eloquent\Model;
 
@@ -17,7 +19,7 @@ class Connection extends Model
 
     protected $casts = [
         'pppoe_password' => 'encrypted',
-        'discount' => 'decimal:2',
+        'discount' => MoneyCast::class,
         'installation_date' => 'date:Y-m-d',
         'activation_date' => 'date:Y-m-d',
         'next_billing_date' => 'date:Y-m-d',
@@ -68,6 +70,6 @@ class Connection extends Model
     public function monthlyCharge(): float
     {
         $price = (float) ($this->package->price ?? 0);
-        return max(0, round($price - (float) $this->discount, 2));
+        return max(0, Money::round($price - (float) $this->discount));
     }
 }

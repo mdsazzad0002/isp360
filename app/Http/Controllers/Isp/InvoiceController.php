@@ -78,11 +78,12 @@ class InvoiceController extends IspController
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.quantity' => 'required|numeric|gt:0',
             'items.*.discount' => 'nullable|numeric|min:0',
+            'no_tax' => 'boolean',
         ])) return $r;
 
         try {
             $customer = Customer::where('branch_id', $this->branchId)->findOrFail($request->customer_id);
-            $data = $request->only(['connection_id', 'invoice_date', 'due_date', 'discount', 'notes']);
+            $data = $request->only(['connection_id', 'invoice_date', 'due_date', 'discount', 'notes']) + ['no_tax' => $request->boolean('no_tax')];
             if ($data['connection_id'] ?? null) {
                 $customer->connections()->findOrFail($data['connection_id']);
             }

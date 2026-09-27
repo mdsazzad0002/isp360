@@ -351,7 +351,9 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/connection-action', [Isp\ConnectionController::class, 'action'])->name('isp.connection.action');
     Route::post('/connection-pay-quote', [Isp\ConnectionController::class, 'payQuote'])->name('isp.connection.payQuote');
     Route::post('/connection-pay', [Isp\ConnectionController::class, 'pay'])->name('isp.connection.pay');
+    Route::post('/connection-credit', [Isp\ConnectionController::class, 'credit'])->name('isp.connection.credit');
     Route::post('/connection-change-package', [Isp\ConnectionController::class, 'changePackage'])->name('isp.connection.package');
+    Route::post('/connection-package-quote', [Isp\ConnectionController::class, 'packageQuote'])->name('isp.connection.packageQuote');
     Route::post('/connection-sync', [Isp\ConnectionController::class, 'sync'])->name('isp.connection.sync');
     Route::post('/connection-online', [Isp\ConnectionController::class, 'online'])->name('isp.connection.online');
     Route::post('/connection-traffic', [Isp\ConnectionController::class, 'traffic'])->middleware('throttle:90,1')->name('isp.connection.traffic');
@@ -366,6 +368,13 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/router-sessions', [Isp\RouterController::class, 'sessions'])->name('isp.router.sessions');
     Route::post('/router-sync-all', [Isp\RouterController::class, 'syncAll'])->name('isp.router.sync');
     Route::post('/delete-router', [Isp\RouterController::class, 'destroy'])->name('isp.router.delete');
+
+    Route::get('/blocks', [Isp\NetworkBlockController::class, 'create'])->name('isp.blocks');
+    Route::post('/get-blocks', [Isp\NetworkBlockController::class, 'index'])->name('isp.blocks.index');
+    Route::post('/block', [Isp\NetworkBlockController::class, 'store'])->name('isp.block.store');
+    Route::post('/block-toggle', [Isp\NetworkBlockController::class, 'toggle'])->name('isp.block.toggle');
+    Route::post('/delete-block', [Isp\NetworkBlockController::class, 'destroy'])->name('isp.block.delete');
+    Route::post('/block-sync', [Isp\NetworkBlockController::class, 'sync'])->name('isp.block.sync');
 
     Route::get('/customer/{id}', [Isp\CustomerProfileController::class, 'show'])->whereNumber('id')->name('isp.customer.show');
     Route::post('/get-customer-profile', [Isp\CustomerProfileController::class, 'data'])->name('isp.customer.data');
@@ -401,12 +410,16 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::get('/due-report', [Isp\ReportController::class, 'dueReport'])->name('isp.due.report');
     Route::post('/get-due-report', [Isp\ReportController::class, 'getDueReport'])->name('isp.due.report.data');
     Route::post('/get-due-summary', [Isp\ReportController::class, 'dueSummary'])->name('isp.due.summary');
+    Route::get('/tax-report', [Isp\ReportController::class, 'taxReport'])->name('isp.tax.report');
+    Route::post('/get-tax-report', [Isp\ReportController::class, 'getTaxReport'])->name('isp.tax.report.data');
     Route::get('/collection-report', [Isp\ReportController::class, 'collectionReport'])->name('isp.collection.report');
     Route::post('/get-collection-report', [Isp\ReportController::class, 'getCollectionReport'])->name('isp.collection.report.data');
 
     Route::get('/settings', [Isp\SettingController::class, 'create'])->name('isp.settings');
     Route::post('/get-settings', [Isp\SettingController::class, 'show'])->name('isp.settings.show');
     Route::post('/settings', [Isp\SettingController::class, 'update'])->name('isp.settings.update');
+    Route::post('/tax-rate', [Isp\TaxRateController::class, 'store'])->name('isp.tax_rate.store');
+    Route::post('/get-tax-rates', [Isp\TaxRateController::class, 'index'])->name('isp.tax_rate.index');
 
     Route::get('/audit-log', [Isp\AuditLogController::class, 'create'])->name('isp.audit');
     Route::post('/get-audit-log', [Isp\AuditLogController::class, 'index'])->name('isp.audit.index');

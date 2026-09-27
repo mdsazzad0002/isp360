@@ -5,7 +5,7 @@ import { router } from '@inertiajs/vue3';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
 import { useToast } from '../../lib/toast';
-import { money, fmtDate, useApiError, GATEWAY_STYLES } from '../../lib/isp';
+import { money, fmtDate, useApiError, GATEWAY_STYLES, fmtMoney, cur, moneyStep, roundMoney } from '../../lib/isp';
 
 const props = defineProps({
     customer: { type: Object, required: true },
@@ -35,15 +35,15 @@ const selected = computed(() => props.gateways.find((g) => g.gateway === form.ga
 const amountNumber = computed(() => Number(form.amount) || 0);
 const amountError = computed(() => {
     if (!selected.value || !form.amount) return '';
-    if (amountNumber.value < selected.value.min_amount) return `Minimum Tk ${money(selected.value.min_amount)}`;
-    if (amountNumber.value > selected.value.max_amount) return `Maximum Tk ${money(selected.value.max_amount)}`;
+    if (amountNumber.value < selected.value.min_amount) return `Minimum ${fmtMoney(selected.value.min_amount)}`;
+    if (amountNumber.value > selected.value.max_amount) return `Maximum ${fmtMoney(selected.value.max_amount)}`;
     return '';
 });
 const canPay = computed(() => selected.value && amountNumber.value > 0 && !amountError.value && !busy.value);
 
 watch(
     () => form.purpose,
-    (p) => (form.amount = p === 'bill' && props.summary.due > 0 ? Number(props.summary.due).toFixed(2) : ''),
+    (p) => (form.amount = p === 'bill' && props.summary.due > 0 ? roundMoney(props.summary.due) : ''),
     { immediate: true }
 );
 
@@ -97,7 +97,7 @@ const RESULT = {
             <div class="text-sm">
                 <div class="font-semibold">{{ RESULT[result.status]?.title }}</div>
                 <div>
-                    Tk {{ money(result.amount) }} via {{ GATEWAY_STYLES[result.gateway]?.label }}
+                    {{ fmtMoney(result.amount) }} via {{ GATEWAY_STYLES[result.gateway]?.label }}
                     <template v-if="result.trx_id"> · TrxID <span class="font-mono">{{ result.trx_id }}</span></template>
                 </div>
                 <div v-if="result.status === 'completed'">Your account has been updated.</div>
@@ -109,16 +109,16 @@ const RESULT = {
         <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">Amount due</div>
-                <div class="mt-1 text-2xl font-bold" :class="summary.due > 0 ? 'text-red-600' : 'text-slate-800'">৳{{ money(summary.due) }}</div>
+                <div class="mt-1 text-2xl font-bold" :class="summary.due > 0 ? 'text-red-600' : 'text-slate-800'">{{ fmtMoney(summary.due) }}</div>
             </div>
             <div class="rounded-lg border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm">
                 <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-700"><i class="bi bi-wallet2"></i> Wallet balance</div>
-                <div class="mt-1 text-2xl font-bold text-emerald-700">৳{{ money(summary.wallet) }}</div>
+                <div class="mt-1 text-2xl font-bold text-emerald-700">{{ fmtMoney(summary.wallet) }}</div>
                 <div class="text-xs text-slate-500">Used automatically for your next bills</div>
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">Waiting for verification</div>
-                <div class="mt-1 text-2xl font-bold text-amber-600">৳{{ money(summary.pending) }}</div>
+                <div class="mt-1 text-2xl font-bold text-amber-600">{{ fmtMoney(summary.pending) }}</div>
             </div>
         </div>
 
@@ -142,7 +142,7 @@ const RESULT = {
                         >
                             <i class="bi bi-receipt text-lg text-brand-600"></i>
                             <div class="mt-1 text-sm font-semibold text-slate-800">Pay bill</div>
-                            <div class="text-xs text-slate-500">{{ summary.due > 0 ? `Tk ${money(summary.due)} due` : 'Nothing due' }}</div>
+                            <div class="text-xs text-slate-500">{{ summary.due > 0 ? `${fmtMoney(summary.due)} due` : 'Nothing due' }}</div>
                         </button>
                         <button
                             type="button"
@@ -156,7 +156,7 @@ const RESULT = {
                         </button>
                     </div>
                     <p v-if="form.purpose === 'wallet' && summary.due > 0" class="mt-2 text-xs text-amber-700">
-                        <i class="bi bi-info-circle"></i> You have Tk {{ money(summary.due) }} due. Money you add pays that first; the rest stays in your wallet.
+                        <i class="bi bi-info-circle"></i> You have {{ fmtMoney(summary.due) }} due. Money you add pays that first; the rest stays in your wallet.
                     </p>
                 </div>
 
@@ -164,12 +164,12 @@ const RESULT = {
                 <div>
                     <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">2. Amount</div>
                     <div class="flex items-center rounded-lg border px-3" :class="amountError ? 'border-red-400' : 'border-slate-300'">
-                        <span class="text-lg font-semibold text-slate-400">৳</span>
-                        <input v-model="form.amount" type="number" min="1" step="0.01" placeholder="0.00" class="w-full border-none bg-transparent px-2 py-2.5 text-lg font-semibold outline-none" />
+                        <span class="text-lg font-semibold text-slate-400">{{ cur() }}</span>
+                        <input v-model="form.amount" type="number" min="1" :step="moneyStep()" placeholder="0.00" class="w-full border-none bg-transparent px-2 py-2.5 text-lg font-semibold outline-none" />
                     </div>
                     <p v-if="amountError" class="mt-1 text-xs text-red-600">{{ amountError }}</p>
                     <div v-if="form.purpose === 'wallet'" class="mt-2 flex flex-wrap gap-2">
-                        <button v-for="v in [500, 1000, 2000, 5000]" :key="v" type="button" class="rounded-full border border-slate-200 px-3 py-1 text-xs hover:border-emerald-400 hover:bg-emerald-50" @click="form.amount = v">+ ৳{{ v }}</button>
+                        <button v-for="v in [500, 1000, 2000, 5000]" :key="v" type="button" class="rounded-full border border-slate-200 px-3 py-1 text-xs hover:border-emerald-400 hover:bg-emerald-50" @click="form.amount = v">+ {{ fmtMoney(v) }}</button>
                     </div>
                 </div>
 
@@ -205,7 +205,7 @@ const RESULT = {
                         @click="payOnline"
                     >
                         <i class="bi" :class="busy ? 'bi-arrow-repeat animate-spin' : 'bi-lock-fill'"></i>
-                        {{ busy ? 'Opening ' + selected.label + '…' : `Pay ৳${money(amountNumber)} with ${selected.label}` }}
+                        {{ busy ? 'Opening ' + selected.label + '…' : `Pay ${fmtMoney(amountNumber)} with ${selected.label}` }}
                     </button>
 
                     <form v-else class="space-y-3" @submit.prevent="submitManual">
@@ -221,7 +221,7 @@ const RESULT = {
                             </li>
                             <li class="flex gap-2">
                                 <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white" :class="GATEWAY_STYLES[selected.gateway].badge">2</span>
-                                <span>Send exactly <strong>৳{{ money(amountNumber) }}</strong> and use <strong class="font-mono">{{ customer.code }}</strong> as the reference.</span>
+                                <span>Send exactly <strong>{{ fmtMoney(amountNumber) }}</strong> and use <strong class="font-mono">{{ customer.code }}</strong> as the reference.</span>
                             </li>
                             <li class="flex gap-2">
                                 <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white" :class="GATEWAY_STYLES[selected.gateway].badge">3</span>
@@ -258,7 +258,7 @@ const RESULT = {
                         <div class="font-medium text-slate-700">{{ i.invoice_no }}</div>
                         <div class="text-xs text-slate-400">Due {{ fmtDate(i.due_date) }}</div>
                     </div>
-                    <div class="font-semibold text-red-600">৳{{ money(i.due) }}</div>
+                    <div class="font-semibold text-red-600">{{ fmtMoney(i.due) }}</div>
                 </div>
                 <div v-if="!invoices.length" class="py-6 text-center text-sm text-slate-400"><i class="bi bi-check2-circle text-emerald-500"></i> All bills are paid</div>
                 <p class="mt-3 text-xs text-slate-500">Payments are applied to the oldest bill first.</p>

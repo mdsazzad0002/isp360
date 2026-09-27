@@ -1,8 +1,51 @@
+import { usePage } from '@inertiajs/vue3';
 import { useToast } from './toast';
 
+// Billing currency of the branch in view, shared by HandleInertiaRequests.
+export function currency() {
+    return usePage().props?.currency || { code: 'BDT', symbol: 'Tk', decimals: 2 };
+}
+
+// "Tk" / "$" — for labels like "Amount (Tk)".
+export function cur() {
+    return currency().symbol;
+}
+
+// Smallest unit of the currency for number inputs: "0.01", "1" (JPY), "0.001" (KWD).
+export function moneyStep() {
+    const decimals = currency().decimals ?? 2;
+    return decimals > 0 ? (1 / 10 ** decimals).toFixed(decimals) : '1';
+}
+
+// Rounds to the currency's smallest unit (for amounts put into inputs).
+export function roundMoney(value) {
+    return Number(Number(value || 0).toFixed(currency().decimals ?? 2));
+}
+
+// An invoice's tax per rate from its lines' snapshots: [{ label: 'VAT 15%', amount }].
+export function invoiceTaxes(invoice) {
+    const groups = {};
+    (invoice.items || []).forEach((it) =>
+        (it.taxes || []).forEach((t) => {
+            const key = `${t.name} ${Number(t.rate)}%`;
+            groups[key] = (groups[key] || 0) + Number(t.amount);
+        }),
+    );
+    return Object.entries(groups).map(([label, amount]) => ({ label, amount }));
+}
+
+// The number alone: "1,200.00".
 export function money(value) {
     const n = Number(value || 0);
-    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const decimals = currency().decimals ?? 2;
+    return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+// With the symbol: "Tk 1,200.00", "$1,200.00", "-Tk 50.00" (letter symbols get a space).
+export function fmtMoney(value) {
+    const n = Number(value || 0);
+    const symbol = cur();
+    return (n < 0 ? '-' : '') + symbol + (/\p{L}$/u.test(symbol) ? ' ' : '') + money(Math.abs(n));
 }
 
 export function fmtDate(value) {
@@ -20,9 +63,27 @@ export function fmtDateTime(value) {
     return `${fmtDate(value)}, ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
 }
 
+// The company's timezone, shared by HandleInertiaRequests. Server times are wall-clock times in it.
+export function timezone() {
+    return usePage().props?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+// The company's current wall-clock time, "2026-09-27 19:30:00", whatever the browser's timezone.
+export function nowString() {
+    try {
+        return new Intl.DateTimeFormat('sv-SE', {
+            timeZone: timezone(), year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+        }).format(new Date());
+    } catch {
+        const d = new Date();
+        const p = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    }
+}
+
+// The company's date today, "2026-09-27".
 export function today() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return nowString().slice(0, 10);
 }
 
 export function monthStart() {
@@ -130,6 +191,7 @@ export async function promptReason(title, { text = '', confirmButtonText = 'Conf
 // Connection expire time (paid until): red when unpaid or past, amber within 3 days.
 export function expiryClass(value) {
     if (!value) return 'text-red-600';
-    const ms = new Date(String(value).replace(' ', 'T')) - new Date();
+    // both sides as the company's wall-clock time, so a browser in another timezone agrees
+    const ms = new Date(String(value).replace(' ', 'T')) - new Date(nowString().replace(' ', 'T'));
     return ms <= 0 ? 'text-red-600 font-medium' : ms <= 3 * 86400000 ? 'text-amber-600' : 'text-emerald-700';
 }

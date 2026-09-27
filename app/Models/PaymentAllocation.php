@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Model;
 
 class PaymentAllocation extends Model
 {
     protected $guarded = ['id'];
 
-    protected $casts = ['amount' => 'decimal:2', 'reversed_at' => 'datetime'];
+    protected $casts = ['amount' => MoneyCast::class, 'reversed_at' => 'datetime'];
 
     public function payment()
     {

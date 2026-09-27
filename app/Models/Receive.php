@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,6 +10,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Receive extends Model
 {
     use HasFactory, SoftDeletes;
+
+    // amounts in the company currency's decimals (the columns hold 3)
+    protected $casts = [
+        'amount' => MoneyCast::class,
+        'previous_due' => MoneyCast::class,
+    ];
 
     public $timestamps = false;
 

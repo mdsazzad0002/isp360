@@ -5,7 +5,7 @@ import { usePage } from '@inertiajs/vue3';
 import Modal from '../Modal.vue';
 import SearchSelect from '../SearchSelect.vue';
 import StatusBadge from './StatusBadge.vue';
-import { money, fmtDate, label, today, PAYMENT_METHODS, promptReason, useApiError, fmtDateTime } from '../../lib/isp';
+import { money, fmtDate, label, today, PAYMENT_METHODS, promptReason, useApiError, fmtDateTime, fmtMoney, moneyStep } from '../../lib/isp';
 import { printReceipt } from '../../lib/ispPrint';
 import { useToast } from '../../lib/toast';
 
@@ -103,7 +103,7 @@ function print() {
                     <div class="text-slate-500">{{ payment.customer?.code }} · {{ payment.customer?.phone }}</div>
                 </div>
                 <div class="text-right">
-                    <div class="text-lg font-semibold text-slate-800">Tk {{ money(payment.amount) }}</div>
+                    <div class="text-lg font-semibold text-slate-800">{{ fmtMoney(payment.amount) }}</div>
                     <div class="text-slate-500">{{ fmtDate(payment.payment_date) }} · {{ label(payment.method) }}<span v-if="payment.bank"> ({{ payment.bank.name }})</span></div>
                     <div v-if="payment.transaction_id" class="text-slate-500">TrxID {{ payment.transaction_id }}</div>
                     <div class="text-xs text-slate-400">Received by {{ payment.received_by?.name || 'System' }} · {{ payment.source }}</div>
@@ -149,7 +149,7 @@ function print() {
 
             <div v-if="refund.open" class="rounded-md border border-slate-200 bg-slate-50 p-3">
                 <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <input v-model="refund.amount" type="number" min="0" :max="payment.unallocated" step="0.01" placeholder="Amount" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                    <input v-model="refund.amount" type="number" min="0" :max="payment.unallocated" :step="moneyStep()" placeholder="Amount" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
                     <select v-model="refund.method" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
                         <option v-for="m in PAYMENT_METHODS" :key="m.value" :value="m.value">{{ m.label }}</option>
                     </select>

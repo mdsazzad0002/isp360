@@ -6,7 +6,7 @@ import Modal from '../../Components/Modal.vue';
 import Pagination from '../../Components/Pagination.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
 import { useToast } from '../../lib/toast';
-import { money, fmtDate, label, useApiError } from '../../lib/isp';
+import { money, fmtDate, label, useApiError, fmtMoney, cur, moneyStep } from '../../lib/isp';
 
 defineOptions({ layout: AppLayout });
 const props = defineProps({ can: { type: Object, default: () => ({}) } });
@@ -247,7 +247,7 @@ onMounted(() => {
             <form v-if="pay.row" class="space-y-3 p-5 text-sm" @submit.prevent="submitPay">
                 <div>
                     <h2 class="text-base font-semibold text-slate-800">Pay withdrawal {{ pay.row.ref_no }}</h2>
-                    <p class="text-slate-500">{{ pay.row.reseller?.name }} · Tk {{ money(pay.row.amount) }} · {{ label(pay.row.method) }} {{ pay.row.account_details }}</p>
+                    <p class="text-slate-500">{{ pay.row.reseller?.name }} · {{ fmtMoney(pay.row.amount) }} · {{ label(pay.row.method) }} {{ pay.row.account_details }}</p>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -283,7 +283,7 @@ onMounted(() => {
         <Modal :show="rejectForm.show" max-width="max-w-md" @close="rejectForm.show = false">
             <form v-if="rejectForm.row" class="p-5 text-sm" @submit.prevent="submitReject">
                 <h2 class="mb-1 text-base font-semibold text-slate-800">Reject withdrawal {{ rejectForm.row.ref_no }}</h2>
-                <p class="mb-4 text-slate-500">{{ rejectForm.row.reseller?.name }} · Tk {{ money(rejectForm.row.amount) }}</p>
+                <p class="mb-4 text-slate-500">{{ rejectForm.row.reseller?.name }} · {{ fmtMoney(rejectForm.row.amount) }}</p>
                 <label class="mb-1 block text-xs font-medium text-slate-600">Reason</label>
                 <input v-model="rejectForm.note" required minlength="3" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                 <div class="mt-4 flex justify-end gap-2">
@@ -302,8 +302,8 @@ onMounted(() => {
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-slate-600">Amount (Tk)</label>
-                        <input v-model="dep.amount" type="number" min="0.01" step="0.01" required class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Amount ({{ cur() }})</label>
+                        <input v-model="dep.amount" type="number" :min="moneyStep()" :step="moneyStep()" required class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
                     </div>
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Received by</label>

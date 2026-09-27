@@ -216,6 +216,13 @@ class IspBillingTest extends TestCase
         ])->assertOk()->assertJsonPath('message', fn ($m) => str_contains($m, 'Tk 600.00 due'));
         $this->assertEquals(600.0, (float) $poor->fresh()->ledger_balance);
         $this->assertEquals('suspended', $line('nb_user_2')->status);
+        // the panel is told to hide Activate / Reactivate and offer Pay
+        $this->api('/isp/get-connection', ['id' => $line('nb_user_2')->id])->assertOk()->assertJsonPath('needs_payment', true);
+        $this->api('/isp/get-connection', ['id' => $line('nb_user_1')->id])->assertOk()->assertJsonPath('needs_payment', false);
+        // staff can't switch an unpaid line back on by hand
+        $this->api('/isp/connection-action', ['id' => $line('nb_user_2')->id, 'action' => 'reactivate', 'reason' => 'please'])
+            ->assertStatus(422)->assertJsonPath('message', fn ($m) => str_contains($m, 'no paid time'));
+        $this->assertEquals('suspended', $line('nb_user_2')->status);
 
         // the time starts at the payment
         Carbon::setTestNow('2026-09-15 16:45:00');
@@ -237,6 +244,7 @@ class IspBillingTest extends TestCase
         CollectionService::receive($poor->fresh(), ['amount' => 600, 'method' => 'cash'], [$bill->id => 600], false);
         $this->assertEquals('pending', $line('nb_user_3')->status);
         $this->assertNull($line('nb_user_3')->expire_at);
+        $this->api('/isp/get-connection', ['id' => $pending->id])->assertJsonPath('needs_payment', false); // paid: Activate is offered
         Carbon::setTestNow('2026-09-20 11:00:00');
         $this->api('/isp/connection-action', ['id' => $pending->id, 'action' => 'activate'])->assertOk();
         $this->assertEquals('active', $line('nb_user_3')->status);
@@ -325,6 +333,109 @@ class IspBillingTest extends TestCase
         $this->assertEquals(['cycles' => 1, 'months' => 1, 'amount' => 500, 'until' => '2027-01-15 10:00:00'], $quote['options'][0]);
         $this->api('/isp/connection-pay', ['id' => $id, 'cycles' => 1, 'method' => 'cash'])->assertOk();
         $this->assertEquals('2027-01-15 10:00:00', $line()->expire_at);
+        $this->artisan('isp:ledger-check')->assertSuccessful();
+    }
+
+    // "On due": admin starts the line before payment; the bill stays as due, paying it later
+    // doesn't move the time, and no renewal is issued until it is paid. Staff without the
+    // permission (and the reseller portal) can't do it.
+    public function test_connection_on_due(): void
+    {
+        $areaId = $this->api('/area', ['name' => 'OD Area'])->json('id');
+        $this->api('/isp/package', ['name' => 'OD 10', 'download_mbps' => 10, 'upload_mbps' => 5, 'price' => 500, 'billing_cycle' => 'monthly'])->assertOk();
+        $packageId = DB::table('packages')->where('name', 'OD 10')->value('id');
+        $this->api('/customer', ['name' => 'OD Customer', 'phone' => '01799999501', 'area_id' => $areaId])->assertOk();
+        $customer = Customer::where('phone', '01799999501')->firstOrFail();
+        $line = fn ($user) => DB::table('connections')->where('pppoe_username', $user)->first(['id', 'status', 'expire_at']);
+
+        // staff without the permission can't
+        $role = \App\Models\Role::create(['name' => 'T Staff OD', 'access' => json_encode(['connection', 'ispPayment'])]);
+        $staff = User::create(['name' => 'T Staff OD', 'username' => 't_staff_od_' . uniqid(), 'role' => $role->name, 'branch_id' => $this->branch->id, 'ipAddress' => '127.0.0.1']);
+        $this->actingAs($staff)->withSession(['branch' => $this->branch])->postJson('/isp/connection', [
+            'customer_id' => $customer->id, 'package_id' => $packageId, 'area_id' => $areaId, 'connection_type' => 'pppoe', 'pppoe_username' => 'od_x', 'activate_now' => true, 'on_credit' => true,
+        ])->assertForbidden();
+
+        // admin: runs now on due
+        $this->api('/isp/connection', [
+            'customer_id' => $customer->id, 'package_id' => $packageId, 'connection_type' => 'pppoe', 'pppoe_username' => 'od_user', 'activate_now' => true, 'on_credit' => true,
+        ])->assertOk();
+        $this->assertEquals('active', $line('od_user')->status);
+        $this->assertEquals('2026-10-15 10:00:00', $line('od_user')->expire_at);
+        $this->assertEquals(500.0, (float) $customer->fresh()->ledger_balance);
+        $row = collect($this->api('/isp/get-connections', ['search' => 'od_user'])->json('data'))->first();
+        $this->assertEquals(1, (int) $row['on_credit']);
+
+        // no renewal while the due is unpaid
+        Carbon::setTestNow('2026-10-13 10:00:00');
+        $this->api('/isp/invoice-generate')->assertOk();
+        $this->assertEquals(1, Invoice::where('customer_id', $customer->id)->whereNotNull('service_months')->count());
+
+        // paid later: the time doesn't move; the renewal comes next
+        $this->api('/isp/payment', ['customer_id' => $customer->id, 'amount' => 500, 'method' => 'cash', 'payment_date' => '2026-10-13'])->assertOk();
+        $this->assertEquals('2026-10-15 10:00:00', $line('od_user')->expire_at);
+        $this->api('/isp/invoice-generate')->assertOk();
+        $this->assertEquals(2, Invoice::where('customer_id', $customer->id)->whereNotNull('service_months')->count());
+
+        // unpaid at expiry -> off; admin can start that renewal on due too (from the pay panel)
+        Carbon::setTestNow('2026-10-15 10:00:00');
+        $this->artisan('isp:process-overdue', ['--branch' => $this->branch->id])->assertSuccessful();
+        $this->assertEquals('suspended', $line('od_user')->status);
+        $id = $line('od_user')->id;
+        $this->actingAs($staff)->withSession(['branch' => $this->branch])->postJson('/isp/connection-credit', ['id' => $id])->assertForbidden();
+        $quote = $this->api('/isp/connection-pay-quote', ['id' => $id])->json();
+        $this->assertNull($quote['open'][0]['credit_at']);
+        $this->api('/isp/connection-credit', ['id' => $id])->assertOk();
+        $this->assertEquals('active', $line('od_user')->status);
+        $this->assertEquals('2026-11-15 10:00:00', $line('od_user')->expire_at);
+        $this->api('/isp/connection-credit', ['id' => $id])->assertStatus(422); // nothing left to start
+
+        // the quote doesn't count the on-due bill's time twice
+        $quote = $this->api('/isp/connection-pay-quote', ['id' => $id])->json();
+        $this->assertEquals(['cycles' => 1, 'months' => 0, 'amount' => 500, 'until' => '2026-11-15 10:00:00'], $quote['options'][0]);
+        $this->artisan('isp:ledger-check')->assertSuccessful();
+    }
+
+    // Package change mid-period: the expiry stays, the whole days left are revalued day-wise.
+    public function test_package_change_adjusts_days_left(): void
+    {
+        $areaId = $this->api('/area', ['name' => 'PC Area'])->json('id');
+        foreach (['PC 600' => 600, 'PC 900' => 900, 'PC 300' => 300] as $name => $price) {
+            $this->api('/isp/package', ['name' => $name, 'download_mbps' => 10, 'upload_mbps' => 5, 'price' => $price, 'billing_cycle' => 'monthly'])->assertOk();
+        }
+        $pkg = fn ($name) => DB::table('packages')->where('name', $name)->value('id');
+        $this->api('/customer', ['name' => 'PC Customer', 'phone' => '01799999601', 'area_id' => $areaId])->assertOk();
+        $customer = Customer::where('phone', '01799999601')->firstOrFail();
+        $id = $this->api('/isp/connection', ['customer_id' => $customer->id, 'package_id' => $pkg('PC 600'), 'connection_type' => 'pppoe', 'pppoe_username' => 'pc_user', 'activate_now' => true])->json('id');
+        $this->api('/isp/connection-pay', ['id' => $id, 'cycles' => 1, 'method' => 'cash'])->assertOk();
+        $expire = fn () => DB::table('connections')->where('id', $id)->value('expire_at');
+        $this->assertEquals('2026-10-15 10:00:00', $expire()); // 30 paid days
+
+        // 10 days and 2 hours used -> 19 whole days left; 600/30*19 = 380 unused, 900/30*19 = 570 on the new one
+        Carbon::setTestNow('2026-09-25 12:00:00');
+        $quote = $this->api('/isp/connection-package-quote', ['id' => $id, 'package_id' => $pkg('PC 900')])->assertOk()->json();
+        $this->assertEquals([19, 380, 570, 190], [$quote['days_left'], $quote['credit'], $quote['cost'], $quote['difference']]);
+        $this->api('/isp/connection-change-package', ['id' => $id, 'package_id' => $pkg('PC 900')])->assertOk();
+        $this->assertEquals('2026-10-15 10:00:00', $expire());
+        $this->assertEquals(190.0, (float) $customer->fresh()->ledger_balance);
+
+        // a day later, down to 300: 18 days at the current 900 rate (540) - 180 = 360 credit, which pays the 190 due first
+        Carbon::setTestNow('2026-09-26 12:00:00');
+        $quote = $this->api('/isp/connection-package-quote', ['id' => $id, 'package_id' => $pkg('PC 300')])->json();
+        $this->assertEquals([18, 540, 180, -360], [$quote['days_left'], $quote['credit'], $quote['cost'], $quote['difference']]);
+        $this->api('/isp/connection-change-package', ['id' => $id, 'package_id' => $pkg('PC 300')])->assertOk();
+        $this->assertEquals(-170.0, (float) $customer->fresh()->ledger_balance);
+        $this->assertEquals(170.0, CollectionService::advanceCredit($customer->id));
+        $this->assertEquals(0, DB::table('receives')->where('customer_id', $customer->id)->where('amount', 360)->count()); // not cash
+
+        // an unpaid renewal bill is voided and billed again at the new price (paid from the credit)
+        Carbon::setTestNow('2026-10-12 12:00:00');
+        $this->api('/isp/invoice-generate')->assertOk();
+        $renewal = Invoice::where('connection_id', $id)->whereNotNull('service_months')->latest('id')->first();
+        $this->assertEquals(300.0, (float) $renewal->total);
+        $this->api('/isp/connection-change-package', ['id' => $id, 'package_id' => $pkg('PC 600')])->assertOk();
+        $this->assertEquals('void', $renewal->fresh()->status);
+        $rebilled = Invoice::where('connection_id', $id)->whereNotNull('service_months')->latest('id')->first();
+        $this->assertEquals(600.0, (float) $rebilled->total);
         $this->artisan('isp:ledger-check')->assertSuccessful();
     }
 

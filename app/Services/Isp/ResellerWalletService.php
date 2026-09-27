@@ -2,6 +2,7 @@
 
 namespace App\Services\Isp;
 
+use App\Support\Money;
 use App\Models\Customer;
 use App\Models\CustomerPayment;
 use App\Models\Invoice;
@@ -28,16 +29,18 @@ class ResellerWalletService
     public static function summary(int $resellerId): array
     {
         // Per allocation, rounded the same way as ResellerLedgerService, so statement == wallet.
+        // The margin is the invoice's net (total less tax) above the company's share, pro rata
+        // to what was paid: the tax always goes to the company.
         $earned = (float) DB::table('payment_allocations')
             ->join('invoices', 'invoices.id', '=', 'payment_allocations.invoice_id')
             ->where('invoices.reseller_id', $resellerId)
             ->where('payment_allocations.status', 'active')
             ->whereNotIn('invoices.status', ['draft', 'void', 'cancelled'])
             ->where('invoices.total', '>', 0)
-            ->sum(DB::raw('round(payment_allocations.amount * (1 - invoices.reseller_cost / invoices.total), 2)'));
+            ->sum(DB::raw('round(payment_allocations.amount * (invoices.total - invoices.tax_total - invoices.reseller_cost) / invoices.total, ' . Money::decimals() . ')'));
         $expected = (float) Invoice::where('reseller_id', $resellerId)
             ->whereNotIn('status', ['draft', 'void', 'cancelled'])
-            ->sum(DB::raw('total - reseller_cost'));
+            ->sum(DB::raw('total - tax_total - reseller_cost'));
         $collected = (float) CustomerPayment::where('collected_by_reseller_id', $resellerId)
             ->whereNotIn('status', ['reversed', 'failed', 'pending'])
             ->sum('amount');
@@ -49,16 +52,16 @@ class ResellerWalletService
                 coalesce(sum(case when type = 'withdrawal' and status = 'pending' then amount end), 0) as pending
             ")->first();
 
-        $balance = round($earned - $collected + (float) $tx->deposits - (float) $tx->withdrawn, 2);
+        $balance = Money::round($earned - $collected + (float) $tx->deposits - (float) $tx->withdrawn);
         return [
-            'earned' => round($earned, 2),
-            'expected' => round($expected, 2),
-            'collected' => round($collected, 2),
-            'deposits' => round((float) $tx->deposits, 2),
-            'withdrawn' => round((float) $tx->withdrawn, 2),
-            'pending' => round((float) $tx->pending, 2),
+            'earned' => Money::round($earned),
+            'expected' => Money::round($expected),
+            'collected' => Money::round($collected),
+            'deposits' => Money::round((float) $tx->deposits),
+            'withdrawn' => Money::round((float) $tx->withdrawn),
+            'pending' => Money::round((float) $tx->pending),
             'balance' => $balance,
-            'available' => round(max(0, $balance - (float) $tx->pending), 2),
+            'available' => Money::round(max(0, $balance - (float) $tx->pending)),
         ];
     }
 
@@ -73,10 +76,10 @@ class ResellerWalletService
             if ((int) $customer->reseller_id !== (int) $reseller->id) {
                 throw new RuntimeException('This customer is not yours.');
             }
-            $amount = round($amount, 2);
+            $amount = Money::round($amount);
             $available = self::summary($reseller->id)['available'];
             if ($amount > $available + 0.001) {
-                throw new RuntimeException('Your wallet only has ' . number_format($available, 2) . ' available.');
+                throw new RuntimeException('Your wallet only has ' . Money::format($available) . ' available.');
             }
             return CollectionService::receive($customer, [
                 'amount' => $amount,
@@ -95,13 +98,13 @@ class ResellerWalletService
         return DB::transaction(function () use ($reseller, $data) {
             // One request at a time per reseller, so two tabs can't both spend the same balance.
             Reseller::whereKey($reseller->id)->lockForUpdate()->first();
-            $amount = round((float) $data['amount'], 2);
+            $amount = Money::round((float) $data['amount']);
             if ($amount <= 0) {
                 throw new RuntimeException('Amount must be greater than zero.');
             }
             $available = self::summary($reseller->id)['available'];
             if ($amount > $available + 0.001) {
-                throw new RuntimeException('Only ' . number_format($available, 2) . ' is available to withdraw.');
+                throw new RuntimeException('Only ' . Money::format($available) . ' is available to withdraw.');
             }
 
             $tx = ResellerTransaction::create([
@@ -178,7 +181,7 @@ class ResellerWalletService
     public static function deposit(Reseller $reseller, array $data): ResellerTransaction
     {
         return DB::transaction(function () use ($reseller, $data) {
-            $amount = round((float) $data['amount'], 2);
+            $amount = Money::round((float) $data['amount']);
             if ($amount <= 0) {
                 throw new RuntimeException('Amount must be greater than zero.');
             }

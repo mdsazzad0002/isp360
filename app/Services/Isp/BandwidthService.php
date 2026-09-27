@@ -2,6 +2,7 @@
 
 namespace App\Services\Isp;
 
+use App\Support\Money;
 use App\Models\BandwidthPurchase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ class BandwidthService
         $today = now()->toDateString();
         $purchases = BandwidthPurchase::where('branch_id', $branchId)->runningOn($today)->orderBy('provider')->get();
         $purchasedMbps = round((float) $purchases->sum('bandwidth_mbps'), 2);
-        $cost = round((float) $purchases->sum('monthly_cost'), 2);
+        $cost = Money::round((float) $purchases->sum('monthly_cost'));
 
         // package price is per billing cycle; per-month revenue divides by the cycle length
         $cycleMonths = "case packages.billing_cycle when 'quarterly' then 3 when 'half_yearly' then 6 when 'yearly' then 12 else 1 end";
@@ -33,11 +34,11 @@ class BandwidthService
             ])
             ->map(fn ($p) => [
                 'id' => $p->id, 'name' => $p->name, 'download_mbps' => (float) $p->download_mbps, 'upload_mbps' => (float) $p->upload_mbps,
-                'connections' => (int) $p->connections, 'sold_mbps' => round((float) $p->sold_mbps, 2), 'monthly_revenue' => round((float) $p->monthly_revenue, 2),
+                'connections' => (int) $p->connections, 'sold_mbps' => round((float) $p->sold_mbps, 2), 'monthly_revenue' => Money::round((float) $p->monthly_revenue),
             ]);
 
         $soldMbps = round((float) $packages->sum('sold_mbps'), 2);
-        $revenue = round((float) $packages->sum('monthly_revenue'), 2);
+        $revenue = Money::round((float) $packages->sum('monthly_revenue'));
         return [
             'purchased_mbps' => $purchasedMbps,
             'sold_mbps' => $soldMbps,
@@ -47,9 +48,9 @@ class BandwidthService
             'contention' => $purchasedMbps > 0 ? round($soldMbps / $purchasedMbps, 2) : null,
             'monthly_cost' => $cost,
             'monthly_revenue' => $revenue,
-            'monthly_profit' => round($revenue - $cost, 2),
-            'cost_per_mbps' => $purchasedMbps > 0 ? round($cost / $purchasedMbps, 2) : null,
-            'revenue_per_mbps' => $soldMbps > 0 ? round($revenue / $soldMbps, 2) : null,
+            'monthly_profit' => Money::round($revenue - $cost),
+            'cost_per_mbps' => $purchasedMbps > 0 ? Money::round($cost / $purchasedMbps) : null,
+            'revenue_per_mbps' => $soldMbps > 0 ? Money::round($revenue / $soldMbps) : null,
             'purchases' => $purchases,
             'packages' => $packages->values(),
         ];
@@ -70,7 +71,7 @@ class BandwidthService
             ->whereNotNull('service_months')
             ->whereNotIn('status', ['draft', 'void', 'cancelled'])
             ->whereBetween('invoice_date', [$from->toDateString(), $to->toDateString()])
-            ->selectRaw("date_format(invoice_date, '%Y-%m') as ym, sum(case when reseller_id is not null then reseller_cost else total end) as amount")
+            ->selectRaw("date_format(invoice_date, '%Y-%m') as ym, sum(case when reseller_id is not null then reseller_cost else total - tax_total end) as amount")
             ->groupBy('ym')->pluck('amount', 'ym');
 
         $purchases = BandwidthPurchase::where('branch_id', $branchId)
@@ -96,21 +97,21 @@ class BandwidthService
                     $mbps += (float) $p->bandwidth_mbps; // bought at month end
                 }
             }
-            $rev = round((float) ($revenue[$m->format('Y-m')] ?? 0), 2);
-            $cost = round($cost, 2);
+            $rev = Money::round((float) ($revenue[$m->format('Y-m')] ?? 0));
+            $cost = Money::round($cost);
             $months[] = [
                 'month' => $m->format('Y-m'),
                 'label' => $m->format('M y'),
                 'revenue' => $rev,
                 'cost' => $cost,
-                'profit' => round($rev - $cost, 2),
+                'profit' => Money::round($rev - $cost),
                 'margin' => $rev > 0 ? round(($rev - $cost) / $rev * 100, 1) : null,
                 'purchased_mbps' => round($mbps, 2),
             ];
         }
 
-        $totals = ['revenue' => round(array_sum(array_column($months, 'revenue')), 2), 'cost' => round(array_sum(array_column($months, 'cost')), 2)];
-        $totals['profit'] = round($totals['revenue'] - $totals['cost'], 2);
+        $totals = ['revenue' => Money::round(array_sum(array_column($months, 'revenue'))), 'cost' => Money::round(array_sum(array_column($months, 'cost')))];
+        $totals['profit'] = Money::round($totals['revenue'] - $totals['cost']);
         $totals['margin'] = $totals['revenue'] > 0 ? round($totals['profit'] / $totals['revenue'] * 100, 1) : null;
         return ['months' => $months, 'totals' => $totals];
     }

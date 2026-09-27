@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Model;
 
 class Invoice extends Model
@@ -12,14 +13,18 @@ class Invoice extends Model
         'period_start' => 'datetime:Y-m-d H:i:s',
         'period_end' => 'datetime:Y-m-d H:i:s',
         'paid_at' => 'datetime:Y-m-d H:i:s',
+        'credit_at' => 'datetime:Y-m-d H:i:s',
         'invoice_date' => 'date:Y-m-d',
         'due_date' => 'date:Y-m-d',
-        'subtotal' => 'decimal:2',
-        'discount' => 'decimal:2',
-        'adjustment' => 'decimal:2',
-        'total' => 'decimal:2',
-        'paid' => 'decimal:2',
-        'due' => 'decimal:2',
+        'subtotal' => MoneyCast::class,
+        'discount' => MoneyCast::class,
+        'tax' => MoneyCast::class,
+        'tax_total' => MoneyCast::class,
+        'tax_inclusive' => 'boolean',
+        'adjustment' => MoneyCast::class,
+        'total' => MoneyCast::class,
+        'paid' => MoneyCast::class,
+        'due' => MoneyCast::class,
         'voided_at' => 'datetime',
     ];
 

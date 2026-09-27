@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Model;
 
 // One online payment attempt by a customer (gateway checkout or manual TrxID).
@@ -11,7 +12,7 @@ class OnlinePayment extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'amount' => 'decimal:2',
+        'amount' => MoneyCast::class,
         'payload' => 'array',
         'reviewed_at' => 'datetime',
         'completed_at' => 'datetime',

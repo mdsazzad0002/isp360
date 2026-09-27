@@ -64,6 +64,7 @@ const selected = ref(null);
 const searchType = ref(props.filters[entityIdParam] ? props.mode : '');
 
 const date = ref(props.filters.date || '');
+const dueStatus = ref(props.filters.dueStatus || '');
 const search = ref(props.filters.search || '');
 const sortBy = ref(props.filters.sortBy || 'name');
 const sortDir = ref(props.filters.sortDir || 'asc');
@@ -94,6 +95,7 @@ function currentFilters(pageNumber) {
         page: pageNumber,
         [entityIdParam]: searchType.value === props.mode && selected.value ? selected.value.id : '',
         date: date.value,
+        dueStatus: searchType.value === props.mode ? '' : dueStatus.value,
         search: search.value,
         sortBy: sortBy.value,
         sortDir: sortDir.value,
@@ -209,6 +211,16 @@ function exportExcel() {
                     <label class="mb-1 block text-xs font-medium text-slate-600">{{ mode === 'customer' ? 'Customer' : 'Supplier' }}</label>
                     <SearchSelect :options="options" v-model="selected" label="display_name" :placeholder="`Select ${mode}`" @update:model-value="load(1)" />
                 </div>
+                <div v-if="searchType !== mode && mode === 'customer'" class="w-40">
+                    <label class="mb-1 block text-xs font-medium text-slate-600">Due status</label>
+                    <select v-model="dueStatus" @change="load(1)" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-400">
+                        <option value="">All customers</option>
+                        <option value="due">Has due</option>
+                        <option value="advance">Has advance</option>
+                        <option value="nonzero">Due or advance</option>
+                        <option value="clear">Clear (0)</option>
+                    </select>
+                </div>
                 <div class="w-44">
                     <label class="mb-1 block text-xs font-medium text-slate-600">Date</label>
                     <input type="date" v-model="date" @change="load(1)" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-400" />
@@ -236,6 +248,11 @@ function exportExcel() {
         </div>
 
         <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            <div v-if="dues.total_due !== undefined" class="mb-3 flex flex-wrap gap-4 text-sm">
+                <span class="text-slate-500">{{ dues.total }} {{ mode === 'customer' ? 'customers' : 'suppliers' }}</span>
+                <span class="text-slate-500">Total due: <strong class="text-slate-800">{{ Number(dues.total_due).toFixed(2) }}</strong></span>
+                <span class="text-slate-500">Total advance: <strong class="text-rose-600">{{ Number(dues.total_advance).toFixed(2) }}</strong></span>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full border border-slate-200 text-sm">
                     <thead>

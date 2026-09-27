@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\StampsCreatedAt;
 use Illuminate\Database\Eloquent\Model;
 
 class ConnectionHistory extends Model
 {
+    use StampsCreatedAt;
+
     public $timestamps = false;
 
     protected $guarded = ['id'];

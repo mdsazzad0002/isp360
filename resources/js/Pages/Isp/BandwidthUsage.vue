@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { Link } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
-import { money } from '../../lib/isp';
+import { money, fmtMoney } from '../../lib/isp';
 
 // Bandwidth bought (running purchases) against bandwidth sold on active connections, today.
 defineOptions({ layout: AppLayout });
@@ -27,7 +27,7 @@ onMounted(() => axios.post('/isp/get-bandwidth-usage').then((r) => (data.value =
                 <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                     <div class="text-xs text-slate-500">Bought</div>
                     <div class="text-2xl font-semibold text-slate-800">{{ money(data.purchased_mbps) }} <span class="text-sm font-normal text-slate-500">Mbps</span></div>
-                    <div class="text-xs text-slate-500">Tk {{ money(data.monthly_cost) }} / month</div>
+                    <div class="text-xs text-slate-500">{{ fmtMoney(data.monthly_cost) }} / month</div>
                 </div>
                 <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                     <div class="text-xs text-slate-500">Sold (active connections)</div>
@@ -44,8 +44,8 @@ onMounted(() => axios.post('/isp/get-bandwidth-usage').then((r) => (data.value =
                 </div>
                 <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                     <div class="text-xs text-slate-500">Monthly profit on bandwidth</div>
-                    <div class="text-2xl font-semibold" :class="data.monthly_profit < 0 ? 'text-red-600' : 'text-slate-800'">Tk {{ money(data.monthly_profit) }}</div>
-                    <div class="text-xs text-slate-500">Revenue Tk {{ money(data.monthly_revenue) }} − cost Tk {{ money(data.monthly_cost) }}</div>
+                    <div class="text-2xl font-semibold" :class="data.monthly_profit < 0 ? 'text-red-600' : 'text-slate-800'">{{ fmtMoney(data.monthly_profit) }}</div>
+                    <div class="text-xs text-slate-500">Revenue {{ fmtMoney(data.monthly_revenue) }} − cost {{ fmtMoney(data.monthly_cost) }}</div>
                 </div>
             </div>
 
@@ -58,8 +58,8 @@ onMounted(() => axios.post('/isp/get-bandwidth-usage').then((r) => (data.value =
                     <div class="h-full rounded-full" :class="oversold ? 'bg-amber-500' : 'bg-brand-500'" :style="{ width: `${soldPct}%` }"></div>
                 </div>
                 <div class="mt-2 flex flex-wrap gap-4 text-xs text-slate-500">
-                    <span>Cost: <b class="text-slate-700">{{ data.cost_per_mbps !== null ? `Tk ${money(data.cost_per_mbps)}` : '—' }}</b> per bought Mbps</span>
-                    <span>Revenue: <b class="text-slate-700">{{ data.revenue_per_mbps !== null ? `Tk ${money(data.revenue_per_mbps)}` : '—' }}</b> per sold Mbps</span>
+                    <span>Cost: <b class="text-slate-700">{{ data.cost_per_mbps !== null ? `${fmtMoney(data.cost_per_mbps)}` : '—' }}</b> per bought Mbps</span>
+                    <span>Revenue: <b class="text-slate-700">{{ data.revenue_per_mbps !== null ? `${fmtMoney(data.revenue_per_mbps)}` : '—' }}</b> per sold Mbps</span>
                 </div>
             </div>
 

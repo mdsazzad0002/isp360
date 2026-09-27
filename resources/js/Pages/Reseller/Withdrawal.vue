@@ -5,7 +5,7 @@ import PortalLayout from '../../Layouts/PortalLayout.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
 import { useToast } from '../../lib/toast';
 import { confirmDialog } from '../../lib/confirm';
-import { money, fmtDate, label, useApiError } from '../../lib/isp';
+import { money, fmtDate, label, useApiError, cur, moneyStep } from '../../lib/isp';
 
 const props = defineProps({
     reseller: { type: Object, required: true },
@@ -97,8 +97,8 @@ onMounted(load);
             </p>
             <form class="grid grid-cols-2 gap-3 md:grid-cols-4" @submit.prevent="save">
                 <div>
-                    <label class="mb-1 block text-xs font-medium text-slate-600">Amount (Tk)</label>
-                    <input v-model="form.amount" type="number" min="1" :max="wallet.available" step="0.01" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                    <label class="mb-1 block text-xs font-medium text-slate-600">Amount ({{ cur() }})</label>
+                    <input v-model="form.amount" type="number" min="1" :max="wallet.available" :step="moneyStep()" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-slate-600">Receive by</label>

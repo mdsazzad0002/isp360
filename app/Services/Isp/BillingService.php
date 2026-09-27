@@ -2,11 +2,13 @@
 
 namespace App\Services\Isp;
 
+use App\Support\Money;
 use App\Models\BillingNote;
 use App\Models\Connection;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\Package;
 use App\Models\PaymentAllocation;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
@@ -109,7 +111,7 @@ class BillingService
             // Inside a larger transaction (connection create), notify only once it commits.
             DB::afterCommit(fn () => IspNotifier::send($invoice->branch_id, $invoice->customer, 'invoice', [
                 'invoice' => $invoice->invoice_no,
-                'amount' => number_format((float) $invoice->total, 2),
+                'amount' => Money::number($invoice->total),
                 'due_date' => $invoice->due_date->format('d-m-Y'),
             ]));
         }
@@ -124,17 +126,19 @@ class BillingService
     {
         $connection->loadMissing('package', 'customer');
         $open = self::openServiceInvoices($connection->id);
+        $uncredited = $open->whereNull('credit_at'); // bills on due already count in the paid-until time
         $cycleMonths = $connection->package->cycleMonths();
-        $charge = $connection->monthlyCharge();
+        $charge = TaxService::gross($connection->monthlyCharge(), TaxService::forPackage($connection->package)); // one more cycle, tax included
         $advance = CollectionService::advanceCredit($connection->customer_id);
-        $firstTime = ! Invoice::where('connection_id', $connection->id)->whereNotNull('service_months')->where('status', 'paid')->exists();
+        $firstTime = ! Invoice::where('connection_id', $connection->id)->whereNotNull('service_months')
+            ->whereNotIn('status', ['draft', 'void', 'cancelled'])->where(fn ($q) => $q->where('status', 'paid')->orWhereNotNull('credit_at'))->exists();
         // new time stacks on the time left, never starts before now or before activation
         $start = $connection->activated_at ? collect([now(), $connection->activated_at, $connection->expire_at])->filter()->max()->copy() : null;
 
         $options = [];
         for ($cycles = max(1, $open->count()); $cycles <= 12; $cycles++) {
             $extra = $cycles - $open->count();
-            $months = (int) $open->sum('service_months') + $extra * $cycleMonths;
+            $months = (int) $uncredited->sum('service_months') + $extra * $cycleMonths;
             $until = $start?->copy()->addMonthsNoOverflow($months);
             if ($until && $firstTime && $connection->bonus_days) {
                 $until->addDays($connection->bonus_days);
@@ -142,7 +146,7 @@ class BillingService
             $options[] = [
                 'cycles' => $cycles,
                 'months' => $months,
-                'amount' => round(max(0, (float) $open->sum('due') + $extra * $charge - $advance), 2),
+                'amount' => Money::round(max(0, (float) $open->sum('due') + $extra * $charge - $advance)),
                 'until' => $until?->toDateTimeString(),
             ];
         }
@@ -151,7 +155,7 @@ class BillingService
             'charge' => $charge,
             'advance' => $advance,
             'bonus_days' => $firstTime ? (int) $connection->bonus_days : 0,
-            'open' => $open->map->only(['id', 'invoice_no', 'due', 'service_months', 'status'])->values(),
+            'open' => $open->map->only(['id', 'invoice_no', 'due', 'service_months', 'status', 'credit_at'])->values(),
             'options' => $options,
         ];
     }
@@ -176,7 +180,7 @@ class BillingService
                 self::billNow($connection, true);
             }
             $targets = self::openServiceInvoices($connection->id);
-            $amount = round((float) $targets->sum('due'), 2);
+            $amount = Money::round((float) $targets->sum('due'));
             if ($amount <= 0) {
                 return null; // advance credit paid it
             }
@@ -189,7 +193,32 @@ class BillingService
     {
         return Invoice::where('connection_id', $connectionId)->whereNotNull('service_months')
             ->whereIn('status', Invoice::OPEN_STATUSES)->where('due', '>', 0)
-            ->orderBy('id')->get(['id', 'invoice_no', 'due', 'service_months', 'status']);
+            ->orderBy('id')->get(['id', 'invoice_no', 'due', 'service_months', 'status', 'credit_at']);
+    }
+
+    /**
+     * Admin only ("on due"): starts the time of the connection's unpaid service bill(s) now,
+     * without payment. The bills stay open as the customer's due; paying them later doesn't
+     * move the time. Until they are paid no renewal bill is issued, so the line stops at expiry.
+     */
+    public static function grantCredit(Connection $connection, ?string $note = null): int
+    {
+        return DB::transaction(function () use ($connection, $note) {
+            $connection = Connection::lockForUpdate()->findOrFail($connection->id);
+            if (in_array($connection->status, ['terminated', 'inactive'], true)) {
+                throw new RuntimeException("A {$connection->status} connection can't be started on due.");
+            }
+            $bills = self::openServiceInvoices($connection->id)->whereNull('credit_at');
+            if ($bills->isEmpty()) {
+                throw new RuntimeException('There is no unpaid bill to start on due.');
+            }
+            foreach ($bills as $bill) {
+                Invoice::whereKey($bill->id)->update(['credit_at' => now(), 'credit_by' => Auth::guard('web')->id()]);
+                AuditLogger::log('invoice.on_due', Invoice::find($bill->id), null, ['connection' => $connection->code, 'due' => (float) $bill->due], $note);
+            }
+            ConnectionService::refreshExpiry($connection->id);
+            return $bills->count();
+        });
     }
 
     private static function openServiceInvoice($query)
@@ -203,7 +232,7 @@ class BillingService
     // A reseller package invoice records the company's share: the company price the reseller
     // last accepted (base_price), so a company price change counts only once the reseller has
     // reviewed it. A reseller package with no base package has no known share: the whole
-    // amount is the company's.
+    // amount is the company's. The share is net of tax: the tax is never the reseller's.
     private static function resellerCost(Connection $connection, float $amount): array
     {
         $package = $connection->package;
@@ -211,7 +240,7 @@ class BillingService
             return [];
         }
         $basePrice = $package->base_price ?? ($package->base_package_id ? $package->basePackage?->price : null);
-        $cost = $basePrice !== null ? round((float) $basePrice, 2) : $amount;
+        $cost = TaxService::net($basePrice !== null ? (float) $basePrice : $amount, TaxService::forPackage($package));
         return ['reseller_id' => $package->reseller_id, 'reseller_cost' => $cost];
     }
 
@@ -231,6 +260,7 @@ class BillingService
                 'notes' => $data['notes'] ?? null,
                 'source' => 'manual',
                 'ledger_type' => $data['ledger_type'] ?? 'invoice',
+                'no_tax' => ! empty($data['no_tax']),
             ], $items, ! $asDraft);
 
             if (! $asDraft) {
@@ -250,19 +280,18 @@ class BillingService
             }
             $old = $invoice->only(['subtotal', 'discount', 'total', 'invoice_date', 'due_date']);
             $invoice->items()->delete();
-            [$subtotal] = self::writeItems($invoice, $items);
+            [$subtotal, $lines] = self::writeItems($invoice, $items, empty($data['no_tax']));
             $invoice->fill([
                 'invoice_date' => $data['invoice_date'] ?? $invoice->invoice_date,
                 'due_date' => $data['due_date'] ?? $invoice->due_date,
                 'connection_id' => $data['connection_id'] ?? $invoice->connection_id,
-                'discount' => round((float) ($data['discount'] ?? 0), 2),
+                'discount' => Money::round((float) ($data['discount'] ?? 0)),
                 'notes' => $data['notes'] ?? $invoice->notes,
                 'subtotal' => $subtotal,
                 'updated_by' => Auth::guard('web')->id(),
             ]);
             self::assertDiscount($invoice);
-            $invoice->total = round($subtotal - (float) $invoice->discount, 2);
-            $invoice->due = $invoice->total;
+            self::applyTax($invoice, $subtotal, $lines);
             $invoice->save();
             AuditLogger::log('invoice.draft_updated', $invoice, $old, $invoice->only(['subtotal', 'discount', 'total', 'invoice_date', 'due_date']));
             return $invoice->fresh(['items']);
@@ -339,13 +368,16 @@ class BillingService
             if (! in_array($invoice->status, ['issued', 'partially_paid', 'paid', 'overdue'], true)) {
                 throw new RuntimeException('Notes can only be raised against an issued invoice.');
             }
-            $amount = round($amount, 2);
+            $amount = Money::round($amount);
             if ($amount <= 0) {
                 throw new RuntimeException('Amount must be greater than zero.');
             }
             if ($type === 'credit' && $amount > (float) $invoice->due + 0.001) {
-                throw new RuntimeException('A credit note cannot exceed the unpaid amount (' . number_format((float) $invoice->due, 2) . '). Reverse the payment allocation first if the invoice is already paid.');
+                throw new RuntimeException('A credit note cannot exceed the unpaid amount (' . Money::format($invoice->due) . '). Reverse the payment allocation first if the invoice is already paid.');
             }
+
+            // the note carries the invoice's share of tax: a credit note gives it back, a debit note adds it
+            $noteTax = (float) $invoice->total > 0 ? Money::round($amount * (float) $invoice->tax_total / (float) $invoice->total) : 0.0;
 
             $settings = IspSettings::all($invoice->branch_id);
             $note = BillingNote::create([
@@ -354,6 +386,7 @@ class BillingService
                 'customer_id' => $invoice->customer_id,
                 'invoice_id' => $invoice->id,
                 'amount' => $amount,
+                'tax_amount' => $noteTax,
                 'note_date' => Carbon::parse($date ?? now())->toDateString(),
                 'reason' => mb_substr($reason, 0, 255),
                 'branch_id' => $invoice->branch_id,
@@ -362,7 +395,8 @@ class BillingService
             ]);
 
             $old = $invoice->only(['adjustment', 'total', 'due', 'status']);
-            $invoice->adjustment = round((float) $invoice->adjustment + ($type === 'debit' ? $amount : -$amount), 2);
+            $invoice->adjustment = Money::round((float) $invoice->adjustment + ($type === 'debit' ? $amount : -$amount));
+            $invoice->tax_total = Money::round((float) $invoice->tax_total + ($type === 'debit' ? $noteTax : -$noteTax));
             $invoice->save();
             self::recalculate($invoice);
 
@@ -384,8 +418,10 @@ class BillingService
     // Derives paid / due / status from allocations. Never trusts stored totals.
     public static function recalculate(Invoice $invoice): Invoice
     {
-        $paid = round((float) PaymentAllocation::where('invoice_id', $invoice->id)->where('status', 'active')->sum('amount'), 2);
-        $total = round((float) $invoice->subtotal - (float) $invoice->discount + (float) $invoice->adjustment, 2);
+        $paid = Money::round((float) PaymentAllocation::where('invoice_id', $invoice->id)->where('status', 'active')->sum('amount'));
+        // notes (adjustment) are tax-inclusive amounts; line tax is added unless the prices already hold it
+        $total = Money::round((float) $invoice->subtotal - (float) $invoice->discount + (float) $invoice->adjustment
+            + ($invoice->tax_inclusive ? 0 : (float) $invoice->tax));
 
         $invoice->paid = $paid;
         $invoice->total = $total;
@@ -396,7 +432,7 @@ class BillingService
             return $invoice;
         }
 
-        $invoice->due = max(0, round($total - $paid, 2));
+        $invoice->due = max(0, Money::round($total - $paid));
         $wasPaid = (bool) $invoice->paid_at;
         // the moment it became fully paid: a service invoice's internet time starts from here
         $invoice->paid_at = $invoice->due <= 0 ? ($invoice->paid_at ?? now()) : null;
@@ -428,7 +464,9 @@ class BillingService
     private static function createInvoiceRecord(Customer $customer, int $branchId, array $data, array $items, bool $issue): Invoice
     {
         $ledgerType = $data['ledger_type'] ?? 'invoice';
-        unset($data['ledger_type']);
+        // an opening balance is old due, not a sale: no tax
+        $taxable = empty($data['no_tax']) && $ledgerType !== 'opening';
+        unset($data['ledger_type'], $data['no_tax']);
 
         $invoice = new Invoice(array_merge($data, [
             'invoice_no' => SequenceService::next($branchId, 'invoice', IspSettings::get($branchId, 'invoice_prefix')),
@@ -438,7 +476,7 @@ class BillingService
             'created_by' => Auth::guard('web')->id(),
             'ipAddress' => app()->runningInConsole() ? null : request()->ip(),
         ]));
-        $invoice->discount = round((float) ($data['discount'] ?? 0), 2);
+        $invoice->discount = Money::round((float) ($data['discount'] ?? 0));
 
         try {
             $invoice->save();
@@ -449,11 +487,10 @@ class BillingService
             throw $e;
         }
 
-        [$subtotal] = self::writeItems($invoice, $items);
+        [$subtotal, $lines] = self::writeItems($invoice, $items, $taxable);
         $invoice->subtotal = $subtotal;
         self::assertDiscount($invoice);
-        $invoice->total = round($subtotal - (float) $invoice->discount, 2);
-        $invoice->due = $invoice->total;
+        self::applyTax($invoice, $subtotal, $lines);
         $invoice->save();
 
         if ($issue) {
@@ -466,24 +503,29 @@ class BillingService
         return $invoice;
     }
 
-    private static function writeItems(Invoice $invoice, array $items): array
+    // Writes the lines; returns [subtotal, [[item, tax rates], ...]]. A line's rates: its own
+    // 'tax_rates', else its package's, else the default rates; none when $taxable is false.
+    private static function writeItems(Invoice $invoice, array $items, bool $taxable = true): array
     {
         if (empty($items)) {
             throw new RuntimeException('An invoice needs at least one item.');
         }
         $subtotal = 0;
+        $lines = [];
         foreach ($items as $item) {
             $qty = (float) ($item['quantity'] ?? 1);
-            $price = round((float) ($item['unit_price'] ?? 0), 2);
-            $discount = round((float) ($item['discount'] ?? 0), 2);
+            $price = Money::round((float) ($item['unit_price'] ?? 0));
+            $discount = Money::round((float) ($item['discount'] ?? 0));
             if ($qty <= 0 || $price < 0 || $discount < 0 || empty($item['description'])) {
                 throw new RuntimeException('Every item needs a description, a positive quantity and a non-negative price.');
             }
-            $lineTotal = round($price * $qty - $discount, 2);
+            $lineTotal = Money::round($price * $qty - $discount);
             if ($lineTotal < 0) {
                 throw new RuntimeException("Item discount is larger than the item amount ({$item['description']}).");
             }
-            InvoiceItem::create([
+            $rates = ! $taxable ? [] : ($item['tax_rates']
+                ?? TaxService::forPackage(! empty($item['package_id']) ? Package::with('basePackage')->find($item['package_id']) : null));
+            $lines[] = [InvoiceItem::create([
                 'invoice_id' => $invoice->id,
                 'package_id' => $item['package_id'] ?? null,
                 'description' => mb_substr($item['description'], 0, 255),
@@ -493,10 +535,34 @@ class BillingService
                 'total' => $lineTotal,
                 'period_start' => $item['period_start'] ?? null,
                 'period_end' => $item['period_end'] ?? null,
-            ]);
+            ]), $rates];
             $subtotal += $lineTotal;
         }
-        return [round($subtotal, 2)];
+        return [Money::round($subtotal), $lines];
+    }
+
+    // Line tax and the invoice totals. The invoice discount is shared over the lines by amount
+    // (the last line takes the rounding), so tax is charged on what is actually billed.
+    private static function applyTax(Invoice $invoice, float $subtotal, array $lines): void
+    {
+        $inclusive = TaxService::inclusive();
+        $discount = (float) $invoice->discount;
+        $left = $discount;
+        $tax = 0.0;
+        $last = count($lines) - 1;
+        foreach ($lines as $i => [$item, $rates]) {
+            $share = $i === $last ? $left : ($subtotal > 0 ? Money::round($discount * (float) $item->total / $subtotal) : 0.0);
+            $left = Money::round($left - $share);
+            $line = TaxService::lineTax((float) $item->total - $share, $rates, $inclusive);
+            $item->update(['tax_amount' => $line['amount'], 'taxes' => $line['taxes'] ?: null]);
+            $tax += $line['amount'];
+        }
+        $invoice->subtotal = $subtotal;
+        $invoice->tax = Money::round($tax);
+        $invoice->tax_total = $invoice->tax; // new or draft: no notes yet
+        $invoice->tax_inclusive = $inclusive;
+        $invoice->total = Money::round($subtotal - $discount + ($inclusive ? 0 : $invoice->tax));
+        $invoice->due = $invoice->total;
     }
 
     private static function assertDiscount(Invoice $invoice): void

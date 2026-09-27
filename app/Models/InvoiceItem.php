@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Model;
 
 class InvoiceItem extends Model
@@ -9,10 +10,12 @@ class InvoiceItem extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'unit_price' => 'decimal:2',
+        'unit_price' => MoneyCast::class,
         'quantity' => 'decimal:4',
-        'discount' => 'decimal:2',
-        'total' => 'decimal:2',
+        'discount' => MoneyCast::class,
+        'total' => MoneyCast::class,
+        'tax_amount' => MoneyCast::class,
+        'taxes' => 'array',
         'period_start' => 'date:Y-m-d',
         'period_end' => 'date:Y-m-d',
     ];

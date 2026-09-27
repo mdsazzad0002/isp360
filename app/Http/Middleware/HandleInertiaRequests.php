@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Middleware;
@@ -64,7 +65,7 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             'company' => fn () => optional(company())->only([
-                'title', 'logo', 'favicon', 'phone', 'email', 'address', 'url', 'multi_branch_status',
+                'title', 'logo', 'favicon', 'phone', 'email', 'address', 'url', 'multi_branch_status', 'tax_label', 'tax_number',
             ]),
             'appVersion' => config('app.version', '1.0.0'),
             'menuGroups' => fn () => $user ? $menuGroups : [],
@@ -73,6 +74,10 @@ class HandleInertiaRequests extends Middleware
             'canUserSwitch' => fn () => $user && checkAccess('userSwitch'),
             'canCustomerLoginAs' => fn () => $user && checkAccess('customerLoginAs'),
             'canResellerLoginAs' => fn () => $user && checkAccess('resellerLoginAs'),
+            // the company's billing currency, the same for every branch and portal
+            'currency' => fn () => Money::currency(),
+            // the company's timezone: server times are its wall-clock time, and "today" is its date
+            'timezone' => fn () => \App\Support\Region::timezone(),
             'portalUser' => function () use ($request) {
                 // pick the guard from the URL, since one browser can hold both portal sessions
                 $guard = $request->is('customer-portal/*') ? 'customer' : ($request->is('reseller/*') ? 'reseller' : null);

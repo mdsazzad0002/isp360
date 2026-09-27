@@ -2,6 +2,7 @@
 
 namespace App\Services\Isp;
 
+use App\Support\Money;
 use App\Models\CustomerPayment;
 use App\Models\PaymentAllocation;
 use App\Models\ResellerTransaction;
@@ -45,14 +46,14 @@ class ResellerLedgerService
             $balance += $row['credit'] - $row['debit'];
             $credit += $row['credit'];
             $debit += $row['debit'];
-            $out[] = $row + ['balance' => round($balance, 2)];
+            $out[] = $row + ['balance' => Money::round($balance)];
         }
 
         return [
-            'opening' => round($opening, 2),
-            'credit' => round($credit, 2),
-            'debit' => round($debit, 2),
-            'closing' => round($opening + $credit - $debit, 2),
+            'opening' => Money::round($opening),
+            'credit' => Money::round($credit),
+            'debit' => Money::round($debit),
+            'closing' => Money::round($opening + $credit - $debit),
             'rows' => array_map(fn ($r) => array_diff_key($r, ['sort' => 1]), $out),
         ];
     }
@@ -70,10 +71,10 @@ class ResellerLedgerService
             ->where('invoices.total', '>', 0)
             ->get([
                 'payment_allocations.id', 'payment_allocations.amount', 'payment_allocations.status', 'payment_allocations.created_at', 'payment_allocations.reversed_at',
-                'invoices.invoice_no', 'invoices.total', 'invoices.reseller_cost', 'customer_payments.receipt_no', 'customers.name as customer_name',
+                'invoices.invoice_no', 'invoices.total', 'invoices.tax_total', 'invoices.reseller_cost', 'customer_payments.receipt_no', 'customers.name as customer_name',
             ]);
         foreach ($allocations as $a) {
-            $margin = round((float) $a->amount * (1 - (float) $a->reseller_cost / (float) $a->total), 2);
+            $margin = Money::round((float) $a->amount * ((float) $a->total - (float) $a->tax_total - (float) $a->reseller_cost) / (float) $a->total);
             $rows->push(self::row($a->created_at, 1, 'earning', "Earning on {$a->invoice_no} ({$a->customer_name}) · receipt {$a->receipt_no}", $a->invoice_no, $margin, 0));
             if ($a->status === 'reversed' && $a->reversed_at) {
                 $rows->push(self::row($a->reversed_at, 2, 'earning_reversed', "Payment taken off {$a->invoice_no} ({$a->customer_name})", $a->invoice_no, 0, $margin));
@@ -115,8 +116,8 @@ class ResellerLedgerService
             'type' => $type,
             'description' => $description,
             'ref' => $ref,
-            'credit' => round($credit, 2),
-            'debit' => round($debit, 2),
+            'credit' => Money::round($credit),
+            'debit' => Money::round($debit),
         ];
     }
 }

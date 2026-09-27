@@ -23,7 +23,7 @@ class IspSettings
         'init_bonus_days' => 0,
         // referral commission to the existing customer who referred a new one, as wallet credit
         'referral_enabled' => false,
-        'referral_commission_type' => 'fixed', // fixed Tk | percent of the first bill
+        'referral_commission_type' => 'fixed', // fixed amount | percent of the first bill
         'referral_commission' => '0',
         'auto_suspend' => true,
         'auto_reactivate' => true,
@@ -31,9 +31,9 @@ class IspSettings
         'sms_payment' => true,
         'sms_suspend' => true,
         'sms_reactivate' => true,
-        'sms_tpl_invoice' => 'Dear {name}, your internet bill {invoice} of Tk {amount} is due on {due_date}. Total due: Tk {balance}.',
-        'sms_tpl_payment' => 'Dear {name}, we received Tk {amount} (receipt {receipt}). Current due: Tk {balance}. Thank you.',
-        'sms_tpl_suspend' => 'Dear {name}, your internet connection {connection} is suspended for unpaid bills. Due: Tk {balance}.',
+        'sms_tpl_invoice' => 'Dear {name}, your internet bill {invoice} of {currency} {amount} is due on {due_date}. Total due: {currency} {balance}.',
+        'sms_tpl_payment' => 'Dear {name}, we received {currency} {amount} (receipt {receipt}). Current due: {currency} {balance}. Thank you.',
+        'sms_tpl_suspend' => 'Dear {name}, your internet connection {connection} is suspended for unpaid bills. Due: {currency} {balance}.',
         'sms_tpl_reactivate' => 'Dear {name}, your internet connection {connection} is active again. Thank you.',
     ];
 

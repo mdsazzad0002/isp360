@@ -2,6 +2,7 @@
 
 namespace App\Services\Isp;
 
+use App\Support\Money;
 use App\Models\Package;
 use App\Models\PackagePriceHistory;
 use App\Models\Reseller;
@@ -56,9 +57,9 @@ class ResellerPackageService
             if (! $base || (! $base->is_active && (int) $base->id !== (int) $package->base_package_id)) {
                 throw new RuntimeException('Select an active company package to customize.');
             }
-            $price = round((float) $data['price'], 2);
+            $price = Money::round((float) $data['price']);
             if ($price < (float) $base->price) {
-                throw new RuntimeException('Your price cannot be lower than the company price (' . number_format((float) $base->price, 2) . ').');
+                throw new RuntimeException('Your price cannot be lower than the company price (' . Money::format($base->price) . ').');
             }
 
             $old = $package->exists ? $package->only(['name', 'price', 'base_price', 'download_mbps', 'upload_mbps', 'billing_cycle']) : null;

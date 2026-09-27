@@ -5,7 +5,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
 import LedgerStatement from '../../Components/Isp/LedgerStatement.vue';
-import { money, fmtDate, label, fmtDateTime } from '../../lib/isp';
+import { money, fmtDate, label, fmtDateTime, fmtMoney } from '../../lib/isp';
 import { printInvoice } from '../../lib/ispPrint';
 
 const props = defineProps({
@@ -36,7 +36,7 @@ async function printInv(inv) {
         <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">Amount due</div>
-                <div class="mt-1 text-2xl font-bold" :class="summary.balance > 0 ? 'text-red-600' : 'text-slate-800'">৳{{ money(Math.max(0, summary.balance)) }}</div>
+                <div class="mt-1 text-2xl font-bold" :class="summary.balance > 0 ? 'text-red-600' : 'text-slate-800'">{{ fmtMoney(Math.max(0, summary.balance)) }}</div>
                 <div v-if="summary.next_due_date && summary.balance > 0" class="text-xs text-slate-500">Pay by {{ fmtDate(summary.next_due_date) }}</div>
                 <Link v-if="summary.balance > 0" href="/customer-portal/pay" class="mt-2 inline-flex items-center gap-1 rounded-md bg-brand-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-600">
                     <i class="bi bi-credit-card"></i> Pay now
@@ -44,11 +44,11 @@ async function printInv(inv) {
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">Overdue</div>
-                <div class="mt-1 text-2xl font-bold" :class="summary.overdue > 0 ? 'text-red-600' : 'text-slate-800'">৳{{ money(summary.overdue) }}</div>
+                <div class="mt-1 text-2xl font-bold" :class="summary.overdue > 0 ? 'text-red-600' : 'text-slate-800'">{{ fmtMoney(summary.overdue) }}</div>
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400"><i class="bi bi-wallet2"></i> Wallet balance</div>
-                <div class="mt-1 text-2xl font-bold text-emerald-700">৳{{ money(summary.advance) }}</div>
+                <div class="mt-1 text-2xl font-bold text-emerald-700">{{ fmtMoney(summary.advance) }}</div>
                 <Link href="/customer-portal/pay?purpose=wallet" class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:underline"><i class="bi bi-plus-circle"></i> Add money</Link>
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -60,7 +60,7 @@ async function printInv(inv) {
         <div v-for="c in connections" :key="c.id" class="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <div>
                 <div class="font-semibold text-slate-800">{{ c.package?.name }} <span class="text-sm font-normal text-slate-500">{{ c.package?.download_mbps }}/{{ c.package?.upload_mbps }} Mbps</span></div>
-                <div class="text-sm text-slate-500">{{ c.code }} · {{ label(c.connection_type) }}<span v-if="c.pppoe_username"> · {{ c.pppoe_username }}</span> · ৳{{ money(Number(c.package?.price) - Number(c.discount)) }} / {{ label(c.package?.billing_cycle) }}</div>
+                <div class="text-sm text-slate-500">{{ c.code }} · {{ label(c.connection_type) }}<span v-if="c.pppoe_username"> · {{ c.pppoe_username }}</span> · {{ fmtMoney(Number(c.package?.price) - Number(c.discount)) }} / {{ label(c.package?.billing_cycle) }}</div>
             </div>
             <div class="text-right">
                 <StatusBadge :status="c.status" />

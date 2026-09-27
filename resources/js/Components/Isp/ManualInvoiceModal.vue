@@ -3,7 +3,7 @@ import { ref, reactive, computed, watch } from 'vue';
 import axios from 'axios';
 import Modal from '../Modal.vue';
 import CustomerPicker from './CustomerPicker.vue';
-import { money, today, useApiError } from '../../lib/isp';
+import { money, today, useApiError, moneyStep } from '../../lib/isp';
 import { useToast } from '../../lib/toast';
 
 // One-off invoice (installation, equipment, service charge...) or edit of a draft.
@@ -19,7 +19,7 @@ const showError = useApiError();
 const customer = ref(null);
 const connections = ref([]);
 const saving = ref(false);
-const form = reactive({ id: null, connection_id: '', invoice_date: today(), due_date: today(), discount: 0, notes: '' });
+const form = reactive({ id: null, connection_id: '', invoice_date: today(), due_date: today(), discount: 0, notes: '', no_tax: false });
 const items = ref([]);
 
 const subtotal = computed(() => items.value.reduce((s, i) => s + Number(i.unit_price || 0) * Number(i.quantity || 0) - Number(i.discount || 0), 0));
@@ -40,6 +40,8 @@ watch(
             due_date: d?.due_date ?? today(),
             discount: Number(d?.discount ?? 0),
             notes: d?.notes ?? '',
+            // a draft saved without tax keeps that choice
+            no_tax: d ? Number(d.tax || 0) === 0 && (d.items || []).every((i) => !i.taxes) : false,
         });
         items.value = d?.items?.length ? d.items.map((i) => ({ description: i.description, unit_price: Number(i.unit_price), quantity: Number(i.quantity), discount: Number(i.discount) })) : [blankItem()];
     }
@@ -109,9 +111,9 @@ async function save(asDraft) {
                 <tbody>
                     <tr v-for="(item, i) in items" :key="i" class="border-b border-slate-100">
                         <td class="px-1 py-1"><input v-model="item.description" type="text" placeholder="e.g. ONU device, installation" class="w-full rounded border border-slate-300 px-2 py-1" /></td>
-                        <td class="px-1 py-1"><input v-model="item.unit_price" type="number" min="0" step="0.01" class="w-full rounded border border-slate-300 px-2 py-1" /></td>
+                        <td class="px-1 py-1"><input v-model="item.unit_price" type="number" min="0" :step="moneyStep()" class="w-full rounded border border-slate-300 px-2 py-1" /></td>
                         <td class="px-1 py-1"><input v-model="item.quantity" type="number" min="0.01" step="0.01" class="w-full rounded border border-slate-300 px-2 py-1" /></td>
-                        <td class="px-1 py-1"><input v-model="item.discount" type="number" min="0" step="0.01" class="w-full rounded border border-slate-300 px-2 py-1" /></td>
+                        <td class="px-1 py-1"><input v-model="item.discount" type="number" min="0" :step="moneyStep()" class="w-full rounded border border-slate-300 px-2 py-1" /></td>
                         <td class="px-2 py-1 text-right">{{ money(Number(item.unit_price || 0) * Number(item.quantity || 0) - Number(item.discount || 0)) }}</td>
                         <td class="px-1 py-1 text-center"><i v-if="items.length > 1" class="bi bi-trash cursor-pointer text-red-500" @click="items.splice(i, 1)"></i></td>
                     </tr>
@@ -126,8 +128,9 @@ async function save(asDraft) {
                 </div>
                 <div class="space-y-1 text-right">
                     <div>Subtotal: <strong>{{ money(subtotal) }}</strong></div>
-                    <div class="flex items-center justify-end gap-2">Invoice discount <input v-model="form.discount" type="number" min="0" step="0.01" class="w-28 rounded border border-slate-300 px-2 py-1 text-right" /></div>
-                    <div class="text-base">Total: <strong>{{ money(subtotal - Number(form.discount || 0)) }}</strong></div>
+                    <div class="flex items-center justify-end gap-2">Invoice discount <input v-model="form.discount" type="number" min="0" :step="moneyStep()" class="w-28 rounded border border-slate-300 px-2 py-1 text-right" /></div>
+                    <label class="flex items-center justify-end gap-2 text-xs text-slate-500"><input v-model="form.no_tax" type="checkbox" /> No tax on this invoice</label>
+                    <div class="text-base">Total: <strong>{{ money(subtotal - Number(form.discount || 0)) }}</strong><span v-if="!form.no_tax" class="text-xs text-slate-400"> · tax at the default rates is worked out on save</span></div>
                 </div>
             </div>
         </div>

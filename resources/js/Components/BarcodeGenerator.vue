@@ -1,4 +1,5 @@
 <script setup>
+import { fmtMoney } from '../lib/isp';
 import { ref, computed, watch, nextTick } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -203,7 +204,7 @@ function print() {
                             <p style="font-size:10px;margin:0 0 2px 1px;padding:2px 0 0 0;font-weight:bolder;text-align:center;line-height:1;">{{ item.name }}</p>
                             <img class="barcode" style="line-height:0;" />
                             <p style="margin:0;font-size:12px;margin-top:-3px;text-align:center;font-weight:900;">{{ item.code }}</p>
-                            <p style="margin:0;margin-top:-1px;text-align:center;font-size:12px;font-weight:bolder;">BDT {{ item.sale_rate }}</p>
+                            <p style="margin:0;margin-top:-1px;text-align:center;font-size:12px;font-weight:bolder;">{{ fmtMoney(item.sale_rate) }}</p>
                         </div>
                     </div>
                 </template>
@@ -217,7 +218,7 @@ function print() {
                             <p style="font-size:10px;margin:0 0 2px 1px;padding:2px 0 0 0;font-weight:bolder;text-align:center;line-height:1;">{{ item.name }}</p>
                             <img class="singlebarcode" style="line-height:0;" />
                             <p style="margin:0;font-size:12px;margin-top:-3px;text-align:center;font-weight:900;">{{ item.code }}</p>
-                            <p style="margin:0;margin-top:-1px;text-align:center;font-size:12px;font-weight:bolder;">BDT {{ item.sale_rate }}</p>
+                            <p style="margin:0;margin-top:-1px;text-align:center;font-size:12px;font-weight:bolder;">{{ fmtMoney(item.sale_rate) }}</p>
                         </div>
                     </div>
                 </template>

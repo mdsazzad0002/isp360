@@ -7,7 +7,7 @@ import Modal from '../../Components/Modal.vue';
 import Pagination from '../../Components/Pagination.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
 import { useToast } from '../../lib/toast';
-import { money, fmtDate, label, useApiError, GATEWAY_STYLES } from '../../lib/isp';
+import { money, fmtDate, label, useApiError, GATEWAY_STYLES, fmtMoney, cur, moneyStep } from '../../lib/isp';
 
 defineOptions({ layout: AppLayout });
 const props = defineProps({ canReview: Boolean });
@@ -73,7 +73,7 @@ onMounted(load);
             @click="filter.status = 'pending_review'; reload()"
         >
             <i class="bi bi-hourglass-split text-lg"></i>
-            <span><strong>{{ pending.count }}</strong> payment(s) of Tk {{ money(pending.amount) }} are waiting for verification. Check each Transaction ID in the wallet app before approving.</span>
+            <span><strong>{{ pending.count }}</strong> payment(s) of {{ fmtMoney(pending.amount) }} are waiting for verification. Check each Transaction ID in the wallet app before approving.</span>
         </div>
 
         <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
@@ -168,8 +168,8 @@ onMounted(load);
                     <template v-if="review.row.sender_number"> from {{ review.row.sender_number }}</template>
                 </p>
                 <template v-if="review.action === 'approve'">
-                    <label class="mb-1 block text-xs font-medium text-slate-600">Amount actually received (Tk)</label>
-                    <input v-model="review.amount" type="number" min="1" step="0.01" required class="mb-3 w-full rounded-md border border-slate-300 px-3 py-1.5" />
+                    <label class="mb-1 block text-xs font-medium text-slate-600">Amount actually received ({{ cur() }})</label>
+                    <input v-model="review.amount" type="number" min="1" :step="moneyStep()" required class="mb-3 w-full rounded-md border border-slate-300 px-3 py-1.5" />
                     <label class="mb-1 block text-xs font-medium text-slate-600">Note <span class="font-normal text-slate-400">(optional)</span></label>
                     <input v-model="review.note" maxlength="200" class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
                     <p class="mt-3 text-xs text-slate-500">This records a payment in the customer's ledger and applies it to open bills. It can only be undone by reversing the payment.</p>

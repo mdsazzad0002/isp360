@@ -4,7 +4,7 @@ import axios from 'axios';
 import { usePage } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import BarList from '../../Components/Isp/BarList.vue';
-import { money, fmtDate, label, today, monthStart, escapeHtml as e } from '../../lib/isp';
+import { money, fmtDate, label, today, monthStart, escapeHtml as e, fmtMoney } from '../../lib/isp';
 import { printDocument } from '../../lib/print';
 
 defineOptions({ layout: AppLayout });
@@ -22,7 +22,7 @@ function table(title, rows, fmtLabel = (x) => x) {
 }
 function print() {
     const d = data.value;
-    const body = `<p style="font-size:12px;">${fmtDate(d.from)} – ${fmtDate(d.to)} · ${d.count} payments · Net Tk ${money(d.total)} · Reversed Tk ${money(d.reversed)}</p>` +
+    const body = `<p style="font-size:12px;">${fmtDate(d.from)} – ${fmtDate(d.to)} · ${d.count} payments · Net ${fmtMoney(d.total)} · Reversed ${fmtMoney(d.reversed)}</p>` +
         table('By method', d.by_method, label) + table('By collector', d.by_collector) + table('By area', d.by_area) + table('By day', d.by_day, fmtDate);
     printDocument('Collection Report', body, pageProps.props.company);
 }

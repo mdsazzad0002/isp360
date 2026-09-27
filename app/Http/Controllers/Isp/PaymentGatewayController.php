@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Isp;
 
+use App\Support\Money;
 use App\Models\Bank;
 use App\Models\PaymentGateway;
 use App\Services\Isp\AuditLogger;
@@ -23,7 +24,8 @@ class PaymentGatewayController extends IspController
     {
         $rows = PaymentGateway::where('branch_id', $this->branchId)->get()->keyBy('gateway');
 
-        $gateways = collect(PaymentGateway::GATEWAYS)->map(function ($meta, $key) use ($rows) {
+        $currency = Money::code();
+        $gateways = collect(PaymentGateway::GATEWAYS)->map(function ($meta, $key) use ($rows, $currency) {
             $row = $rows->get($key);
             // secrets are never sent back: the form shows whether one is saved
             $credentials = [];
@@ -50,6 +52,8 @@ class PaymentGatewayController extends IspController
                 'max_amount' => $row ? (float) $row->max_amount : 50000,
                 'sort' => $row?->sort ?? 0,
                 'usable' => $row ? OnlinePaymentService::isUsable($row) : false,
+                'currencies' => $meta['currencies'],
+                'currency_ok' => PaymentGateway::supportsCurrency($key, $currency),
             ];
         })->values();
 
@@ -107,6 +111,9 @@ class PaymentGatewayController extends IspController
             'updated_by' => $this->userId,
         ]);
 
+        if ($gateway->is_active && ! PaymentGateway::supportsCurrency($key, $currency = Money::code())) {
+            return send_error("{$meta['label']} only takes " . implode(', ', $meta['currencies']) . "; the company bills in {$currency}.", null, 422);
+        }
         if ($gateway->is_active) {
             $missing = [];
             if (! $gateway->bank_id) {

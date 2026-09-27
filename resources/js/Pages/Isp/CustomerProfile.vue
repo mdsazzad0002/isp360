@@ -14,7 +14,7 @@ import ReceivePaymentForm from '../../Components/Isp/ReceivePaymentForm.vue';
 import LedgerStatement from '../../Components/Isp/LedgerStatement.vue';
 import TerminalOffcanvas from '../../Components/Isp/TerminalOffcanvas.vue';
 import SyncBadge from '../../Components/Isp/SyncBadge.vue';
-import { money, fmtDate, label, expiryClass, fmtDateTime } from '../../lib/isp';
+import { money, fmtDate, label, expiryClass, fmtDateTime, fmtMoney } from '../../lib/isp';
 import { useToast } from '../../lib/toast';
 
 defineOptions({ layout: AppLayout });
@@ -114,7 +114,7 @@ onMounted(load);
                         <tbody>
                             <tr v-for="c in data.connections" :key="c.id" class="cursor-pointer border-b border-slate-100 hover:bg-slate-50" @click="Object.assign(connPanel, { show: true, id: c.id })">
                                 <td class="px-2 py-2 font-medium text-brand-600">{{ c.code }}</td>
-                                <td class="px-2 py-2">{{ c.package?.name }} <span class="text-xs text-slate-400">Tk {{ money(c.package?.price) }}</span></td>
+                                <td class="px-2 py-2">{{ c.package?.name }} <span class="text-xs text-slate-400">{{ fmtMoney(c.package?.price) }}</span></td>
                                 <td class="px-2 py-2">
                                     {{ label(c.connection_type) }} <span class="font-mono text-xs text-slate-500">{{ c.pppoe_username || c.static_ip }}</span>
                                     <button v-if="c.pppoe_username || c.static_ip" type="button" class="ml-1 text-slate-400 hover:text-brand-600" title="Copy" @click.stop="copyText(c.pppoe_username || c.static_ip)"><i class="bi bi-copy text-xs"></i></button>
@@ -172,7 +172,7 @@ onMounted(load);
         </template>
 
         <ConnectionPanel :show="connPanel.show" :connection-id="connPanel.id" :can="can" @close="connPanel.show = false" @changed="load" @edit="(c) => { connPanel.show = false; Object.assign(connForm, { show: true, connection: c }); }" />
-        <ConnectionFormModal :show="connForm.show" :connection="connForm.connection" :customer-id="customerId" @close="connForm.show = false" @saved="load" />
+        <ConnectionFormModal :can-credit="!!can.connectionCredit" :show="connForm.show" :connection="connForm.connection" :customer-id="customerId" @close="connForm.show = false" @saved="load" />
         <InvoiceDetailModal :show="invDetail.show" :invoice-id="invDetail.id" :can="invoiceCan" @close="invDetail.show = false" @changed="load" @edit-draft="(inv) => { invDetail.show = false; Object.assign(manual, { show: true, draft: inv }); }" @receive="openReceive" />
         <ManualInvoiceModal :show="manual.show" :draft="manual.draft" :customer-id="customerId" @close="manual.show = false" @saved="load" />
         <PaymentDetailModal :show="payDetail.show" :payment-id="payDetail.id" :can="paymentCan" @close="payDetail.show = false" @changed="load" />

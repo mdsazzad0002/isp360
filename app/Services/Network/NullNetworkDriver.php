@@ -3,6 +3,8 @@
 namespace App\Services\Network;
 
 use App\Models\Connection;
+use App\Models\Router;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 // No router integration: staff enable/disable users on the router by hand. Swap in a
@@ -25,6 +27,12 @@ class NullNetworkDriver implements NetworkDriver
 
     public function verify(Connection $connection): array
     {
+        return [];
+    }
+
+    public function syncBlocks(Router $router, Collection $blocks): array
+    {
+        Log::channel('single')->info('[network:null] blocks', ['router' => $router->name, 'count' => $blocks->count()]);
         return [];
     }
 }

@@ -2,12 +2,13 @@
 
 namespace App\Services\Isp;
 
+use App\Support\Money;
 use App\Models\Customer;
 use App\Models\Invoice;
 use Illuminate\Support\Facades\DB;
 
 // Referral commission: when a referred customer's first service bill is fully paid, the
-// existing customer who referred them gets the commission from the settings (fixed Tk or a
+// existing customer who referred them gets the commission from the settings (fixed amount or a
 // percent of that bill) as wallet credit. It is recorded as a customer payment with method
 // 'referral' — advance credit that pays the referrer's next bills — once per new customer.
 // It is not cash, so it has no cash-book entry.
@@ -32,7 +33,7 @@ class ReferralService
         }
 
         $value = (float) $settings['referral_commission'];
-        $amount = round($settings['referral_commission_type'] === 'percent' ? (float) $invoice->total * $value / 100 : $value, 2);
+        $amount = Money::round($settings['referral_commission_type'] === 'percent' ? ((float) $invoice->total - (float) $invoice->tax_total) * $value / 100 : $value);
         if ($amount <= 0) {
             return;
         }

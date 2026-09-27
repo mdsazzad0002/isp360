@@ -2,6 +2,7 @@
 
 namespace App\Services\Isp;
 
+use App\Support\Money;
 use App\Models\Customer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -20,7 +21,8 @@ class IspNotifier
         $vars = array_merge([
             'name' => $customer->name,
             'code' => $customer->code,
-            'balance' => number_format(max(0, LedgerService::balance($customer->id)), 2),
+            'currency' => Money::currency()['symbol'],
+            'balance' => Money::number(max(0, LedgerService::balance($customer->id))),
         ], $vars);
         $message = preg_replace_callback('/\{(\w+)\}/', fn ($m) => $vars[$m[1]] ?? $m[0], $settings['sms_tpl_' . $event] ?? '');
 

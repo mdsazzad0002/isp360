@@ -5,7 +5,7 @@ import PortalLayout from '../../Layouts/PortalLayout.vue';
 import Pagination from '../../Components/Pagination.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
 import { useToast } from '../../lib/toast';
-import { money, fmtDate, label, monthStart, today, useApiError, fmtDateTime } from '../../lib/isp';
+import { money, fmtDate, label, monthStart, today, useApiError, fmtDateTime, fmtMoney, cur, moneyStep } from '../../lib/isp';
 
 // Reseller collects a bill from one of their customers (cash or into their own mobile
 // wallet). The money is credited to the customer at once and counted in the reseller's
@@ -115,8 +115,8 @@ onMounted(load);
                     </select>
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs font-medium text-slate-600">Amount (Tk)</label>
-                    <input v-model="form.amount" type="number" min="0.01" step="0.01" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                    <label class="mb-1 block text-xs font-medium text-slate-600">Amount ({{ cur() }})</label>
+                    <input v-model="form.amount" type="number" :min="moneyStep()" :step="moneyStep()" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-slate-600">Method</label>
@@ -187,7 +187,7 @@ onMounted(load);
                 </div>
                 <div class="text-right text-sm">
                     <div class="text-slate-500">{{ totals.count ?? 0 }} payments</div>
-                    <div class="text-base font-semibold text-emerald-700">Tk {{ money(totals.amount) }}</div>
+                    <div class="text-base font-semibold text-emerald-700">{{ fmtMoney(totals.amount) }}</div>
                 </div>
             </div>
             <div class="overflow-x-auto">

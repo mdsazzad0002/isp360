@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
 use App\Models\Concerns\HasAuditUsers;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -14,10 +15,11 @@ class Package extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
-        'price' => 'decimal:2',
-        'installation_fee' => 'decimal:2',
-        'activation_fee' => 'decimal:2',
-        'base_price' => 'decimal:2',
+        'price' => MoneyCast::class,
+        'installation_fee' => MoneyCast::class,
+        'activation_fee' => MoneyCast::class,
+        'base_price' => MoneyCast::class,
+        'tax_rate_ids' => 'array', // null = default rates, [] = exempt, [ids] = these rates
         'pending_changes' => 'array',
         'approved_at' => 'datetime',
     ];

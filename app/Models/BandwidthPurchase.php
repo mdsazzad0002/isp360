@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Model;
 
 class BandwidthPurchase extends Model
@@ -10,7 +11,7 @@ class BandwidthPurchase extends Model
 
     protected $casts = [
         'bandwidth_mbps' => 'decimal:2',
-        'monthly_cost' => 'decimal:2',
+        'monthly_cost' => MoneyCast::class,
         'start_date' => 'date:Y-m-d',
         'end_date' => 'date:Y-m-d',
     ];

@@ -7,7 +7,7 @@ import Pagination from '../../Components/Pagination.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
 import ReceivePaymentForm from '../../Components/Isp/ReceivePaymentForm.vue';
 import PaymentDetailModal from '../../Components/Isp/PaymentDetailModal.vue';
-import { money, fmtDate, label, today, PAYMENT_METHODS } from '../../lib/isp';
+import { money, fmtDate, label, today, PAYMENT_METHODS, fmtMoney } from '../../lib/isp';
 
 defineOptions({ layout: AppLayout });
 const props = defineProps({ preselectCustomerId: { type: Number, default: null }, can: { type: Object, default: () => ({}) } });
@@ -82,7 +82,7 @@ onMounted(load);
                 </div>
                 <div class="text-right text-sm">
                     <div class="text-slate-500">{{ totals.count ?? 0 }} payments</div>
-                    <div class="text-base font-semibold text-emerald-700">Tk {{ money((totals.amount || 0) - (totals.refunded || 0)) }} <span class="text-xs font-normal text-slate-400">net</span></div>
+                    <div class="text-base font-semibold text-emerald-700">{{ fmtMoney((totals.amount || 0) - (totals.refunded || 0)) }} <span class="text-xs font-normal text-slate-400">net</span></div>
                 </div>
             </div>
             <div class="overflow-x-auto">

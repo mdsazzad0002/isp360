@@ -3,7 +3,7 @@ import { ref, reactive, computed, watch, onMounted } from 'vue';
 import axios from 'axios';
 import SearchSelect from '../SearchSelect.vue';
 import StatusBadge from './StatusBadge.vue';
-import { money, fmtDateTime, PAYMENT_METHODS, useApiError } from '../../lib/isp';
+import { money, fmtDateTime, PAYMENT_METHODS, useApiError, fmtMoney } from '../../lib/isp';
 import { useToast } from '../../lib/toast';
 
 // Pay for a connection by cycles: the unpaid bill first, then extra cycles in advance.
@@ -11,6 +11,8 @@ import { useToast } from '../../lib/toast';
 const props = defineProps({
     modelValue: { type: Boolean, default: false },
     connectionId: { type: [Number, null], default: null },
+    // admin only: start the unpaid bill's time now, the customer pays later
+    canCredit: { type: Boolean, default: false },
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 const toast = useToast();
@@ -23,7 +25,22 @@ const saving = ref(false);
 const form = reactive({ cycles: 1, method: 'cash', transaction_id: '', notes: '' });
 
 const option = computed(() => quote.value?.options.find((o) => o.cycles === Number(form.cycles)) || null);
-const cycleLabel = (months) => (months === 1 ? '1 month' : `${months} months`);
+const cycleLabel = (months) => (months === 0 ? 'Due only' : months === 1 ? '1 month' : `${months} months`);
+const creditable = computed(() => props.canCredit && (quote.value?.open || []).some((i) => !i.credit_at));
+
+async function startOnDue() {
+    saving.value = true;
+    try {
+        const res = await axios.post('/isp/connection-credit', { id: props.connectionId, note: form.notes });
+        toast.success(res.data.message);
+        emit('saved', null);
+        close();
+    } catch (err) {
+        showError(err);
+    } finally {
+        saving.value = false;
+    }
+}
 
 async function load() {
     quote.value = null;
@@ -72,7 +89,7 @@ onMounted(() => {
 
 <template>
     <Teleport to="body">
-        <div v-if="modelValue" class="fixed inset-0 z-[60] flex justify-end">
+        <div v-if="modelValue" class="fixed inset-0 z-[2120] flex justify-end">
             <div class="absolute inset-0 bg-slate-900/40" @click="close"></div>
             <div class="relative flex h-full w-full flex-col bg-slate-50 shadow-2xl animate-slide-in sm:w-[480px]">
                 <div class="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4">
@@ -89,7 +106,7 @@ onMounted(() => {
                         <div>
                             <div class="text-[11px] uppercase text-slate-400">Package</div>
                             <div class="font-medium">{{ quote.connection.package?.name }}</div>
-                            <div class="text-xs text-slate-500">Tk {{ money(quote.charge) }} / {{ cycleLabel(quote.cycle_months) }}</div>
+                            <div class="text-xs text-slate-500">{{ fmtMoney(quote.charge) }} / {{ cycleLabel(quote.cycle_months) }}</div>
                         </div>
                         <div>
                             <div class="text-[11px] uppercase text-slate-400">Status</div>
@@ -98,12 +115,16 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <div v-if="quote.open.length" class="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
-                        <i class="bi bi-exclamation-circle"></i>
-                        Unpaid bill {{ quote.open.map((i) => i.invoice_no).join(', ') }} — Tk {{ money(quote.open.reduce((s, i) => s + Number(i.due), 0)) }}.
-                        The service does not run until it is paid.
+                    <div v-for="i in quote.open.filter((x) => x.credit_at)" :key="`c${i.id}`" class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800">
+                        <i class="bi bi-hourglass-split"></i>
+                        {{ i.invoice_no }} — {{ fmtMoney(i.due) }} is running <b>on due</b> since {{ fmtDateTime(i.credit_at) }}. Paying it does not add time; no renewal bill is issued until it is paid.
                     </div>
-                    <div v-if="quote.advance > 0" class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">Advance credit Tk {{ money(quote.advance) }} is used first.</div>
+                    <div v-if="quote.open.some((x) => !x.credit_at)" class="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
+                        <i class="bi bi-exclamation-circle"></i>
+                        Unpaid bill {{ quote.open.filter((x) => !x.credit_at).map((i) => i.invoice_no).join(', ') }} — {{ fmtMoney(quote.open.filter((x) => !x.credit_at).reduce((s, i) => s + Number(i.due), 0)) }}.
+                        The service does not run until it is paid<template v-if="creditable"> (or started on due below)</template>.
+                    </div>
+                    <div v-if="quote.advance > 0" class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">Advance credit {{ fmtMoney(quote.advance) }} is used first.</div>
 
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">How long to pay for</label>
@@ -117,13 +138,13 @@ onMounted(() => {
                                 @click="form.cycles = o.cycles"
                             >
                                 <div class="font-medium">{{ cycleLabel(o.months) }}</div>
-                                <div class="text-xs text-slate-500">Tk {{ money(o.amount) }}</div>
+                                <div class="text-xs text-slate-500">{{ fmtMoney(o.amount) }}</div>
                             </button>
                         </div>
                     </div>
 
                     <div v-if="option" class="rounded-lg border border-slate-200 bg-white p-3">
-                        <div class="flex justify-between"><span class="text-slate-500">To pay now</span><b class="text-base">Tk {{ money(option.amount) }}</b></div>
+                        <div class="flex justify-between"><span class="text-slate-500">To pay now</span><b class="text-base">{{ fmtMoney(option.amount) }}</b></div>
                         <div class="mt-1 flex justify-between">
                             <span class="text-slate-500">Paid until / next bill due</span>
                             <b class="text-emerald-700">{{ option.until ? fmtDateTime(option.until) : 'starts when activated' }}</b>
@@ -152,10 +173,13 @@ onMounted(() => {
                         <input v-model="form.notes" type="text" class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
                     </div>
 
-                    <div class="flex justify-end gap-2">
+                    <div class="flex flex-wrap justify-end gap-2">
                         <button type="button" class="rounded-md border border-slate-300 px-4 py-1.5" @click="close">Cancel</button>
+                        <button v-if="creditable" type="button" :disabled="saving" class="rounded-md border border-amber-500 px-4 py-1.5 font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50" title="Start the service now; the bill stays as the customer's due" @click="startOnDue">
+                            <i class="bi bi-hourglass-split"></i> Start on due (pay later)
+                        </button>
                         <button type="submit" :disabled="saving || !option" class="rounded-md bg-emerald-600 px-5 py-1.5 font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
-                            <i class="bi bi-check2-circle"></i> {{ option && option.amount > 0 ? `Pay Tk ${money(option.amount)}` : 'Confirm' }}
+                            <i class="bi bi-check2-circle"></i> {{ option && option.amount > 0 ? `Pay ${fmtMoney(option.amount)}` : 'Confirm' }}
                         </button>
                     </div>
                 </form>

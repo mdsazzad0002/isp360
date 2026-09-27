@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Model;
 
 // Credit note (reduces what the customer owes) or debit note (increases it).
@@ -9,7 +10,7 @@ class BillingNote extends Model
 {
     protected $guarded = ['id'];
 
-    protected $casts = ['amount' => 'decimal:2', 'note_date' => 'date:Y-m-d'];
+    protected $casts = ['amount' => MoneyCast::class, 'tax_amount' => MoneyCast::class, 'note_date' => 'date:Y-m-d'];
 
     public function customer()
     {

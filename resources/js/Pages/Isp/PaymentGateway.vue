@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import { useToast } from '../../lib/toast';
-import { useApiError, GATEWAY_STYLES } from '../../lib/isp';
+import { useApiError, GATEWAY_STYLES, cur } from '../../lib/isp';
 
 defineOptions({ layout: AppLayout });
 const props = defineProps({ ipnUrl: { type: String, default: '' } });
@@ -78,6 +78,7 @@ onMounted(load);
                         <span class="block text-xs text-slate-500">
                             {{ g.mode === 'api' ? 'Automatic (API)' : 'Manual (Transaction ID)' }}
                             <template v-if="g.mode === 'api'"> · {{ g.sandbox ? 'Sandbox' : 'Live' }}</template>
+                            <template v-if="!g.currency_ok"> · <span class="text-amber-600">only takes {{ g.currencies.join(', ') }}</span></template>
                         </span>
                     </span>
                     <span
@@ -163,11 +164,11 @@ onMounted(load);
                             <p v-if="!banks.length" class="mt-1 text-xs text-amber-600">No accounts yet. Add one under Finance → Banking → Bank Entry.</p>
                         </div>
                         <div>
-                            <label class="mb-1 block text-xs font-medium text-slate-600">Minimum (Tk)</label>
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Minimum ({{ cur() }})</label>
                             <input v-model="g.min_amount" type="number" min="1" step="1" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                         </div>
                         <div>
-                            <label class="mb-1 block text-xs font-medium text-slate-600">Maximum (Tk)</label>
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Maximum ({{ cur() }})</label>
                             <input v-model="g.max_amount" type="number" min="1" step="1" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                         </div>
                     </div>

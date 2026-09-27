@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Isp;
 
+use App\Support\Money;
 use App\Models\Connection;
 use App\Models\Package;
 use App\Models\PackagePriceHistory;
@@ -28,7 +29,7 @@ class PackageController extends IspController
             ->get()
             ->map(function ($p) {
                 $tag = $p->reseller ? "[{$p->reseller->name}] " : ($p->visibility === 'hidden' ? '[Hidden] ' : '');
-                $p->display_name = $tag . "{$p->name} — Tk " . number_format((float) $p->price, 2) . ' / ' . str_replace('_', '-', $p->billing_cycle);
+                $p->display_name = $tag . "{$p->name} — " . Money::format($p->price) . ' / ' . str_replace('_', '-', $p->billing_cycle);
                 return $p;
             });
         return response()->json($packages);
@@ -61,6 +62,9 @@ class PackageController extends IspController
             'network_profile' => 'nullable|max:100',
             'visibility' => 'nullable|in:universal,hidden',
             'price_change_reason' => 'nullable|max:255',
+            'tax_mode' => 'nullable|in:default,custom,exempt',
+            'tax_rate_ids' => 'nullable|array',
+            'tax_rate_ids.*' => 'integer|exists:tax_rates,id',
         ])) return $r;
 
         try {
@@ -77,6 +81,12 @@ class PackageController extends IspController
                 ]);
                 if ($package->reseller_id === null) {
                     $package->visibility = $request->visibility ?: 'universal';
+                    // null = the default rates, [] = exempt, [ids] = these rates (a reseller copy follows its base)
+                    $package->tax_rate_ids = match ($request->tax_mode ?? 'default') {
+                        'exempt' => [],
+                        'custom' => array_values(array_unique(array_map('intval', $request->tax_rate_ids ?? []))),
+                        default => null,
+                    };
                 }
                 $package->updated_by = $this->userId;
                 $package->ipAddress = $request->ip();

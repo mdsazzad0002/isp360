@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Isp;
 
+use App\Support\Money;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -45,7 +46,7 @@ class ReportController extends IspController
         $months = [];
         for ($d = $from->copy(); $d->lte(now()); $d->addMonthNoOverflow()) {
             $k = $d->format('Y-m');
-            $months[] = ['month' => $d->format('M y'), 'billed' => round((float) ($billed[$k] ?? 0), 2), 'collected' => round((float) ($paid[$k] ?? 0), 2), 'new_customers' => (int) ($newCustomers[$k] ?? 0)];
+            $months[] = ['month' => $d->format('M y'), 'billed' => Money::round((float) ($billed[$k] ?? 0)), 'collected' => Money::round((float) ($paid[$k] ?? 0)), 'new_customers' => (int) ($newCustomers[$k] ?? 0)];
         }
 
         $packageWise = DB::table('connections')->join('packages', 'packages.id', '=', 'connections.package_id')
@@ -62,12 +63,12 @@ class ReportController extends IspController
             'customers' => $customers,
             'connections' => $connections,
             'new_connections' => DB::table('connections')->where('branch_id', $b)->where('created_at', '>=', $monthStart)->count(),
-            'today_collection' => round((float) $todayCollection, 2),
-            'month_collection' => round((float) $monthCollection, 2),
-            'month_billed' => round((float) $monthBilled, 2),
-            'outstanding' => round((float) $outstanding, 2),
-            'advance' => round(abs((float) $advance), 2),
-            'overdue' => round((float) $overdue, 2),
+            'today_collection' => Money::round((float) $todayCollection),
+            'month_collection' => Money::round((float) $monthCollection),
+            'month_billed' => Money::round((float) $monthBilled),
+            'outstanding' => Money::round((float) $outstanding),
+            'advance' => Money::round(abs((float) $advance)),
+            'overdue' => Money::round((float) $overdue),
             'boxes' => ['count' => (int) $boxes->boxes, 'capacity' => (int) $boxes->capacity, 'used' => $usedPorts],
             'active_packages' => DB::table('packages')->where('branch_id', $b)->where('is_active', true)->whereNull('deleted_at')->count(),
             'months' => $months,
@@ -135,6 +136,19 @@ class ReportController extends IspController
         return response()->json($rows);
     }
 
+    // Output tax for a period, for the whole company.
+    public function taxReport()
+    {
+        return $this->page('ispReport', 'Isp/TaxReport');
+    }
+
+    public function getTaxReport(Request $request)
+    {
+        if ($r = $this->deny('ispReport')) return $r;
+        if ($r = $this->validateOrFail($request->all(), ['dateFrom' => 'required|date', 'dateTo' => 'required|date|after_or_equal:dateFrom'])) return $r;
+        return response()->json(\App\Services\Isp\TaxReportService::report($request->dateFrom, $request->dateTo));
+    }
+
     public function collectionReport()
     {
         return $this->page('ispReport', 'Isp/CollectionReport');
@@ -153,9 +167,9 @@ class ReportController extends IspController
         return response()->json([
             'from' => $from,
             'to' => $to,
-            'total' => round((float) (clone $base)->sum(DB::raw('p.amount - p.refunded_amount')), 2),
+            'total' => Money::round((float) (clone $base)->sum(DB::raw('p.amount - p.refunded_amount'))),
             'count' => (clone $base)->count(),
-            'reversed' => round((float) DB::table('customer_payments')->where('branch_id', $this->branchId)->where('status', 'reversed')->whereBetween('payment_date', [$from, $to])->sum('amount'), 2),
+            'reversed' => Money::round((float) DB::table('customer_payments')->where('branch_id', $this->branchId)->where('status', 'reversed')->whereBetween('payment_date', [$from, $to])->sum('amount')),
             'by_day' => (clone $base)->selectRaw("p.payment_date as label, count(*) as count, {$net} as amount")->groupBy('p.payment_date')->orderBy('p.payment_date')->get(),
             'by_method' => (clone $base)->selectRaw("p.method as label, count(*) as count, {$net} as amount")->groupBy('p.method')->orderByDesc('amount')->get(),
             'by_collector' => (clone $base)->leftJoin('users as u', 'u.id', '=', 'p.received_by')

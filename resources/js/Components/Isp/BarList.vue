@@ -24,5 +24,5 @@ const fmt = (v) => (props.isMoney ? money(v) : Number(v || 0).toLocaleString());
 
 <style scoped>
 .bar { background: #2a78d6; min-width: 2px; }
-:global(.dark) .bar { background: #3987e5; }
+:global(.dark .bar) { background: #3987e5; }
 </style>

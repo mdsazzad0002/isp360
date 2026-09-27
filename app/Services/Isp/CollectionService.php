@@ -2,6 +2,7 @@
 
 namespace App\Services\Isp;
 
+use App\Support\Money;
 use App\Models\Customer;
 use App\Models\CustomerPayment;
 use App\Models\Invoice;
@@ -29,7 +30,7 @@ class CollectionService
     public static function receive(Customer $customer, array $data, ?array $allocations = null, bool $autoAllocate = true): CustomerPayment
     {
         $payment = DB::transaction(function () use ($customer, $data, $allocations, $autoAllocate) {
-            $amount = round((float) $data['amount'], 2);
+            $amount = Money::round((float) $data['amount']);
             if ($amount <= 0) {
                 throw new RuntimeException('Amount must be greater than zero.');
             }
@@ -37,8 +38,8 @@ class CollectionService
             // Money a reseller collects stays with the reseller (their own cash / wallet) until
             // they settle with the company, so it has no company account and no cash-book entry.
             $resellerId = $data['collected_by_reseller_id'] ?? null;
-            // referral commission is company credit, not money received: no account, no cash book
-            $noCash = $method === 'referral';
+            // referral commission and package-change credit are company credit, not money received: no account, no cash book
+            $noCash = in_array($method, ['referral', 'adjustment'], true);
             if ($method !== 'cash' && empty($data['bank_id']) && ! $resellerId && ! $noCash) {
                 throw new RuntimeException('Select the bank / mobile-banking account this money was received into.');
             }
@@ -82,7 +83,7 @@ class CollectionService
             }
 
             if ($allocations) {
-                $total = round(array_sum(array_map('floatval', $allocations)), 2);
+                $total = Money::round(array_sum(array_map('floatval', $allocations)));
                 if ($total > $amount + 0.001) {
                     throw new RuntimeException('Allocated total is more than the payment amount.');
                 }
@@ -103,7 +104,7 @@ class CollectionService
 
         OverdueService::reactivateIfClear($customer->id);
         IspNotifier::send($customer->branch_id, $customer, 'payment', [
-            'amount' => number_format((float) $payment->amount, 2),
+            'amount' => Money::number($payment->amount),
             'receipt' => $payment->receipt_no,
         ]);
         return $payment;
@@ -114,7 +115,7 @@ class CollectionService
         return DB::transaction(function () use ($payment, $invoice, $amount) {
             $payment = CustomerPayment::lockForUpdate()->findOrFail($payment->id);
             $invoice = Invoice::lockForUpdate()->findOrFail($invoice->id);
-            $amount = round($amount, 2);
+            $amount = Money::round($amount);
 
             if ($payment->customer_id !== $invoice->customer_id) {
                 throw new RuntimeException('Payment and invoice belong to different customers.');
@@ -123,10 +124,10 @@ class CollectionService
                 throw new RuntimeException("Invoice {$invoice->invoice_no} is not open for payment ({$invoice->status}).");
             }
             if ($amount <= 0 || $amount > $payment->unallocated() + 0.001) {
-                throw new RuntimeException("Only " . number_format($payment->unallocated(), 2) . " of payment {$payment->receipt_no} is unallocated.");
+                throw new RuntimeException("Only " . Money::format($payment->unallocated()) . " of payment {$payment->receipt_no} is unallocated.");
             }
             if ($amount > (float) $invoice->due + 0.001) {
-                throw new RuntimeException("Invoice {$invoice->invoice_no} only has " . number_format((float) $invoice->due, 2) . ' due.');
+                throw new RuntimeException("Invoice {$invoice->invoice_no} only has " . Money::format($invoice->due) . ' due.');
             }
 
             $allocation = PaymentAllocation::create([
@@ -136,7 +137,7 @@ class CollectionService
                 'status' => 'active',
                 'created_by' => Auth::guard('web')->id(),
             ]);
-            $payment->allocated_amount = round((float) $payment->allocated_amount + $amount, 2);
+            $payment->allocated_amount = Money::round((float) $payment->allocated_amount + $amount);
             $payment->save();
             BillingService::recalculate($invoice);
             return $allocation;
@@ -193,7 +194,7 @@ class CollectionService
                 'reversed_by' => Auth::guard('web')->id(),
                 'reversal_reason' => mb_substr($reason, 0, 255),
             ]);
-            $payment->allocated_amount = max(0, round((float) $payment->allocated_amount - (float) $allocation->amount, 2));
+            $payment->allocated_amount = max(0, Money::round((float) $payment->allocated_amount - (float) $allocation->amount));
             $payment->save();
             BillingService::recalculate($invoice);
 
@@ -256,13 +257,13 @@ class CollectionService
     {
         return DB::transaction(function () use ($payment, $data) {
             $payment = CustomerPayment::lockForUpdate()->findOrFail($payment->id);
-            $amount = round((float) $data['amount'], 2);
+            $amount = Money::round((float) $data['amount']);
             $method = $data['method'] ?? 'cash';
             if ($amount <= 0) {
                 throw new RuntimeException('Amount must be greater than zero.');
             }
             if ($amount > $payment->unallocated() + 0.001) {
-                throw new RuntimeException('Only ' . number_format($payment->unallocated(), 2) . ' of this payment is unallocated and refundable. Reverse an invoice allocation first to refund more.');
+                throw new RuntimeException('Only ' . Money::format($payment->unallocated()) . ' of this payment is unallocated and refundable. Reverse an invoice allocation first to refund more.');
             }
             if ($method !== 'cash' && empty($data['bank_id'])) {
                 throw new RuntimeException('Select the bank / mobile-banking account the refund is paid from.');
@@ -283,7 +284,7 @@ class CollectionService
             ]);
 
             $old = $payment->only(['status', 'refunded_amount']);
-            $payment->refunded_amount = round((float) $payment->refunded_amount + $amount, 2);
+            $payment->refunded_amount = Money::round((float) $payment->refunded_amount + $amount);
             $payment->status = $payment->refunded_amount >= (float) $payment->amount - 0.001 ? 'refunded' : 'partially_refunded';
             $payment->save();
 
@@ -299,9 +300,9 @@ class CollectionService
     // Unallocated money across all the customer's payments (advance credit).
     public static function advanceCredit(int $customerId): float
     {
-        return round((float) CustomerPayment::where('customer_id', $customerId)
+        return Money::round((float) CustomerPayment::where('customer_id', $customerId)
             ->whereIn('status', ['completed', 'partially_refunded'])
-            ->sum(DB::raw('amount - allocated_amount - refunded_amount')), 2);
+            ->sum(DB::raw('amount - allocated_amount - refunded_amount')));
     }
 
     // Cash/bank books: the payment appears as a customer receive.

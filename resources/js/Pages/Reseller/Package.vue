@@ -4,7 +4,7 @@ import axios from 'axios';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
 import { useToast } from '../../lib/toast';
 import { confirmDialog } from '../../lib/confirm';
-import { money, label, useApiError } from '../../lib/isp';
+import { money, label, useApiError, fmtMoney, cur, moneyStep } from '../../lib/isp';
 
 // A reseller sells company packages under their own name and price. Speed, router
 // profile and billing cycle come from the company package. When the company changes that
@@ -139,7 +139,7 @@ onMounted(load);
                     <select v-model="form.base_package_id" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" @change="pickBase">
                         <option value="" disabled>— Select —</option>
                         <option v-for="p in basePackages" :key="p.id" :value="p.id">
-                            {{ p.name }} · {{ p.download_mbps }}/{{ p.upload_mbps }} Mbps · Tk {{ money(p.price) }} / {{ label(p.billing_cycle) }}{{ p.visibility === 'hidden' ? ' · reseller only' : '' }}
+                            {{ p.name }} · {{ p.download_mbps }}/{{ p.upload_mbps }} Mbps · {{ fmtMoney(p.price) }} / {{ label(p.billing_cycle) }}{{ p.visibility === 'hidden' ? ' · reseller only' : '' }}
                         </option>
                     </select>
                 </div>
@@ -152,8 +152,8 @@ onMounted(load);
                     <input v-model="form.code" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs font-medium text-slate-600">My price per cycle (Tk)</label>
-                    <input v-model="form.price" type="number" :min="base ? base.price : 0" step="0.01" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                    <label class="mb-1 block text-xs font-medium text-slate-600">My price per cycle ({{ cur() }})</label>
+                    <input v-model="form.price" type="number" :min="base ? base.price : 0" :step="moneyStep()" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                 </div>
                 <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs">
                     <div class="text-slate-500">Company price</div>

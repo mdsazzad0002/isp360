@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Money;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\LedgerEntry;
@@ -22,12 +23,12 @@ class IspLedgerCheck extends Command
         $problems = 0;
         $ids = LedgerEntry::distinct()->pluck('customer_id');
         foreach ($ids as $customerId) {
-            $ledger = round((float) LedgerEntry::where('customer_id', $customerId)->sum(DB::raw('debit - credit')), 2);
-            $cached = round((float) Customer::withTrashed()->where('id', $customerId)->value('ledger_balance'), 2);
-            $invoiceDue = round((float) Invoice::where('customer_id', $customerId)->whereIn('status', Invoice::OPEN_STATUSES)->sum('due'), 2);
-            $expected = round($invoiceDue - CollectionService::advanceCredit($customerId), 2);
+            $ledger = Money::round((float) LedgerEntry::where('customer_id', $customerId)->sum(DB::raw('debit - credit')));
+            $cached = Money::round((float) Customer::withTrashed()->where('id', $customerId)->value('ledger_balance'));
+            $invoiceDue = Money::round((float) Invoice::where('customer_id', $customerId)->whereIn('status', Invoice::OPEN_STATUSES)->sum('due'));
+            $expected = Money::round($invoiceDue - CollectionService::advanceCredit($customerId));
 
-            if (abs($ledger - $cached) > 0.009 || abs($ledger - $expected) > 0.009) {
+            if (! Money::equals($ledger, $cached) || ! Money::equals($ledger, $expected)) {
                 $problems++;
                 $this->error("Customer {$customerId}: ledger {$ledger}, cached {$cached}, invoices-minus-advance {$expected}");
                 if ($this->option('fix-cache')) {

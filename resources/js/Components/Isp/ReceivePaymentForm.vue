@@ -4,7 +4,7 @@ import axios from 'axios';
 import SearchSelect from '../SearchSelect.vue';
 import CustomerPicker from './CustomerPicker.vue';
 import StatusBadge from './StatusBadge.vue';
-import { money, fmtDate, today, PAYMENT_METHODS, useApiError } from '../../lib/isp';
+import { money, fmtDate, today, PAYMENT_METHODS, useApiError, moneyStep, roundMoney } from '../../lib/isp';
 import { useToast } from '../../lib/toast';
 
 // Bill collection form. Allocation: "auto" pays the oldest invoices first; "manual" lets
@@ -58,7 +58,7 @@ function fillAlloc() {
     let remaining = Number(form.amount || 0);
     dues.value.invoices.forEach((inv) => {
         const take = Math.min(remaining, Number(inv.due));
-        alloc[inv.id] = take > 0 ? Number(take.toFixed(2)) : '';
+        alloc[inv.id] = take > 0 ? roundMoney(take) : '';
         remaining -= take;
     });
 }
@@ -110,7 +110,7 @@ onMounted(() => {
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="mb-1 block text-xs font-medium text-slate-600">Amount</label>
-                    <input v-model="form.amount" type="number" min="0" step="0.01" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                    <input v-model="form.amount" type="number" min="0" :step="moneyStep()" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-slate-600">Date</label>
@@ -167,7 +167,7 @@ onMounted(() => {
                             <td class="px-2 py-1.5">{{ fmtDate(inv.due_date) }}</td>
                             <td class="px-2 py-1.5 text-right">{{ money(inv.due) }}</td>
                             <td v-if="mode === 'manual'" class="px-2 py-1 text-right">
-                                <input v-model="alloc[inv.id]" type="number" min="0" :max="inv.due" step="0.01" class="w-28 rounded border border-slate-300 px-2 py-1 text-right text-sm" />
+                                <input v-model="alloc[inv.id]" type="number" min="0" :max="inv.due" :step="moneyStep()" class="w-28 rounded border border-slate-300 px-2 py-1 text-right text-sm" />
                             </td>
                         </tr>
                         <tr v-if="!dues.invoices.length">

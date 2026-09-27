@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Model;
 
 // Settlement between the company and a reseller: withdrawal requests (company pays the
@@ -12,7 +13,7 @@ class ResellerTransaction extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'amount' => 'decimal:2',
+        'amount' => MoneyCast::class,
         'processed_at' => 'datetime',
     ];
 

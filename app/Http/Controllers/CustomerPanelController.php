@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Money;
 use App\Models\CustomerPayment;
 use App\Models\Invoice;
 use App\Services\Isp\CollectionService;
@@ -29,7 +30,7 @@ class CustomerPanelController extends Controller
             'summary' => [
                 'balance' => LedgerService::balance($customer->id),
                 'advance' => CollectionService::advanceCredit($customer->id),
-                'overdue' => round((float) Invoice::where('customer_id', $customer->id)->where('status', 'overdue')->sum('due'), 2),
+                'overdue' => Money::round((float) Invoice::where('customer_id', $customer->id)->where('status', 'overdue')->sum('due')),
                 'next_due_date' => Invoice::where('customer_id', $customer->id)->whereIn('status', Invoice::OPEN_STATUSES)->min('due_date'),
             ],
             'connections' => $customer->connections()->with('package:id,name,download_mbps,upload_mbps,price,billing_cycle')
@@ -64,9 +65,9 @@ class CustomerPanelController extends Controller
         $byConnection = $invoices->groupBy('connection_id');
         $connections->each(function ($c) use ($byConnection) {
             $rows = $byConnection->get($c->id, collect());
-            $c->billed = round((float) $rows->sum('total'), 2);
-            $c->collected = round((float) $rows->sum('paid'), 2);
-            $c->due = round((float) $rows->whereIn('status', Invoice::OPEN_STATUSES)->sum('due'), 2);
+            $c->billed = Money::round((float) $rows->sum('total'));
+            $c->collected = Money::round((float) $rows->sum('paid'));
+            $c->due = Money::round((float) $rows->whereIn('status', Invoice::OPEN_STATUSES)->sum('due'));
             $c->last_invoice_date = $rows->max('invoice_date');
         });
 
@@ -75,9 +76,9 @@ class CustomerPanelController extends Controller
             'summary' => [
                 'balance' => LedgerService::balance($customer->id),
                 'advance' => CollectionService::advanceCredit($customer->id),
-                'overdue' => round((float) $invoices->where('status', 'overdue')->sum('due'), 2),
-                'total_billed' => round((float) $invoices->sum('total'), 2),
-                'total_paid' => round((float) CustomerPayment::where('customer_id', $customer->id)->whereIn('status', ['completed', 'partially_refunded', 'refunded'])->sum('amount'), 2),
+                'overdue' => Money::round((float) $invoices->where('status', 'overdue')->sum('due')),
+                'total_billed' => Money::round((float) $invoices->sum('total')),
+                'total_paid' => Money::round((float) CustomerPayment::where('customer_id', $customer->id)->whereIn('status', ['completed', 'partially_refunded', 'refunded'])->sum('amount')),
             ],
             'connections' => $connections,
             'invoices' => $invoices,

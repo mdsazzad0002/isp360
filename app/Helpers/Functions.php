@@ -69,6 +69,7 @@ function appMenuGroups()
             'icon' => 'bi-router',
             'items' => [
                 ['access' => 'router', 'uri' => '/isp/routers', 'match' => 'isp/routers', 'icon' => 'bi-router', 'label' => 'Routers (MikroTik)'],
+                ['access' => 'networkBlock', 'uri' => '/isp/blocks', 'match' => 'isp/blocks', 'icon' => 'bi-shield-x', 'label' => 'Site / IP Block'],
                 ['access' => 'package', 'uri' => '/isp/packages', 'match' => 'isp/packages', 'icon' => 'bi-speedometer2', 'label' => 'Packages'],
                 ['access' => 'bandwidth', 'uri' => '/isp/bandwidth', 'match' => 'isp/bandwidth', 'icon' => 'bi-cloud-download', 'label' => 'Bandwidth Purchase'],
             ],
@@ -123,6 +124,7 @@ function appMenuGroups()
             'items' => [
                 ['access' => 'ispReport', 'uri' => '/isp/due-report', 'match' => 'isp/due-report', 'icon' => 'bi-exclamation-triangle', 'label' => 'Due & Overdue'],
                 ['access' => 'ispReport', 'uri' => '/isp/collection-report', 'match' => 'isp/collection-report', 'icon' => 'bi-graph-up', 'label' => 'Collection Report'],
+                ['access' => 'ispReport', 'uri' => '/isp/tax-report', 'match' => 'isp/tax-report', 'icon' => 'bi-receipt-cutoff', 'label' => 'Tax Report'],
                 ['access' => 'ispReport', 'uri' => '/isp/bandwidth-usage', 'match' => 'isp/bandwidth-usage', 'icon' => 'bi-speedometer', 'label' => 'Bandwidth Usage'],
                 ['access' => 'ispReport', 'uri' => '/isp/bandwidth-profit', 'match' => 'isp/bandwidth-profit', 'icon' => 'bi-bar-chart-line', 'label' => 'Bandwidth Profit'],
                 ['access' => 'customerDue', 'uri' => '/customerDue', 'match' => 'customerDue', 'icon' => 'bi-cash', 'label' => 'Customer Due'],
@@ -536,6 +538,7 @@ function company()
 function clearCompanyCache()
 {
     \Illuminate\Support\Facades\Cache::forget('company_profile');
+    \App\Support\Money::flush();
 }
 
 // Sends a single transactional SMS (e.g. sale confirmation) through the branch's active

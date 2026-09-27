@@ -91,7 +91,8 @@ class DashboardController extends Controller
                 deleteUploadedFile($data->favicon);
                 $data->favicon = NULL;
             }
-            $dataKeys = $request->except('id', 'logo', 'favicon');
+            // country and currency are managed from the ISP settings page
+            $dataKeys = $request->except('id', 'logo', 'favicon', 'country_code', 'currency_code');
             foreach ($dataKeys as $key => $value) {
                 $data[$key] = $value;
             }

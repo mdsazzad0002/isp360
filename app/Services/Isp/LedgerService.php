@@ -2,6 +2,7 @@
 
 namespace App\Services\Isp;
 
+use App\Support\Money;
 use App\Models\Customer;
 use App\Models\LedgerEntry;
 use Illuminate\Support\Carbon;
@@ -17,8 +18,8 @@ class LedgerService
 {
     public static function post(int $customerId, int $branchId, string $type, float $debit, float $credit, string $description, ?string $refType = null, ?int $refId = null, $date = null): LedgerEntry
     {
-        $debit = round($debit, 2);
-        $credit = round($credit, 2);
+        $debit = Money::round($debit);
+        $credit = Money::round($credit);
 
         $entry = LedgerEntry::create([
             'customer_id' => $customerId,
@@ -43,15 +44,15 @@ class LedgerService
 
     public static function balance(int $customerId): float
     {
-        return round((float) DB::table('customers')->where('id', $customerId)->value('ledger_balance'), 2);
+        return Money::round((float) DB::table('customers')->where('id', $customerId)->value('ledger_balance'));
     }
 
     // Recomputes the cached balance from the ledger (repair tool; should be a no-op).
     public static function rebuild(int $customerId): float
     {
         $sum = (float) LedgerEntry::where('customer_id', $customerId)->sum(DB::raw('debit - credit'));
-        DB::table('customers')->where('id', $customerId)->update(['ledger_balance' => round($sum, 2)]);
-        return round($sum, 2);
+        DB::table('customers')->where('id', $customerId)->update(['ledger_balance' => Money::round($sum)]);
+        return Money::round($sum);
     }
 
     // Opening balance before $from plus every entry in [from, to] with a running balance.
@@ -72,17 +73,17 @@ class LedgerService
 
         $running = $opening;
         $rows = $rows->map(function ($row) use (&$running) {
-            $running = round($running + (float) $row->debit - (float) $row->credit, 2);
+            $running = Money::round($running + (float) $row->debit - (float) $row->credit);
             $row->balance = $running;
             return $row;
         });
 
         return [
-            'opening' => round($opening, 2),
+            'opening' => Money::round($opening),
             'rows' => $rows->values(),
-            'total_debit' => round((float) $rows->sum('debit'), 2),
-            'total_credit' => round((float) $rows->sum('credit'), 2),
-            'closing' => round($running, 2),
+            'total_debit' => Money::round((float) $rows->sum('debit')),
+            'total_credit' => Money::round((float) $rows->sum('credit')),
+            'closing' => Money::round($running),
         ];
     }
 }

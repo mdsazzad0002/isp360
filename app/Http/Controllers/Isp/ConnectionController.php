@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Isp;
 
+use App\Support\Money;
 use App\Models\Connection;
 use App\Models\Invoice;
 use App\Services\Isp\AuditLogger;
 use App\Services\Isp\BillingService;
 use App\Services\Isp\ConnectionService;
+use App\Services\Isp\PackageChangeService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -18,6 +20,7 @@ class ConnectionController extends IspController
             'canAct' => checkAccess('connectionAction'),
             'canSecret' => checkAccess('connectionSecret'),
             'canPay' => checkAccess('ispPayment'),
+            'canCredit' => checkAccess('connectionCredit'),
         ]);
     }
 
@@ -29,6 +32,7 @@ class ConnectionController extends IspController
             ->addSelect(['connections.*',
                 'open_invoice_id' => Invoice::select('id')->whereColumn('connection_id', 'connections.id')->whereNotNull('service_months')->whereIn('status', Invoice::OPEN_STATUSES)->limit(1),
                 'open_due' => Invoice::selectRaw('coalesce(sum(due), 0)')->whereColumn('connection_id', 'connections.id')->whereIn('status', Invoice::OPEN_STATUSES),
+                'on_credit' => Invoice::selectRaw('count(*) > 0')->whereColumn('connection_id', 'connections.id')->whereIn('status', Invoice::OPEN_STATUSES)->whereNotNull('credit_at'),
             ])
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->when($request->syncStatus, fn ($q, $s) => $q->where('network_sync_status', $s))
@@ -57,7 +61,8 @@ class ConnectionController extends IspController
     {
         $connection = Connection::with(['customer:id,code,name,phone,reseller_id', 'package', 'box:id,name,code', 'router', 'histories.createdBy', 'packageHistories.oldPackage', 'packageHistories.newPackage', 'packageHistories.changedBy'])
             ->where('branch_id', $this->branchId)->findOrFail($request->id);
-        return response()->json($connection);
+        // the panel hides Activate / Reactivate and offers Pay instead
+        return response()->json($connection->toArray() + ['needs_payment' => ConnectionService::needsPayment($connection)]);
     }
 
     // PPPoE password is hidden everywhere; revealing it is a separate, audited permission.
@@ -82,6 +87,10 @@ class ConnectionController extends IspController
                 return $this->ok('Connection updated successfully', ['id' => $connection->id]);
             }
 
+            // starting a line on due is an admin decision (the reseller portal can't do it)
+            if ($request->boolean('on_credit') && ! checkAccess('connectionCredit')) {
+                return send_error('You are not allowed to start a connection on due', null, 403);
+            }
             $connection = ConnectionService::create($request->all(), $this->branchId);
             $message = "Connection {$connection->code} created";
             if ($request->boolean('charge_installation') && $connection->package && ((float) $connection->package->installation_fee > 0 || (float) $connection->package->activation_fee > 0)) {
@@ -107,13 +116,13 @@ class ConnectionController extends IspController
         if ($invoices->isEmpty()) {
             return '';
         }
-        $paid = round((float) $invoices->sum('paid'), 2);
-        $due = round((float) $invoices->sum('due'), 2);
-        $text = '. Invoice ' . $invoices->pluck('invoice_no')->implode(', ') . ' (Tk ' . number_format((float) $invoices->sum('total'), 2) . ')';
+        $paid = Money::round((float) $invoices->sum('paid'));
+        $due = Money::round((float) $invoices->sum('due'));
+        $text = '. Invoice ' . $invoices->pluck('invoice_no')->implode(', ') . ' (' . Money::format($invoices->sum('total')) . ')';
         if ($paid > 0) {
-            $text .= ', Tk ' . number_format($paid, 2) . ' paid from balance';
+            $text .= ', ' . Money::format($paid) . ' paid from balance';
         }
-        return $text . ($due > 0 ? ', Tk ' . number_format($due, 2) . ' due' : '');
+        return $text . ($due > 0 ? ', ' . Money::format($due) . ' due' : '');
     }
 
     // Pay panel: cost and paid-until for 1..12 cycles.
@@ -123,6 +132,21 @@ class ConnectionController extends IspController
         $connection = Connection::with('customer:id,code,name,phone', 'package:id,name,price,billing_cycle,download_mbps')
             ->where('branch_id', $this->branchId)->findOrFail($request->id);
         return response()->json(['connection' => $connection] + BillingService::payQuote($connection));
+    }
+
+    // Admin only: start the unpaid bill's time now; the customer keeps the due and pays later.
+    public function credit(Request $request)
+    {
+        if ($r = $this->deny('connectionCredit')) return $r;
+        if ($r = $this->validateOrFail($request->all(), ['id' => 'required|integer', 'note' => 'nullable|max:255'])) return $r;
+        try {
+            $connection = Connection::where('branch_id', $this->branchId)->findOrFail($request->id);
+            BillingService::grantCredit($connection, $request->note);
+            $connection->refresh();
+            return $this->ok("Started on due. Runs until {$connection->expire_at?->format('d M Y h:i A')}; the bill stays as the customer's due.");
+        } catch (\Throwable $th) {
+            return $this->fail($th);
+        }
     }
 
     public function pay(Request $request)
@@ -142,7 +166,7 @@ class ConnectionController extends IspController
                 $request->only(['method', 'bank_id', 'transaction_id', 'notes']) + ['payment_date' => now()->toDateString()]);
             $connection->refresh();
             $until = $connection->expire_at ? ' Paid until ' . $connection->expire_at->format('d M Y h:i A') . '.' : ' The time starts when the connection is activated.';
-            return $this->ok(($payment ? "Payment {$payment->receipt_no} of Tk " . number_format((float) $payment->amount, 2) . ' received.' : 'Paid from advance credit.') . $until,
+            return $this->ok(($payment ? "Payment {$payment->receipt_no} of " . Money::format($payment->amount) . ' received.' : 'Paid from advance credit.') . $until,
                 ['id' => $payment?->id]);
         } catch (\Throwable $th) {
             return $this->fail($th);
@@ -174,19 +198,31 @@ class ConnectionController extends IspController
         }
     }
 
+    // Day-wise preview of a package change: days left, their value on each package, the difference.
+    public function packageQuote(Request $request)
+    {
+        if ($r = $this->deny('connectionAction')) return $r;
+        try {
+            $connection = Connection::with('package')->where('branch_id', $this->branchId)->findOrFail($request->id);
+            $package = ConnectionService::assertCanChangePackage($connection, (int) $request->package_id);
+            return response()->json(PackageChangeService::quote($connection, $package));
+        } catch (\Throwable $th) {
+            return $this->fail($th);
+        }
+    }
+
     public function changePackage(Request $request)
     {
         if ($r = $this->deny('connectionAction')) return $r;
         if ($r = $this->validateOrFail($request->all(), [
             'id' => 'required|integer',
             'package_id' => 'required|integer',
-            'effective_date' => 'nullable|date',
             'reason' => 'nullable|max:255',
         ])) return $r;
         try {
             $connection = Connection::where('branch_id', $this->branchId)->findOrFail($request->id);
-            $connection = ConnectionService::changePackage($connection, (int) $request->package_id, $request->effective_date, $request->reason);
-            return $this->ok("Package changed to {$connection->package->name}. The new price applies from the next invoice.");
+            $connection = ConnectionService::changePackage($connection, (int) $request->package_id, $request->reason, $summary);
+            return $this->ok("Package changed to {$connection->package->name}. {$summary}");
         } catch (\Throwable $th) {
             return $this->fail($th);
         }

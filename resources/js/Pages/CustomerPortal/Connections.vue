@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Link, usePage } from '@inertiajs/vue3';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
-import { money, fmtDate, label, expiryClass, fmtDateTime } from '../../lib/isp';
+import { money, fmtDate, label, expiryClass, fmtDateTime, fmtMoney } from '../../lib/isp';
 import { printInvoice } from '../../lib/ispPrint';
 
 const props = defineProps({
@@ -113,7 +113,7 @@ function toggle(c) {
                                     <td class="px-2 py-2 font-medium text-brand-600">{{ c.code }}</td>
                                     <td class="px-2 py-2">
                                         {{ c.package?.name }}
-                                        <div class="text-xs text-slate-400">{{ c.package?.download_mbps }}/{{ c.package?.upload_mbps }} Mbps · Tk {{ money(Number(c.package?.price) - Number(c.discount)) }} / {{ label(c.package?.billing_cycle) }}</div>
+                                        <div class="text-xs text-slate-400">{{ c.package?.download_mbps }}/{{ c.package?.upload_mbps }} Mbps · {{ fmtMoney(Number(c.package?.price) - Number(c.discount)) }} / {{ label(c.package?.billing_cycle) }}</div>
                                     </td>
                                     <td class="px-2 py-2">{{ label(c.connection_type) }} <div class="text-xs text-slate-400">{{ c.pppoe_username || c.static_ip || '—' }}</div></td>
                                     <td class="px-2 py-2">

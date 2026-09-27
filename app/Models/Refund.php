@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Model;
 
 class Refund extends Model
 {
     protected $guarded = ['id'];
 
-    protected $casts = ['amount' => 'decimal:2', 'refund_date' => 'date:Y-m-d'];
+    protected $casts = ['amount' => MoneyCast::class, 'refund_date' => 'date:Y-m-d'];
 
     public function payment()
     {

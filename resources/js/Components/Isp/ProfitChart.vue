@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { money } from '../../lib/isp';
 
-// Revenue and cost as grouped bars with profit as a line, all in Tk on one axis (profit can
+// Revenue and cost as grouped bars with profit as a line, all in the branch currency on one axis (profit can
 // go below zero, so the baseline is the zero line). Hover a month for the numbers; the last
 // profit point is labelled directly; a table view is always one click away.
 const props = defineProps({
@@ -15,13 +15,21 @@ const pad = { top: 16, right: 64, bottom: 26, left: 60 };
 const hover = ref(null);
 const showTable = ref(false);
 
-function nice(v) {
-    if (v <= 0) return 0;
-    const p = Math.pow(10, Math.floor(Math.log10(v)));
-    return Math.ceil(v / p) * p;
+// A 1/2/2.5/5 x 10^n step, so every tick is a round number and zero is always a tick.
+function niceStep(range) {
+    const raw = Math.max(range, 1) / 4;
+    const p = Math.pow(10, Math.floor(Math.log10(raw)));
+    return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw);
 }
-const maxV = computed(() => nice(Math.max(1, ...props.rows.flatMap((r) => [r.revenue, r.cost, r.profit].map(Number)))));
-const minV = computed(() => -nice(Math.max(0, ...props.rows.map((r) => -Number(r.profit)))));
+const scale = computed(() => {
+    const values = props.rows.flatMap((r) => [r.revenue, r.cost, r.profit].map(Number));
+    const hi = Math.max(0, ...values);
+    const lo = Math.min(0, ...values);
+    const step = niceStep(hi - lo);
+    return { step, min: Math.floor(lo / step) * step, max: Math.max(step, Math.ceil(hi / step) * step) };
+});
+const maxV = computed(() => scale.value.max);
+const minV = computed(() => scale.value.min);
 const plotH = computed(() => props.height - pad.top - pad.bottom);
 const y = (v) => pad.top + plotH.value * ((maxV.value - Number(v || 0)) / (maxV.value - minV.value));
 const zeroY = computed(() => y(0));
@@ -30,8 +38,7 @@ const barW = computed(() => Math.max(3, Math.min(20, band.value * 0.3)));
 const cx = (i) => pad.left + i * band.value + band.value / 2;
 const ticks = computed(() => {
     const out = [];
-    const step = (maxV.value - minV.value) / 4;
-    for (let v = minV.value; v <= maxV.value + 0.001; v += step) out.push({ v, y: y(v) });
+    for (let v = minV.value; v <= maxV.value + scale.value.step / 1000; v += scale.value.step) out.push({ v, y: y(v) });
     return out;
 });
 const linePath = computed(() => props.rows.map((r, i) => `${i ? 'L' : 'M'}${cx(i)},${y(r.profit)}`).join(''));
@@ -115,7 +122,7 @@ function barPath(x, v, w) {
     --axis: #6b7280;
     --ink: #374151;
 }
-:global(.dark) .viz {
+:global(.dark .viz) {
     --series-1: #3987e5;
     --series-2: #d95926;
     --series-3: #199e70;

@@ -3,6 +3,8 @@
 namespace App\Services\Network;
 
 use App\Models\Connection;
+use App\Models\Router;
+use Illuminate\Support\Collection;
 
 // Pushes a connection's desired state (enabled/disabled, profile, credentials) to the
 // network side — MikroTik, RADIUS, OLT... Billing never talks to devices directly; it
@@ -17,4 +19,8 @@ interface NetworkDriver
 
     // Live comparison with the device: a list of differences, empty when it matches.
     public function verify(Connection $connection): array;
+
+    // Makes the router's site / IP blocks match $blocks (the branch's active NetworkBlock rows).
+    // Returns warnings (things it could not apply); throws when the router can't be updated.
+    public function syncBlocks(Router $router, Collection $blocks): array;
 }

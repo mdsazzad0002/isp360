@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Model;
 
 // Money received from a customer against ISP billing. Never edited or deleted once
@@ -12,9 +14,10 @@ class CustomerPayment extends Model
 
     protected $casts = [
         'payment_date' => 'date:Y-m-d',
-        'amount' => 'decimal:2',
-        'allocated_amount' => 'decimal:2',
-        'refunded_amount' => 'decimal:2',
+        'amount' => MoneyCast::class,
+        'allocated_amount' => MoneyCast::class,
+        'refunded_amount' => MoneyCast::class,
+        'tax_amount' => MoneyCast::class,
         'reversed_at' => 'datetime',
     ];
 
@@ -51,6 +54,6 @@ class CustomerPayment extends Model
         if (! in_array($this->status, ['completed', 'partially_refunded'], true)) {
             return 0;
         }
-        return round((float) $this->amount - (float) $this->allocated_amount - (float) $this->refunded_amount, 2);
+        return Money::round((float) $this->amount - (float) $this->allocated_amount - (float) $this->refunded_amount);
     }
 }

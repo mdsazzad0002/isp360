@@ -6,13 +6,15 @@ import SearchSelect from '../SearchSelect.vue';
 import CustomerPicker from './CustomerPicker.vue';
 import QuickBoxOffcanvas from './QuickBoxOffcanvas.vue';
 import QuickAreaOffcanvas from './QuickAreaOffcanvas.vue';
-import { today, useApiError } from '../../lib/isp';
+import { today, useApiError, fmtMoney, cur, moneyStep } from '../../lib/isp';
 import { useToast } from '../../lib/toast';
 
 const props = defineProps({
     show: Boolean,
     connection: { type: Object, default: null },
     customerId: { type: [Number, null], default: null },
+    // admin only: start the line before its first bill is paid
+    canCredit: { type: Boolean, default: false },
 });
 const emit = defineEmits(['close', 'saved']);
 const toast = useToast();
@@ -45,6 +47,7 @@ function reset() {
         activate_now: true,
         charge_installation: true,
         bonus_days: Number(settings.value.init_bonus_days || 0),
+        on_credit: false,
         notes: c?.notes ?? '',
         reason: '',
     });
@@ -200,8 +203,8 @@ async function save() {
                     <input v-model="form.mac_address" type="text" class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs font-medium text-slate-600">Monthly discount (Tk)</label>
-                    <input v-model="form.discount" type="number" min="0" step="0.01" class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
+                    <label class="mb-1 block text-xs font-medium text-slate-600">Monthly discount ({{ cur() }})</label>
+                    <input v-model="form.discount" type="number" min="0" :step="moneyStep()" class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-slate-600">Installation date</label>
@@ -214,6 +217,10 @@ async function save() {
                 <div v-if="form.activate_now" class="w-48">
                     <input v-model="form.activation_date" type="date" class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
                 </div>
+                <label v-if="canCredit" class="flex items-start gap-2">
+                    <input v-model="form.on_credit" type="checkbox" class="mt-1" />
+                    <span>Start on due — the line runs now, the first bill stays as the customer's due <span class="text-slate-400">(if their balance doesn't already pay it)</span></span>
+                </label>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Bonus days <span class="text-slate-400">(free, added to the first paid time)</span></label>
@@ -223,12 +230,12 @@ async function save() {
                         <label class="mb-1 block text-xs font-medium text-slate-600">Referred by <span class="text-slate-400">(existing customer)</span></label>
                         <CustomerPicker v-model="referrer" placeholder="Search referrer (optional)" />
                         <p v-if="settings.referral_enabled && referrer" class="mt-1 text-xs text-emerald-700">
-                            {{ referrer.name }} gets {{ settings.referral_commission_type === 'percent' ? `${settings.referral_commission}% of the first bill` : `Tk ${settings.referral_commission}` }} in their wallet once this first bill is paid.
+                            {{ referrer.name }} gets {{ settings.referral_commission_type === 'percent' ? `${settings.referral_commission}% of the first bill` : fmtMoney(settings.referral_commission) }} in their wallet once this first bill is paid.
                         </p>
                     </div>
                 </div>
                 <label v-if="selectedPackage && (Number(selectedPackage.installation_fee) || Number(selectedPackage.activation_fee))" class="flex items-center gap-2">
-                    <input v-model="form.charge_installation" type="checkbox" /> Invoice installation/activation fee (Tk {{ Number(selectedPackage.installation_fee) + Number(selectedPackage.activation_fee) }})
+                    <input v-model="form.charge_installation" type="checkbox" /> Invoice installation/activation fee ({{ fmtMoney(Number(selectedPackage.installation_fee) + Number(selectedPackage.activation_fee)) }})
                 </label>
             </div>
             <div v-else>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Money;
 use App\Models\Connection;
 use App\Models\Customer;
 use App\Models\CustomerPayment;
@@ -36,7 +37,7 @@ class ResellerPanelController extends Controller
         return \Inertia\Inertia::render('Reseller/Dashboard', [
             'customers' => $customers,
             'customerCount' => $customers->count(),
-            'totalDue' => round((float) $customers->where('ledger_balance', '>', 0)->sum('ledger_balance'), 2),
+            'totalDue' => Money::round((float) $customers->where('ledger_balance', '>', 0)->sum('ledger_balance')),
             'connectionCount' => Connection::whereIn('customer_id', $customers->pluck('id'))->where('status', 'active')->count(),
             'wallet' => ResellerWalletService::summary($reseller->id),
         ]);
@@ -200,7 +201,7 @@ class ResellerPanelController extends Controller
         $customer = Customer::where('reseller_id', $reseller->id)->findOrFail($request->customerId);
 
         return response()->json([
-            'balance' => round((float) $customer->ledger_balance, 2),
+            'balance' => Money::round((float) $customer->ledger_balance),
             'advance' => CollectionService::advanceCredit($customer->id),
             'wallet' => ResellerWalletService::summary($reseller->id)['available'],
             'invoices' => Invoice::where('customer_id', $customer->id)->whereIn('status', Invoice::OPEN_STATUSES)

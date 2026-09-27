@@ -5,7 +5,7 @@ import { Link } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import { useToast } from '../../lib/toast';
 import { confirmDialog } from '../../lib/confirm';
-import { money, fmtDate, today, useApiError } from '../../lib/isp';
+import { money, fmtDate, today, useApiError, fmtMoney, cur, moneyStep } from '../../lib/isp';
 
 // Upstream bandwidth bought (IIG / NTTN / transit...) as a monthly cost from start to end date.
 defineOptions({ layout: AppLayout });
@@ -76,9 +76,9 @@ onMounted(load);
                     <input v-model="form.bandwidth_mbps" type="number" min="0.01" step="0.01" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                 </div>
                 <div class="md:col-span-2">
-                    <label class="mb-1 block text-xs font-medium text-slate-600">Monthly cost (Tk)</label>
-                    <input v-model="form.monthly_cost" type="number" min="0" step="0.01" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
-                    <div v-if="Number(form.bandwidth_mbps) > 0 && form.monthly_cost !== ''" class="mt-0.5 text-xs text-slate-500">Tk {{ money(form.monthly_cost / form.bandwidth_mbps) }} / Mbps</div>
+                    <label class="mb-1 block text-xs font-medium text-slate-600">Monthly cost ({{ cur() }})</label>
+                    <input v-model="form.monthly_cost" type="number" min="0" :step="moneyStep()" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                    <div v-if="Number(form.bandwidth_mbps) > 0 && form.monthly_cost !== ''" class="mt-0.5 text-xs text-slate-500">{{ fmtMoney(form.monthly_cost / form.bandwidth_mbps) }} / Mbps</div>
                 </div>
                 <div class="md:col-span-3 grid grid-cols-2 gap-2">
                     <div>
@@ -108,11 +108,11 @@ onMounted(load);
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                 <div class="text-xs text-slate-500">Monthly bandwidth bill</div>
-                <div class="text-xl font-semibold text-slate-800">Tk {{ money(totalCost) }}</div>
+                <div class="text-xl font-semibold text-slate-800">{{ fmtMoney(totalCost) }}</div>
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                 <div class="text-xs text-slate-500">Average cost</div>
-                <div class="text-xl font-semibold text-slate-800">{{ totalMbps ? `Tk ${money(totalCost / totalMbps)}` : '—' }} <span class="text-sm font-normal text-slate-500">/ Mbps</span></div>
+                <div class="text-xl font-semibold text-slate-800">{{ totalMbps ? `${fmtMoney(totalCost / totalMbps)}` : '—' }} <span class="text-sm font-normal text-slate-500">/ Mbps</span></div>
             </div>
             <div class="flex flex-col justify-center gap-1 rounded-lg border border-slate-200 bg-white p-3 text-sm shadow-sm">
                 <Link href="/isp/bandwidth-usage" class="text-brand-600 hover:underline"><i class="bi bi-speedometer"></i> Bought vs sold report</Link>
@@ -133,7 +133,7 @@ onMounted(load);
                             <th class="px-3 py-2 font-medium">Type</th>
                             <th class="px-3 py-2 text-right font-medium">Mbps</th>
                             <th class="px-3 py-2 text-right font-medium">Monthly cost</th>
-                            <th class="px-3 py-2 text-right font-medium">Tk / Mbps</th>
+                            <th class="px-3 py-2 text-right font-medium">{{ cur() }} / Mbps</th>
                             <th class="px-3 py-2 font-medium">Period</th>
                             <th class="px-3 py-2 font-medium">Status</th>
                             <th class="px-3 py-2 text-right font-medium">Action</th>

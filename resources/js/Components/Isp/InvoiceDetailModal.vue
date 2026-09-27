@@ -4,7 +4,7 @@ import axios from 'axios';
 import { usePage } from '@inertiajs/vue3';
 import Modal from '../Modal.vue';
 import StatusBadge from './StatusBadge.vue';
-import { money, fmtDate, today, promptReason, useApiError, fmtDateTime } from '../../lib/isp';
+import { money, fmtDate, today, promptReason, useApiError, fmtDateTime, moneyStep, invoiceTaxes } from '../../lib/isp';
 import { printInvoice } from '../../lib/ispPrint';
 import { useToast } from '../../lib/toast';
 
@@ -119,8 +119,14 @@ function print() {
                     <tfoot class="text-slate-700">
                         <tr><td colspan="4" class="px-2 py-1 text-right">Subtotal</td><td class="px-2 py-1 text-right">{{ money(invoice.subtotal) }}</td></tr>
                         <tr v-if="Number(invoice.discount)"><td colspan="4" class="px-2 py-1 text-right">Discount</td><td class="px-2 py-1 text-right">- {{ money(invoice.discount) }}</td></tr>
+                        <template v-if="!invoice.tax_inclusive">
+                            <tr v-for="t in invoiceTaxes(invoice)" :key="t.label"><td colspan="4" class="px-2 py-1 text-right">{{ t.label }}</td><td class="px-2 py-1 text-right">{{ money(t.amount) }}</td></tr>
+                        </template>
                         <tr v-if="Number(invoice.adjustment)"><td colspan="4" class="px-2 py-1 text-right">Credit / debit notes</td><td class="px-2 py-1 text-right">{{ money(invoice.adjustment) }}</td></tr>
                         <tr class="font-semibold"><td colspan="4" class="px-2 py-1 text-right">Total</td><td class="px-2 py-1 text-right">{{ money(invoice.total) }}</td></tr>
+                        <template v-if="invoice.tax_inclusive">
+                            <tr v-for="t in invoiceTaxes(invoice)" :key="t.label" class="text-slate-500"><td colspan="4" class="px-2 py-1 text-right">Includes {{ t.label }}</td><td class="px-2 py-1 text-right">{{ money(t.amount) }}</td></tr>
+                        </template>
                         <tr><td colspan="4" class="px-2 py-1 text-right">Paid</td><td class="px-2 py-1 text-right text-emerald-700">{{ money(invoice.paid) }}</td></tr>
                         <tr class="font-semibold"><td colspan="4" class="px-2 py-1 text-right">Due</td><td class="px-2 py-1 text-right text-red-600">{{ money(invoice.due) }}</td></tr>
                     </tfoot>
@@ -153,7 +159,7 @@ function print() {
                         <option value="credit">Credit note (reduce)</option>
                         <option value="debit">Debit note (add charge)</option>
                     </select>
-                    <input v-model="noteForm.amount" type="number" min="0" step="0.01" placeholder="Amount" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                    <input v-model="noteForm.amount" type="number" min="0" :step="moneyStep()" placeholder="Amount" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
                     <input v-model="noteForm.date" type="date" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
                     <input v-model="noteForm.reason" type="text" placeholder="Reason (required)" class="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm sm:col-span-1" />
                 </div>

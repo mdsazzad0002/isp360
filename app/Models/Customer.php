@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
+use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +13,13 @@ use Illuminate\Notifications\Notifiable;
 class Customer extends Authenticatable
 {
     use HasFactory, Notifiable, SoftDeletes;
+
+    // amounts in the company currency's decimals (the columns hold 3)
+    protected $casts = [
+        'ledger_balance' => MoneyCast::class,
+        'previous_due' => MoneyCast::class,
+        'credit_limit' => MoneyCast::class,
+    ];
 
     public $timestamps = false;
 
@@ -86,13 +95,23 @@ class Customer extends Authenticatable
 
         $bindings = [];
         $wrapClauses = "";
+        // MariaDB merges the derived table and then misreads the alias-built `due` in WHERE / ORDER BY,
+        // so filters and sums use the full expression.
+        $due = "round(t.ledger_amount + t.payment_amount - t.received_amount, " . Money::decimals() . ")";
         if (!empty($search)) {
             $wrapClauses .= " and (t.name like ? or t.code like ? or t.phone like ? or t.address like ?)";
             $like = '%' . $search . '%';
             array_push($bindings, $like, $like, $like, $like);
         }
+        // no customer selected: every customer, narrowed by the due status filter
         if (empty($req->customerId)) {
-            $wrapClauses .= " and t.due != 0";
+            $wrapClauses .= match ($req->dueStatus ?? '') {
+                'due' => " and $due > 0",
+                'advance' => " and $due < 0",
+                'clear' => " and $due = 0",
+                'nonzero' => " and $due != 0",
+                default => "",
+            };
         }
 
         $sortableColumns = ['code', 'name', 'phone', 'address', 'due'];
@@ -102,9 +121,11 @@ class Customer extends Authenticatable
         $page = max(1, (int) $page);
         $offset = ($page - 1) * $perPage;
 
-        $total = DB::selectOne("select count(*) as total from ($base) as t where 1=1 $wrapClauses", $bindings)->total;
+        $sum = DB::selectOne("select count(*) as total, ifnull(sum(case when $due > 0 then $due end), 0) as total_due,
+            ifnull(sum(case when $due < 0 then -$due end), 0) as total_advance from ($base) as t where 1=1 $wrapClauses", $bindings);
+        $total = $sum->total;
 
-        $rows = DB::select("select * from ($base) as t where 1=1 $wrapClauses order by t.$sortBy $sortDir limit $perPage offset $offset", $bindings);
+        $rows = DB::select("select * from ($base) as t where 1=1 $wrapClauses order by " . ($sortBy === 'due' ? $due : "t.$sortBy") . " $sortDir limit $perPage offset $offset", $bindings);
 
         return [
             'data' => $rows,
@@ -112,6 +133,8 @@ class Customer extends Authenticatable
             'per_page' => $perPage,
             'current_page' => $page,
             'last_page' => max(1, (int) ceil($total / $perPage)),
+            'total_due' => Money::round((float) $sum->total_due),
+            'total_advance' => Money::round((float) $sum->total_advance),
         ];
     }
 
@@ -151,7 +174,12 @@ class Customer extends Authenticatable
                     " . ($branchId == null ? "" : " and cp.branch_id = '$branchId'") . "
                     and cp.customer_id = c.id) as payment_amount,
 
-                    (select (c.previous_due + payment_amount) - received_amount) as due
+                    -- ISP bills, payments, notes and the opening balance (previous due) all live in the ledger
+                    (select ifnull(sum(le.debit - le.credit), 0) from ledger_entries le
+                    where le.customer_id = c.id
+                    " . ($date == null ? "" : " and le.entry_date <= '$date'") . ") as ledger_amount,
+
+                    (select (ledger_amount + payment_amount) - received_amount) as due
 
                     from customers c
                     where c.status = 'a'

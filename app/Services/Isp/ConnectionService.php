@@ -83,6 +83,10 @@ class ConnectionService
             // The first invoice is shown right away. The internet time it buys starts only once
             // it is paid (and the connection is switched on).
             BillingService::billNow($connection);
+            if (! empty($data['on_credit']) && $connection->fresh()->expire_at === null
+                && Invoice::where('connection_id', $connection->id)->whereNotNull('service_months')->whereIn('status', Invoice::OPEN_STATUSES)->exists()) {
+                BillingService::grantCredit($connection, 'Started on due at connection');
+            }
             if (! empty($data['activate_now'])) {
                 self::activate($connection, $data['activation_date'] ?? now()->toDateString());
             }
@@ -194,6 +198,11 @@ class ConnectionService
             if ($connection->status !== 'suspended') {
                 throw new RuntimeException("Only a suspended connection can be reactivated (current: {$connection->status}).");
             }
+            // Pay first, service after: staff can't switch a line on that has no paid time left.
+            if (! $bySystem && self::needsPayment($connection)) {
+                throw new RuntimeException("{$connection->code} has no paid time" . ($connection->expire_at ? ' (expired ' . $connection->expire_at->format('d M Y h:i A') . ')' : '')
+                    . '. Take the payment (Pay) — or start it on due — and it switches on by itself.');
+            }
             $old = ['status' => 'suspended', 'suspension_reason' => $connection->suspension_reason];
             $connection->status = 'active';
             $connection->suspension_reason = null;
@@ -223,24 +232,16 @@ class ConnectionService
         });
     }
 
-    // Basic version: the new price applies from the next invoice. Prorated mid-period
-    // change billing can be added on top of the package_histories rows later.
-    public static function changePackage(Connection $connection, int $packageId, $effectiveDate, ?string $reason): Connection
+    // The paid time stays; the days left are revalued day-wise on the new package
+    // (PackageChangeService): an upgrade adds the difference as due, a downgrade credits it.
+    // $summary gets a short note of what was adjusted.
+    public static function changePackage(Connection $connection, int $packageId, ?string $reason, ?string &$summary = null): Connection
     {
-        return DB::transaction(function () use ($connection, $packageId, $effectiveDate, $reason) {
+        return DB::transaction(function () use ($connection, $packageId, $reason, &$summary) {
             $connection = Connection::with('package')->lockForUpdate()->findOrFail($connection->id);
-            if (in_array($connection->status, ['terminated'], true)) {
-                throw new RuntimeException('A terminated connection cannot change package.');
-            }
-            if ($connection->package_id == $packageId) {
-                throw new RuntimeException('The connection is already on this package.');
-            }
-            $new = Package::where('branch_id', $connection->branch_id)->where('is_active', true)->findOrFail($packageId);
-            $customer = Customer::withTrashed()->findOrFail($connection->customer_id);
-            if (! $new->usableFor($customer)) {
-                throw new RuntimeException($new->unusableReason($customer));
-            }
+            $new = self::assertCanChangePackage($connection, $packageId);
             $old = $connection->package;
+            $quote = PackageChangeService::quote($connection, $new);
 
             PackageHistory::create([
                 'connection_id' => $connection->id,
@@ -248,7 +249,7 @@ class ConnectionService
                 'new_package_id' => $new->id,
                 'old_price' => $old?->price,
                 'new_price' => $new->price,
-                'effective_date' => Carbon::parse($effectiveDate ?? now())->toDateString(),
+                'effective_date' => now()->toDateString(),
                 'reason' => $reason,
                 'changed_by' => Auth::guard('web')->id(),
                 'created_at' => now(),
@@ -259,15 +260,32 @@ class ConnectionService
             $connection->save();
 
             $oldValues = ['package' => $old?->name, 'price' => (float) ($old?->price ?? 0)];
-            $newValues = ['package' => $new->name, 'price' => (float) $new->price];
+            $newValues = ['package' => $new->name, 'price' => (float) $new->price, 'days_left' => $quote['days_left'], 'adjustment' => $quote['difference']];
             self::history($connection, 'package_changed', $oldValues, $newValues, $reason);
             AuditLogger::log('connection.package_changed', $connection, $oldValues, $newValues, $reason);
+            $summary = PackageChangeService::settle($connection->fresh('package'), $quote, $reason);
             self::syncNetwork($connection);
             return $connection->fresh('package');
         });
     }
 
-    // Replays the connection's paid service invoices in the order they were paid. Each buys
+    public static function assertCanChangePackage(Connection $connection, int $packageId): Package
+    {
+        if ($connection->status === 'terminated') {
+            throw new RuntimeException('A terminated connection cannot change package.');
+        }
+        if ($connection->package_id == $packageId) {
+            throw new RuntimeException('The connection is already on this package.');
+        }
+        $new = Package::where('branch_id', $connection->branch_id)->where('is_active', true)->findOrFail($packageId);
+        $customer = Customer::withTrashed()->findOrFail($connection->customer_id);
+        if (! $new->usableFor($customer)) {
+            throw new RuntimeException($new->unusableReason($customer));
+        }
+        return $new;
+    }
+
+    // Replays the connection's paid (or given-on-due) service invoices in the order they were paid. Each buys
     // service_months starting when it was paid, or when the time already bought runs out if that
     // is later (never before the connection was switched on). Writes each invoice's window and
     // the connection's expire_at, then switches the line off or on to match — so a payment starts
@@ -282,12 +300,14 @@ class ConnectionService
         $invoices = Invoice::where('connection_id', $connectionId)
             ->whereNotNull('service_months')
             ->whereNotIn('status', ['draft', 'void', 'cancelled'])
-            ->orderByRaw('paid_at is null, paid_at, id')
-            ->get(['id', 'status', 'paid_at', 'service_months', 'period_start', 'period_end']);
+            // a bill given "on due" counts from when it was granted, and paying it later doesn't move it
+            ->orderByRaw('coalesce(credit_at, paid_at) is null, coalesce(credit_at, paid_at), id')
+            ->get(['id', 'status', 'paid_at', 'credit_at', 'service_months', 'period_start', 'period_end']);
         foreach ($invoices as $invoice) {
             $start = $end = null;
-            if ($invoice->status === 'paid' && $invoice->paid_at && $connection->activated_at) {
-                $start = collect([$invoice->paid_at, $connection->activated_at, $cursor])->filter()->max()->copy();
+            $from = $invoice->credit_at ?? ($invoice->status === 'paid' ? $invoice->paid_at : null);
+            if ($from && $connection->activated_at) {
+                $start = collect([$from, $connection->activated_at, $cursor])->filter()->max()->copy();
                 $end = $start->copy()->addMonthsNoOverflow($invoice->service_months);
                 if (! $cursor && $connection->bonus_days) {
                     $end->addDays($connection->bonus_days); // first paid time only
@@ -310,6 +330,23 @@ class ConnectionService
         if ($apply) {
             self::applyExpiry($connection->fresh());
         }
+    }
+
+    // Pay first: billed but with no paid (or on-due) time running now, while auto-suspend is on.
+    // A pending line counts as paid once its first bill is paid (its time starts at activation).
+    public static function needsPayment(Connection $connection): bool
+    {
+        if (! IspSettings::get($connection->branch_id, 'auto_suspend')) {
+            return false;
+        }
+        if ($connection->expire_at && $connection->expire_at->isFuture()) {
+            return false;
+        }
+        return Invoice::where('connection_id', $connection->id)->whereNotNull('service_months')
+            ->when($connection->status === 'pending',
+                fn ($q) => $q->whereIn('status', Invoice::OPEN_STATUSES)->whereNull('credit_at'),
+                fn ($q) => $q->whereNotIn('status', ['draft', 'void', 'cancelled']))
+            ->exists();
     }
 
     // No grace: an active line whose time is up (or was never paid) goes off now; a line

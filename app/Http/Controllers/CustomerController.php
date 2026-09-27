@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Money;
 use App\Models\Area;
 use App\Models\Customer;
 use Illuminate\Http\Request;
@@ -356,6 +357,14 @@ class CustomerController extends Controller
             $customer->ipAddress = request()->ip();
             $customer->branch_id = $this->branchId;
             $customer->save();
+            // same as a new customer: the opening due is an invoice, so it reaches the ledger and the due report
+            if ((float) $customer->previous_due > 0) {
+                \App\Services\Isp\BillingService::createManual($customer, ['ledger_type' => 'opening'], [[
+                    'description' => 'Opening balance (previous due)',
+                    'unit_price' => (float) $customer->previous_due,
+                    'quantity' => 1,
+                ]]);
+            }
 
             $inserted++;
         }
@@ -390,6 +399,7 @@ class CustomerController extends Controller
             'filters' => [
                 'search' => $request->search ?? '',
                 'customerId' => $request->customerId ?? '',
+                'dueStatus' => $request->dueStatus ?? '',
                 'date' => $date,
                 'sortBy' => $request->sortBy ?? 'name',
                 'sortDir' => $request->sortDir === 'desc' ? 'desc' : 'asc',
@@ -426,11 +436,11 @@ class CustomerController extends Controller
         $row = 2;
         $total = 0;
         foreach ($dues as $index => $item) {
-            $sheet->fromArray([$index + 1, $item->code, $item->name, $item->phone, $item->address, round((float) $item->due, 2)], null, 'A' . $row);
+            $sheet->fromArray([$index + 1, $item->code, $item->name, $item->phone, $item->address, Money::round((float) $item->due)], null, 'A' . $row);
             $total += (float) $item->due;
             $row++;
         }
-        $sheet->fromArray(['', '', '', '', 'Total', round($total, 2)], null, 'A' . $row);
+        $sheet->fromArray(['', '', '', '', 'Total', Money::round($total)], null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':F' . $row)->getFont()->setBold(true);
 
         foreach (range('A', $sheet->getHighestColumn()) as $col) {
@@ -502,14 +512,32 @@ class CustomerController extends Controller
                 " . (empty($request->customerId) ? "" : " and cp.customer_id = '$request->customerId'") . "
                 " . ($branchId == null ? "" : " and cp.branch_id = '$branchId'") . "
 
-                order by created_at asc";
+                UNION
+                -- ISP billing: bills, payments, voids, notes, refunds and the opening balance
+                select
+                'l' as sequence,
+                le.id,
+                le.entry_date as date,
+                le.created_at,
+                le.description,
+                case when le.type in ('opening', 'invoice', 'debit_note') then le.debit else 0 end as bill,
+                0 as paid,
+                0 as due,
+                case when le.type in ('payment_reversal', 'refund') then le.debit else 0 end as cash_payment,
+                case when le.type = 'payment' then le.credit else 0 end as cash_receive,
+                case when le.type in ('invoice_void', 'credit_note') then le.credit else 0 end as return_amount,
+                0 as balance
+                from ledger_entries le
+                where 1 = 1
+                " . (empty($request->customerId) ? "" : " and le.customer_id = '$request->customerId'") . "
+                " . ($branchId == null ? "" : " and le.branch_id = '$branchId'") . "
+
+                order by date asc, created_at asc, sequence asc, id asc";
 
         $ledgers = DB::select($query);
 
-        $customer = Customer::select('previous_due')->where('id', $request->customerId)
-            ->where('branch_id', $branchId)
-            ->first();
-        $previousBalance = empty($customer) ? 0 : $customer->previous_due;
+        // the previous due is already in the ledger as the opening balance bill
+        $previousBalance = 0;
 
         $ledgers = collect($ledgers)->map(function ($ledger, $key) use ($previousBalance, $ledgers) {
             $lastBalance = $key == 0 ? $previousBalance : $ledgers[$key - 1]->balance;

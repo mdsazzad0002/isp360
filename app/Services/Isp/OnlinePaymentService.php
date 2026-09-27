@@ -2,6 +2,7 @@
 
 namespace App\Services\Isp;
 
+use App\Support\Money;
 use App\Models\Customer;
 use App\Models\CustomerPayment;
 use App\Models\OnlinePayment;
@@ -44,7 +45,8 @@ class OnlinePaymentService
 
     public static function isUsable(PaymentGateway $g): bool
     {
-        if (! isset(PaymentGateway::GATEWAYS[$g->gateway]) || ! $g->bank_id) {
+        if (! isset(PaymentGateway::GATEWAYS[$g->gateway]) || ! $g->bank_id
+            || ! PaymentGateway::supportsCurrency($g->gateway, Money::code())) {
             return false;
         }
         return $g->mode === 'api'
@@ -63,10 +65,10 @@ class OnlinePaymentService
 
     private static function checkAmount(PaymentGateway $gateway, float $amount): float
     {
-        $amount = round($amount, 2);
+        $amount = Money::round($amount);
         if ($amount < (float) $gateway->min_amount || $amount > (float) $gateway->max_amount) {
-            throw new RuntimeException('Amount must be between Tk ' . number_format((float) $gateway->min_amount, 2)
-                . ' and Tk ' . number_format((float) $gateway->max_amount, 2) . " for {$gateway->label()}.");
+            throw new RuntimeException('Amount must be between ' . Money::format($gateway->min_amount)
+                . ' and ' . Money::format($gateway->max_amount) . " for {$gateway->label()}.");
         }
         return $amount;
     }
@@ -155,9 +157,9 @@ class OnlinePaymentService
 
             $payment->trx_id = $result->trxId;
             // money was taken but not the amount we asked for: let an admin decide
-            if (abs((float) $result->amount - (float) $payment->amount) > 0.009) {
+            if (! Money::equals($result->amount, $payment->amount)) {
                 $payment->status = 'pending_review';
-                $payment->failure_reason = 'Gateway reported Tk ' . number_format((float) $result->amount, 2) . ' instead of Tk ' . number_format((float) $payment->amount, 2);
+                $payment->failure_reason = 'Gateway reported ' . Money::format($result->amount) . ' instead of ' . Money::format($payment->amount);
                 $payment->save();
                 return $payment;
             }
@@ -210,7 +212,7 @@ class OnlinePaymentService
             }
             $old = $payment->only(['status', 'amount']);
             if ($amount !== null && $amount > 0) {
-                $payment->amount = round($amount, 2);
+                $payment->amount = Money::round($amount);
             }
             $payment->reviewed_by = Auth::guard('web')->id();
             $payment->reviewed_at = now();
@@ -271,9 +273,9 @@ class OnlinePaymentService
     {
         $balance = LedgerService::balance($customerId);
         return [
-            'due' => round(max(0, $balance), 2),
+            'due' => Money::round(max(0, $balance)),
             'wallet' => CollectionService::advanceCredit($customerId),
-            'pending' => round((float) OnlinePayment::where('customer_id', $customerId)->where('status', 'pending_review')->sum('amount'), 2),
+            'pending' => Money::round((float) OnlinePayment::where('customer_id', $customerId)->where('status', 'pending_review')->sum('amount')),
         ];
     }
 }

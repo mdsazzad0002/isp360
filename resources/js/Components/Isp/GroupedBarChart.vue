@@ -84,7 +84,7 @@ function barPath(x, top, w, base) {
     --grid: #e5e7eb;
     --axis: #6b7280;
 }
-:global(.dark) .viz {
+:global(.dark .viz) {
     --series-1: #3987e5;
     --series-2: #d95926;
     --grid: #34373c;

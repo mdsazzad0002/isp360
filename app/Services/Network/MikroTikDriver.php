@@ -5,14 +5,18 @@ namespace App\Services\Network;
 use App\Models\Connection;
 use App\Models\Package;
 use App\Models\Router;
+use Illuminate\Support\Collection;
 use RuntimeException;
 
 // Keeps the router in line with the billing system, for PPPoE and Hotspot:
 //  package    -> PPP profile / hotspot user profile with a rate limit (created on demand)
 //  connection -> PPP secret / hotspot user, tagged "isp-conn:<id>" so a username change renames it
 //  not active -> user disabled and any live session kicked
+//  blocks     -> address lists + a forward drop rule + DNS NXDOMAIN, tagged "isp-block:" (syncBlocks)
 class MikroTikDriver implements NetworkDriver
 {
+    public const BLOCK_TAG = 'isp-block:';
+    public const BLOCK_LIST_ALL = 'isp-block';
     // RouterOS menus per service. `activeUser` is the field naming the user in the active list.
     public const SERVICES = [
         'pppoe' => ['user' => '/ppp/secret', 'profile' => '/ppp/profile', 'active' => '/ppp/active', 'activeUser' => 'name'],
@@ -94,8 +98,10 @@ class MikroTikDriver implements NetworkDriver
         $rate = $package->upload_mbps && $package->download_mbps ? "{$package->upload_mbps}M/{$package->download_mbps}M" : null;
 
         $existing = $api->first($profileMenu, ['name' => $name]);
+        $list = self::profileList($name);
         if (! $existing) {
-            $data = ['name' => $name, 'rate-limit' => $rate];
+            // customers on this profile land in an address list, so blocks can target one package
+            $data = ['name' => $name, 'rate-limit' => $rate, 'address-list' => $list];
             if ($profileMenu === '/ppp/profile') {
                 // new package profiles take the gateway/pool of the router's "default" profile (set once in the setup guide),
                 // so a new package works without touching the router
@@ -107,11 +113,140 @@ class MikroTikDriver implements NetworkDriver
                 $data['comment'] = 'ISP package ' . $package->name; // hotspot user profiles have no comment field
             }
             $api->create($profileMenu, array_filter($data));
-        } elseif (! $package->network_profile && $rate && ($existing['rate-limit'] ?? '') !== $rate) {
-            // only manage rate limits of profiles this system created
-            $api->update($profileMenu, $existing['.id'], ['rate-limit' => $rate]);
+        } else {
+            $changes = [];
+            if (! $package->network_profile && $rate && ($existing['rate-limit'] ?? '') !== $rate) {
+                $changes['rate-limit'] = $rate; // only manage rate limits of profiles this system created
+            }
+            if (($existing['address-list'] ?? '') === '') {
+                $changes['address-list'] = $list; // never replace an address list set by hand
+            }
+            if ($changes) {
+                $api->update($profileMenu, $existing['.id'], $changes);
+            }
         }
         return $name;
+    }
+
+    // Address list a profile's online customers are put in.
+    public static function profileList(string $profile): string
+    {
+        return 'isp-profile:' . $profile;
+    }
+
+    public static function profileName(Package $package): string
+    {
+        return $package->network_profile ?: 'isp-pkg-' . $package->id;
+    }
+
+    /**
+     * Site / IP blocking. Only entries tagged "isp-block:" are touched, so hand-made firewall
+     * rules stay. All-customer blocks: address list "isp-block" (a domain in an address list is
+     * resolved by the router and kept up to date) + DNS NXDOMAIN for the domain and its
+     * subdomains. Package blocks: list "isp-block:pkg:<id>", dropped only for traffic from the
+     * package profile's address list. The drop rules sit at the top of the forward chain, before
+     * any fasttrack rule.
+     */
+    public function syncBlocks(Router $router, Collection $blocks): array
+    {
+        $api = new MikroTikClient($router);
+        $warnings = [];
+        $lists = [];   // "list|address" => comment
+        $dns = [];     // domain => comment
+        $rules = [];   // comment => rule
+        foreach ($blocks as $block) {
+            $tag = self::BLOCK_TAG . $block->id;
+            if ($block->scope === 'package') {
+                if (! $block->package) {
+                    continue;
+                }
+                $list = self::BLOCK_TAG . 'pkg:' . $block->package_id;
+                $srcList = self::profileList(self::profileName($block->package));
+                $rules[self::BLOCK_TAG . 'rule:pkg:' . $block->package_id] = ['chain' => 'forward', 'action' => 'drop', 'src-address-list' => $srcList, 'dst-address-list' => $list];
+                $warnings = array_merge($warnings, $this->ensureProfileList($api, self::profileName($block->package), $srcList, $block->package->name));
+            } else {
+                $list = self::BLOCK_LIST_ALL;
+                $rules[self::BLOCK_TAG . 'rule:all'] = ['chain' => 'forward', 'action' => 'drop', 'dst-address-list' => $list];
+            }
+            foreach (self::addresses($block) as $address) {
+                $lists[$list . '|' . $address] = $tag;
+            }
+            if ($block->type === 'domain' && $block->scope === 'all') {
+                $dns[$block->value] = $tag;
+            }
+        }
+
+        // address lists (dynamic rows are the router's own lookups of a domain entry)
+        foreach ($api->get('/ip/firewall/address-list') as $row) {
+            if (($row['dynamic'] ?? 'false') === 'true' || ! str_starts_with((string) ($row['comment'] ?? ''), self::BLOCK_TAG)) {
+                continue;
+            }
+            $key = $row['list'] . '|' . $row['address'];
+            isset($lists[$key]) && $lists[$key] === $row['comment'] ? $lists[$key] = null : $api->delete('/ip/firewall/address-list', $row['.id']);
+        }
+        foreach (array_filter($lists) as $key => $comment) {
+            [$list, $address] = explode('|', $key, 2);
+            try {
+                $api->create('/ip/firewall/address-list', ['list' => $list, 'address' => $address, 'comment' => $comment]);
+            } catch (\Throwable $e) {
+                $warnings[] = "{$address}: " . $e->getMessage();
+            }
+        }
+
+        foreach ($api->get('/ip/dns/static') as $row) {
+            if (! str_starts_with((string) ($row['comment'] ?? ''), self::BLOCK_TAG)) {
+                continue;
+            }
+            $name = $row['name'] ?? '';
+            isset($dns[$name]) && $dns[$name] === $row['comment'] && ($row['type'] ?? '') === 'NXDOMAIN' ? $dns[$name] = null : $api->delete('/ip/dns/static', $row['.id']);
+        }
+        foreach (array_filter($dns) as $name => $comment) {
+            $api->create('/ip/dns/static', ['name' => $name, 'type' => 'NXDOMAIN', 'match-subdomain' => 'yes', 'comment' => $comment]);
+        }
+
+        $filters = $api->get('/ip/firewall/filter');
+        foreach ($filters as $row) {
+            $comment = (string) ($row['comment'] ?? '');
+            if (! str_starts_with($comment, self::BLOCK_TAG)) {
+                continue;
+            }
+            $want = $rules[$comment] ?? null;
+            $same = $want && collect($want)->every(fn ($v, $k) => ($row[$k] ?? null) === $v) && ($row['disabled'] ?? 'false') !== 'true';
+            $same ? $rules[$comment] = null : $api->delete('/ip/firewall/filter', $row['.id']);
+        }
+        $top = collect($filters)->first(fn ($r) => ($r['dynamic'] ?? 'false') !== 'true' && ! str_starts_with((string) ($r['comment'] ?? ''), self::BLOCK_TAG));
+        foreach (array_filter($rules) as $comment => $rule) {
+            $api->create('/ip/firewall/filter', $rule + ['comment' => $comment] + ($top ? ['place-before' => $top['.id']] : []));
+        }
+        return array_values(array_unique($warnings));
+    }
+
+    // A package block matches customers by their profile's address list: set it where it is empty
+    // (profiles made before blocking existed); an address list set by hand is left alone.
+    private function ensureProfileList(MikroTikClient $api, string $name, string $list, string $packageName): array
+    {
+        $warnings = [];
+        foreach (['/ppp/profile', '/ip/hotspot/user/profile'] as $menu) {
+            $profile = $api->first($menu, ['name' => $name]);
+            if (! $profile || ($profile['address-list'] ?? '') === $list) {
+                continue;
+            }
+            if (($profile['address-list'] ?? '') === '') {
+                $api->update($menu, $profile['.id'], ['address-list' => $list]);
+            } else {
+                $warnings[] = "Profile {$name} (package {$packageName}) puts customers in address list \"{$profile['address-list']}\", so its package block can't match them.";
+            }
+        }
+        return $warnings;
+    }
+
+    // A domain is listed with and without "www."; an IP / subnet as it is.
+    private static function addresses($block): array
+    {
+        if ($block->type !== 'domain' || str_starts_with($block->value, 'www.')) {
+            return [$block->value];
+        }
+        return [$block->value, 'www.' . $block->value];
     }
 
     // Compares the router with what billing expects, without changing anything.
