@@ -118,7 +118,7 @@ onMounted(showLedger);
         </div>
 
         <div v-if="isLoading" class="mt-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-            <div class="mb-2 text-right">
+            <div class="mb-2 text-end">
                 <button type="button" @click="print" title="Print" class="text-slate-500 hover:text-brand-500">
                     <i class="bi bi-printer text-lg"></i>
                 </button>
@@ -126,7 +126,7 @@ onMounted(showLedger);
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Date</th>
                             <th class="px-2 py-2 font-medium">Description</th>
                             <th class="px-2 py-2 font-medium">Source</th>
@@ -139,7 +139,7 @@ onMounted(showLedger);
                         <tr class="border-b border-slate-100">
                             <td class="px-2 py-1.5"></td>
                             <td colspan="4" class="px-2 py-1.5">Previous Balance</td>
-                            <td class="px-2 py-1.5 text-right">{{ previousBalance.toFixed(2) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ previousBalance.toFixed(2) }}</td>
                         </tr>
                         <tr v-for="(item, index) in ledgers" :key="index" class="border-b border-slate-100">
                             <td class="px-2 py-1.5">{{ item.date }}</td>
@@ -149,15 +149,15 @@ onMounted(showLedger);
                                     {{ item.source }}
                                 </span>
                             </td>
-                            <td class="px-2 py-1.5 text-right">{{ item.in.toFixed(2) }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ item.out.toFixed(2) }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ item.balance.toFixed(2) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ item.in.toFixed(2) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ item.out.toFixed(2) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ item.balance.toFixed(2) }}</td>
                         </tr>
                         <tr v-if="ledgers.length > 0" class="bg-slate-50 font-semibold">
                             <td colspan="3" class="px-2 py-2 text-center">Total</td>
-                            <td class="px-2 py-2 text-right">{{ sumField('in') }}</td>
-                            <td class="px-2 py-2 text-right">{{ sumField('out') }}</td>
-                            <td class="px-2 py-2 text-right">{{ lastBalance() }}</td>
+                            <td class="px-2 py-2 text-end">{{ sumField('in') }}</td>
+                            <td class="px-2 py-2 text-end">{{ sumField('out') }}</td>
+                            <td class="px-2 py-2 text-end">{{ lastBalance() }}</td>
                         </tr>
                         <tr v-if="ledgers.length === 0">
                             <td colspan="6" class="px-2 py-6 text-center text-slate-400">Not Found Data</td>

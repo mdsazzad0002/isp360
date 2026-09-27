@@ -10,7 +10,7 @@ use App\Services\Isp\OnlinePaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-// Admin setup of the customer payment methods (bKash, Nagad, Rocket, SSLCommerz).
+// Admin setup of the customer payment methods (bKash, Nagad, Rocket, SSLCommerz, Stripe, PayPal).
 class PaymentGatewayController extends IspController
 {
     public function create()
@@ -54,6 +54,8 @@ class PaymentGatewayController extends IspController
                 'usable' => $row ? OnlinePaymentService::isUsable($row) : false,
                 'currencies' => $meta['currencies'],
                 'currency_ok' => PaymentGateway::supportsCurrency($key, $currency),
+                // Stripe: the endpoint to add in the Stripe dashboard (Developers > Webhooks), once saved
+                'webhook_url' => in_array($key, ['stripe', 'paypal'], true) && $row ? url("/api/payment/webhook/{$key}/{$row->id}") : null,
             ];
         })->values();
 
@@ -111,6 +113,11 @@ class PaymentGatewayController extends IspController
             'updated_by' => $this->userId,
         ]);
 
+        // Stripe test keys only in sandbox mode and live keys only outside it, so a test setup can't take real money unnoticed
+        if ($key === 'stripe' && ($secretKey = $gateway->credential('secret_key'))
+            && ! preg_match($gateway->sandbox ? '/^(sk|rk)_test_/' : '/^(sk|rk)_live_/', $secretKey)) {
+            return send_error($gateway->sandbox ? 'Sandbox mode needs a Stripe test key (sk_test_… or rk_test_…).' : 'Live mode needs a Stripe live key (sk_live_… or rk_live_…).', null, 422);
+        }
         if ($gateway->is_active && ! PaymentGateway::supportsCurrency($key, $currency = Money::code())) {
             return send_error("{$meta['label']} only takes " . implode(', ', $meta['currencies']) . "; the company bills in {$currency}.", null, 422);
         }

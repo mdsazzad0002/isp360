@@ -48,13 +48,13 @@ onBeforeUnmount(() => {
 
         <div
             v-show="open"
-            class="absolute right-0 top-full z-[2000] mt-2 w-40 overflow-hidden rounded-md border border-slate-200 bg-white p-1 shadow-xl"
+            class="absolute end-0 top-full z-[2000] mt-2 w-40 overflow-hidden rounded-md border border-slate-200 bg-white p-1 shadow-xl"
         >
             <button
                 v-for="locale in SUPPORTED_LOCALES"
                 :key="locale.code"
                 type="button"
-                class="flex w-full items-center gap-2.5 rounded px-3 py-2 text-left text-sm transition hover:bg-slate-50"
+                class="flex w-full items-center gap-2.5 rounded px-3 py-2 text-start text-sm transition hover:bg-slate-50"
                 :class="locale.code === $i18n.locale ? 'bg-brand-50 font-medium text-brand-600' : 'text-slate-700'"
                 @click="selectLocale(locale.code)"
             >

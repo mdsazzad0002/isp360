@@ -3,12 +3,20 @@ import { reactive, ref } from 'vue';
 import axios from 'axios';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
 import { useToast } from '../../lib/toast';
+import { useI18n } from 'vue-i18n';
 
 const props = defineProps({
     customer: { type: Object, required: true },
 });
 
 const toast = useToast();
+const { t } = useI18n();
+// marketing SMS consent (recorded each time it changes)
+const marketing = ref(!props.customer.marketing_opt_out);
+async function setMarketing() {
+    await axios.post('/customer-portal/marketing', { opt_out: !marketing.value });
+    toast.success(t('portal.saved'));
+}
 const form = reactive({
     name: props.customer.name,
     email: props.customer.email ?? '',
@@ -64,11 +72,14 @@ async function save() {
                     class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
                 />
             </div>
-            <div class="text-right">
+            <div class="text-end">
                 <button type="submit" :disabled="onProgress" class="rounded-md bg-brand-500 px-5 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50">
                     Save Changes
                 </button>
             </div>
         </form>
+        <label class="mt-4 flex max-w-md items-center gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm">
+            <input v-model="marketing" type="checkbox" @change="setMarketing" /> {{ t('portal.marketing_sms') }}
+        </label>
     </PortalLayout>
 </template>

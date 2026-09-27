@@ -21,7 +21,7 @@ defineEmits(['update:modelValue']);
             class="relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition"
             :class="modelValue === 'active' ? 'bg-brand-500' : 'bg-slate-300'"
         >
-            <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white transition" :class="modelValue === 'active' ? 'left-5' : 'left-0.5'"></span>
+            <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white transition" :class="modelValue === 'active' ? 'start-5' : 'start-0.5'"></span>
         </button>
     </div>
 </template>

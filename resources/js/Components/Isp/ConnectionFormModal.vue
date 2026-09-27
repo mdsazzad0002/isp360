@@ -40,6 +40,7 @@ function reset() {
         pppoe_username: c?.pppoe_username ?? '',
         pppoe_password: '',
         static_ip: c?.static_ip ?? '',
+        ipv6_prefix: c?.ipv6_prefix ?? '',
         mac_address: c?.mac_address ?? '',
         discount: Number(c?.discount ?? 0),
         installation_date: c?.installation_date ?? today(),
@@ -141,6 +142,23 @@ async function save() {
         saving.value = false;
     }
 }
+
+// IPAM: fill the address / prefix from a pool's next free one
+const pools = reactive({ static: [], ipv6_pd: [] });
+axios.post('/isp/get-ip-pools').then((r) => {
+    pools.static = r.data.filter((p) => p.type === 'static' || p.type === 'cgnat');
+    pools.ipv6_pd = r.data.filter((p) => p.type === 'ipv6_pd');
+}).catch(() => {});
+async function fromPool(event, field) {
+    const id = event.target.value;
+    event.target.value = '';
+    if (!id) return;
+    try {
+        form[field] = (await axios.post('/isp/ip-pool-next', { id })).data.value;
+    } catch (err) {
+        showError(err);
+    }
+}
 </script>
 
 <template>
@@ -196,7 +214,23 @@ async function save() {
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-slate-600">Static IP <span v-if="form.connection_type !== 'static'" class="text-slate-400">(optional)</span></label>
-                    <input v-model="form.static_ip" type="text" class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
+                    <div class="flex gap-1">
+                        <input v-model="form.static_ip" type="text" class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
+                        <select v-if="pools.static.length" class="w-24 rounded-md border border-slate-300 px-1 text-xs" title="Next free address of a pool" @change="fromPool($event, 'static_ip')">
+                            <option value="">Pool…</option>
+                            <option v-for="p in pools.static" :key="p.id" :value="p.id">{{ p.name }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div v-if="form.connection_type === 'pppoe' || form.ipv6_prefix || pools.ipv6_pd.length">
+                    <label class="mb-1 block text-xs font-medium text-slate-600">IPv6 prefix <span class="text-slate-400">(optional, delegated)</span></label>
+                    <div class="flex gap-1">
+                        <input v-model="form.ipv6_prefix" type="text" placeholder="2001:db8:100:1200::/56" class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
+                        <select v-if="pools.ipv6_pd.length" class="w-24 rounded-md border border-slate-300 px-1 text-xs" title="Next free prefix of a pool" @change="fromPool($event, 'ipv6_prefix')">
+                            <option value="">Pool…</option>
+                            <option v-for="p in pools.ipv6_pd" :key="p.id" :value="p.id">{{ p.name }}</option>
+                        </select>
+                    </div>
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-slate-600">MAC address <span v-if="form.connection_type === 'hotspot'" class="text-slate-400">(locks login to this device)</span></label>

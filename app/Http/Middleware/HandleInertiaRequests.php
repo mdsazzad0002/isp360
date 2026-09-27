@@ -70,7 +70,7 @@ class HandleInertiaRequests extends Middleware
             'appVersion' => config('app.version', '1.0.0'),
             'menuGroups' => fn () => $user ? $menuGroups : [],
             'currentBranch' => fn () => $user ? $request->session()->get('branch') : null,
-            'canSwitchBranch' => fn () => $user && in_array($user->role, ['Superadmin', 'admin']),
+            'canSwitchBranch' => fn () => $user && (in_array($user->role, ['Superadmin', 'admin']) || $user->region_id),
             'canUserSwitch' => fn () => $user && checkAccess('userSwitch'),
             'canCustomerLoginAs' => fn () => $user && checkAccess('customerLoginAs'),
             'canResellerLoginAs' => fn () => $user && checkAccess('resellerLoginAs'),
@@ -78,6 +78,23 @@ class HandleInertiaRequests extends Middleware
             'currency' => fn () => Money::currency(),
             // the company's timezone: server times are its wall-clock time, and "today" is its date
             'timezone' => fn () => \App\Support\Region::timezone(),
+            // the company's country pack, for forms: phone example, address labels, number/date style
+            'region' => function () {
+                $pack = \App\Support\CountryPack::current();
+                return [
+                    'country' => $pack['code'],
+                    'calling_code' => $pack['phone']['calling_code'],
+                    'phone_example' => \App\Support\Phone::example($pack['code']),
+                    'state_label' => $pack['address']['state_label'],
+                    'postcode_label' => $pack['address']['postcode_label'],
+                    'postcode_required' => (bool) $pack['address']['postcode_required'],
+                    'number_locale' => $pack['number_locale'],
+                    'date_format' => $pack['date_format'],
+                ];
+            },
+            // default UI language from the country pack; a user's own pick in the switcher wins
+            // (in the customer portal: the customer's own language, when set)
+            'defaultLocale' => fn () => ($request->is('customer-portal/*') ? Auth::guard('customer')->user()?->language : null) ?: (company()?->language ?? 'en'),
             'portalUser' => function () use ($request) {
                 // pick the guard from the URL, since one browser can hold both portal sessions
                 $guard = $request->is('customer-portal/*') ? 'customer' : ($request->is('reseller/*') ? 'reseller' : null);

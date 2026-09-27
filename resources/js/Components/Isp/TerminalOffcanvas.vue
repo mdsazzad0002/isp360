@@ -66,7 +66,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
                     <div class="min-w-0 flex-1 overflow-y-auto p-4">
                         <ConnectionTerminal ref="terminal" :connections="connections" :connection-id="connectionId" height="calc(100vh - 250px)" @ran="onRan" @context="(c) => (ctx = c)" />
                     </div>
-                    <aside v-if="showDocs" class="hidden w-[380px] shrink-0 border-l border-slate-200 bg-slate-50 md:block">
+                    <aside v-if="showDocs" class="hidden w-[380px] shrink-0 border-s border-slate-200 bg-slate-50 md:block">
                         <TerminalDocs :ctx="ctx" @use="(cmd) => terminal?.setInput(cmd)" @run="(cmd) => terminal?.run(cmd)" @refresh="terminal?.refresh()" />
                     </aside>
                 </div>

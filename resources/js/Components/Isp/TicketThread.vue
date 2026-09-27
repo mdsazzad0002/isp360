@@ -152,7 +152,7 @@ watch(() => props.ticketId, load, { immediate: true });
                         <div class="mb-1 text-[11px] text-slate-500">
                             <span class="font-medium text-slate-700">{{ who(r) }}</span>
                             · {{ fmtDate(r.created_at) }} {{ String(r.created_at).slice(11, 16) }}
-                            <span v-if="r.is_internal" class="ml-1 rounded bg-amber-200 px-1 text-[10px] text-amber-900">internal note</span>
+                            <span v-if="r.is_internal" class="ms-1 rounded bg-amber-200 px-1 text-[10px] text-amber-900">internal note</span>
                         </div>
                         <div class="whitespace-pre-wrap break-words text-slate-800">{{ r.message }}</div>
                         <a v-if="r.attachment" :href="'/' + r.attachment" target="_blank" rel="noopener" class="mt-2 block">

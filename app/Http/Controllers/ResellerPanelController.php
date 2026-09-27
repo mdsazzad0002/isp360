@@ -54,9 +54,10 @@ class ResellerPanelController extends Controller
     {
         $reseller = Auth::guard('reseller')->user();
 
+        normalizePhone($request);
         $validator = Validator::make($request->all(), [
             'name'  => 'required',
-            'phone' => 'required',
+            'phone' => ['required', new \App\Rules\PhoneNumber],
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
 

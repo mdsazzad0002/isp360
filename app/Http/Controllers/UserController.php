@@ -69,8 +69,10 @@ class UserController extends Controller
             'phone'    => 'required',
             'role'     => 'required',
             'email'    => 'required',
+            'region_id' => 'nullable|integer|exists:regions,id',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
+        if ($r = $this->regionGuard($request)) return $r;
         try {
             $check = User::where('username', $request->username)->withTrashed()->first();
             if (!empty($check) && $check->deleted_at != NULL) {
@@ -110,8 +112,10 @@ class UserController extends Controller
             'phone'    => 'required',
             'role'     => 'required',
             'email'    => 'required',
+            'region_id' => 'nullable|integer|exists:regions,id',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
+        if ($r = $this->regionGuard($request)) return $r;
         try {
             $data = User::find($request->id);
             $dataKey = $request->except('id', 'image', 'password');
@@ -134,6 +138,16 @@ class UserController extends Controller
         } catch (\Throwable $th) {
             return send_error('Something went wrong', $th->getMessage());
         }
+    }
+
+    // Only head-office users hand out regions, so a regional manager cannot widen anyone's reach.
+    private function regionGuard(Request $request)
+    {
+        if (!$request->has('region_id') || auth()->user()->seesAllBranches()) {
+            return null;
+        }
+        $current = $request->id ? User::find($request->id)?->region_id : null;
+        return (int) $request->region_id === (int) $current ? null : send_error('Only head-office users can assign regions', null, 403);
     }
 
     public function destroy(Request $request)

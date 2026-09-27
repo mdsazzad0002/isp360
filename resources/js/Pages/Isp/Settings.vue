@@ -4,7 +4,7 @@ import axios from 'axios';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import { useToast } from '../../lib/toast';
-import { useApiError, cur } from '../../lib/isp';
+import { useApiError, cur, fmtDate } from '../../lib/isp';
 
 defineOptions({ layout: AppLayout });
 const toast = useToast();
@@ -12,14 +12,45 @@ const showError = useApiError();
 const s = ref(null);
 const saving = ref(false);
 
-onMounted(() => axios.post('/isp/get-settings').then((r) => (s.value = r.data)));
+// SMS templates in other languages, for customers who have one set: { bn: { invoice: '...' } }
+const smsEvents = [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension'], ['reminder', 'Renewal reminder']];
+// e-mail / WhatsApp channels of the branch (same templates as SMS)
+const channels = ref([]);
+const loadChannels = () => axios.post('/isp/get-messaging').then((r) => (channels.value = r.data));
+onMounted(loadChannels);
+async function saveChannel(c) {
+    try {
+        toast.success((await axios.post('/isp/messaging', { channel: c.channel, is_active: c.is_active, values: c.values })).data.message);
+        loadChannels();
+    } catch (err) {
+        showError(err);
+    }
+}
+const smsLangs = [['bn', 'বাংলা'], ['hi', 'हिन्दी'], ['ar', 'العربية'], ['en', 'English']];
+const trLang = ref('bn');
+const translations = ref({});
+function setSettings(data) {
+    s.value = data;
+    try {
+        translations.value = JSON.parse(data.sms_tpl_translations || '{}') || {};
+    } catch (e) {
+        translations.value = {};
+    }
+    for (const [code] of smsLangs) translations.value[code] ??= {};
+}
+onMounted(() => axios.post('/isp/get-settings').then((r) => setSettings(r.data)));
 
 async function save() {
     saving.value = true;
     try {
+        // only languages with at least one template
+        const used = Object.fromEntries(Object.entries(translations.value)
+            .map(([l, t]) => [l, Object.fromEntries(Object.entries(t).filter(([, v]) => String(v || '').trim()))])
+            .filter(([, t]) => Object.keys(t).length));
+        s.value.sms_tpl_translations = Object.keys(used).length ? JSON.stringify(used) : '';
         const res = await axios.post('/isp/settings', s.value);
         toast.success(res.data.message);
-        s.value = (await axios.post('/isp/get-settings')).data;
+        setSettings((await axios.post('/isp/get-settings')).data);
         router.reload({ only: ['currency'] });
     } catch (err) {
         showError(err);
@@ -40,6 +71,37 @@ function onCountry() {
     if (!c || s.value.currency_locked) return;
     if (s.value.currencies.some((x) => x.code === c.currency)) s.value.currency_code = c.currency;
     s.value.timezone = c.timezone;
+}
+// the chosen country's pack: its defaults are shown, and applied only on request
+const pack = computed(() => country.value?.pack);
+const packOptions = ref({ tax: false, billing: false });
+const applying = ref(false);
+async function applyPack() {
+    const c = country.value;
+    if (!c || !confirm(`Apply the ${c.name} country pack to the whole company?`)) return;
+    applying.value = true;
+    try {
+        const res = await axios.post('/isp/country-pack', { country_code: c.code, ...packOptions.value });
+        toast.success(res.data.message);
+        s.value = (await axios.post('/isp/get-settings')).data;
+        router.reload({ only: ['currency', 'timezone', 'defaultLocale'] });
+    } catch (err) {
+        showError(err);
+    } finally {
+        applying.value = false;
+    }
+}
+// terms of service / privacy notice: publishing makes a new version customers accept in the portal
+const legal = ref([]);
+const loadLegal = () => axios.post('/isp/get-legal').then((r) => (legal.value = r.data.map((l) => ({ ...l, draft: l.current?.body || '' }))));
+onMounted(loadLegal);
+async function publishLegal(l) {
+    try {
+        toast.success((await axios.post('/isp/legal-publish', { type: l.type, body: l.draft })).data.message);
+        loadLegal();
+    } catch (err) {
+        showError(err);
+    }
 }
 // tax rates are saved one by one, apart from the settings form
 const newRate = () => ({ id: null, name: '', rate: '', is_default: true, is_active: true, sort: 0 });
@@ -88,6 +150,37 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                     All dates and times (expiry, bills, reports) are in this timezone, and a paid line expires at the same local time even across daylight-saving changes.
                     Payment methods that can't take this currency are hidden from customers.
                 </p>
+
+                <div v-if="pack" class="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <h3 class="mb-2 text-xs font-semibold text-slate-700">
+                        {{ pack.name }} country pack
+                        <span class="font-normal text-slate-400">{{ pack.full ? '' : '(generic: currency and timezone only)' }}</span>
+                    </h3>
+                    <dl class="grid grid-cols-1 gap-x-4 gap-y-1 text-xs md:grid-cols-2">
+                        <div><dt class="inline text-slate-500">Currency / timezone:</dt> <dd class="inline">{{ pack.currency }}, {{ pack.timezone }}</dd></div>
+                        <div><dt class="inline text-slate-500">Language / date format:</dt> <dd class="inline">{{ pack.language }}, {{ pack.date_format }}</dd></div>
+                        <div v-if="pack.phone.calling_code"><dt class="inline text-slate-500">Phone:</dt> <dd class="inline">+{{ pack.phone.calling_code }}, e.g. {{ pack.phone.example }}</dd></div>
+                        <div><dt class="inline text-slate-500">Address:</dt> <dd class="inline">{{ pack.address.state_label }}, {{ pack.address.postcode_label }}{{ pack.address.postcode_required ? ' (required)' : '' }}</dd></div>
+                        <div><dt class="inline text-slate-500">Customer ID types:</dt> <dd class="inline">{{ Object.values(pack.id_types).join(', ') }}</dd></div>
+                        <div>
+                            <dt class="inline text-slate-500">Tax:</dt>
+                            <dd class="inline">{{ pack.tax.label }}, {{ pack.tax.prices_include_tax ? 'included in prices' : 'added to prices' }}; {{ pack.tax.rates.length ? pack.tax.rates.map((r) => r.name).join(' + ') : 'no suggested rate' }}</dd>
+                        </div>
+                        <div v-if="pack.payment_gateways.length">
+                            <dt class="inline text-slate-500">Payment gateways:</dt>
+                            <dd class="inline">{{ pack.available_gateways.join(', ') || 'none built yet' }}<span v-if="pack.payment_gateways.length > pack.available_gateways.length" class="text-slate-400"> (planned: {{ pack.payment_gateways.filter((g) => !pack.available_gateways.includes(g)).join(', ') }})</span></dd>
+                        </div>
+                        <div v-if="pack.sms_providers.length"><dt class="inline text-slate-500">SMS providers:</dt> <dd class="inline">{{ pack.sms_providers.join(', ') }}</dd></div>
+                        <div><dt class="inline text-slate-500">Session log retention:</dt> <dd class="inline">{{ pack.log_retention_days ? `${pack.log_retention_days} days` : 'no legal minimum' }}</dd></div>
+                        <div v-if="pack.regulatory_reports.length"><dt class="inline text-slate-500">Regulatory reports:</dt> <dd class="inline">{{ pack.regulatory_reports.join(', ') }}</dd></div>
+                    </dl>
+                    <div class="mt-3 flex flex-wrap items-center gap-4 text-sm">
+                        <label class="flex items-center gap-2"><input v-model="packOptions.tax" type="checkbox" /> Also set tax name, pricing and suggested rates</label>
+                        <label v-if="Object.keys(pack.billing).length" class="flex items-center gap-2"><input v-model="packOptions.billing" type="checkbox" /> Also set billing defaults on every branch</label>
+                        <button type="button" :disabled="applying" class="ms-auto rounded-md border border-brand-500 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-50" @click="applyPack">Apply country pack</button>
+                    </div>
+                    <p class="mt-2 text-xs text-slate-500">Nothing recorded changes: the currency and timezone stay once money exists, and tax rates are added only when the company has none. Check suggested tax rates with your accountant.</p>
+                </div>
             </section>
 
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -110,32 +203,68 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
 
                 <table class="mt-3 w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 text-left text-xs text-slate-500">
-                            <th class="py-1.5 pr-2 font-medium">Rate name</th>
-                            <th class="w-28 py-1.5 pr-2 font-medium">Rate %</th>
-                            <th class="w-24 py-1.5 pr-2 text-center font-medium" title="Used by packages set to the default taxes and by manual invoice lines">Default</th>
-                            <th class="w-20 py-1.5 pr-2 text-center font-medium">Active</th>
+                        <tr class="border-b border-slate-200 text-start text-xs text-slate-500">
+                            <th class="py-1.5 pe-2 font-medium">Rate name</th>
+                            <th class="w-28 py-1.5 pe-2 font-medium">Rate %</th>
+                            <th class="w-24 py-1.5 pe-2 text-center font-medium" title="Used by packages set to the default taxes and by manual invoice lines">Default</th>
+                            <th class="w-20 py-1.5 pe-2 text-center font-medium">Active</th>
                             <th class="w-20 py-1.5"></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="r in s.tax_rates" :key="r.id" class="border-b border-slate-100">
-                            <td class="py-1 pr-2"><input v-model="r.name" maxlength="60" :class="input" /></td>
-                            <td class="py-1 pr-2"><input v-model="r.rate" type="number" min="0" max="100" step="0.0001" :class="input" /></td>
-                            <td class="py-1 pr-2 text-center"><input v-model="r.is_default" type="checkbox" /></td>
-                            <td class="py-1 pr-2 text-center"><input v-model="r.is_active" type="checkbox" /></td>
-                            <td class="py-1 text-right"><button type="button" class="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50" @click="saveRate(r)">Save</button></td>
+                            <td class="py-1 pe-2"><input v-model="r.name" maxlength="60" :class="input" /></td>
+                            <td class="py-1 pe-2"><input v-model="r.rate" type="number" min="0" max="100" step="0.0001" :class="input" /></td>
+                            <td class="py-1 pe-2 text-center"><input v-model="r.is_default" type="checkbox" /></td>
+                            <td class="py-1 pe-2 text-center"><input v-model="r.is_active" type="checkbox" /></td>
+                            <td class="py-1 text-end"><button type="button" class="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50" @click="saveRate(r)">Save</button></td>
                         </tr>
                         <tr>
-                            <td class="py-1 pr-2"><input v-model="rateForm.name" maxlength="60" placeholder="e.g. VAT 15%" :class="input" /></td>
-                            <td class="py-1 pr-2"><input v-model="rateForm.rate" type="number" min="0" max="100" step="0.0001" placeholder="15" :class="input" /></td>
-                            <td class="py-1 pr-2 text-center"><input v-model="rateForm.is_default" type="checkbox" /></td>
-                            <td class="py-1 pr-2 text-center"><input v-model="rateForm.is_active" type="checkbox" /></td>
-                            <td class="py-1 text-right"><button type="button" class="rounded bg-brand-500 px-2 py-1 text-xs text-white hover:bg-brand-600" @click="saveRate(rateForm)">Add</button></td>
+                            <td class="py-1 pe-2"><input v-model="rateForm.name" maxlength="60" placeholder="e.g. VAT 15%" :class="input" /></td>
+                            <td class="py-1 pe-2"><input v-model="rateForm.rate" type="number" min="0" max="100" step="0.0001" placeholder="15" :class="input" /></td>
+                            <td class="py-1 pe-2 text-center"><input v-model="rateForm.is_default" type="checkbox" /></td>
+                            <td class="py-1 pe-2 text-center"><input v-model="rateForm.is_active" type="checkbox" /></td>
+                            <td class="py-1 text-end"><button type="button" class="rounded bg-brand-500 px-2 py-1 text-xs text-white hover:bg-brand-600" @click="saveRate(rateForm)">Add</button></td>
                         </tr>
                     </tbody>
                 </table>
                 <p class="mt-2 text-xs text-slate-500">No rates = no tax. Several default rates are all charged (e.g. CGST 9% + SGST 9%). A package can use the defaults, its own rates, or be tax exempt. Issued invoices keep the rates they were billed with.</p>
+            </section>
+
+            <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 class="mb-3 text-sm font-semibold text-slate-700">Login security <span class="font-normal text-slate-400">(whole company)</span></h2>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Two-factor login (authenticator app)</label>
+                        <select v-model="s.two_factor_policy" :class="input">
+                            <option v-for="p in s.two_factor_policies" :key="p.value" :value="p.value">{{ p.label }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Keep session logs (days, 0 = forever)</label>
+                        <input v-model="s.log_retention_days" type="number" min="0" max="3650" :class="input" />
+                        <p v-if="s.log_retention_minimum" class="mt-1 text-[11px] text-slate-400">Legal minimum in this country: {{ s.log_retention_minimum }} days</p>
+                    </div>
+                    <label class="flex items-center gap-2 pt-5 text-sm"><input v-model="s.session_log_mikrotik" type="checkbox" /> Record sessions from this branch's MikroTik routers (polled every 5 min)</label>
+                    <label class="flex items-center gap-2 pt-5 text-sm"><input v-model="s.kyc_required" type="checkbox" /> Verified ID (KYC) required before a connection is switched on</label>
+                </div>
+                <div class="mt-4 space-y-3 border-t border-slate-200 pt-3">
+                    <div v-for="l in legal" :key="l.type">
+                        <div class="mb-1 flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-600">{{ l.title }} <span class="text-slate-400">{{ l.current ? `v${l.current.version}, published ${fmtDate(l.current.published_at)}` : 'none yet' }}</span></span>
+                            <button type="button" class="rounded border border-brand-500 px-2 py-0.5 text-xs text-brand-600" @click="publishLegal(l)">Publish as new version</button>
+                        </div>
+                        <textarea v-model="l.draft" rows="3" :class="input" placeholder="Text customers accept in the portal"></textarea>
+                    </div>
+                    <p class="text-xs text-slate-500">A new version is shown to every customer at their next portal visit; each acceptance is recorded with time, IP and browser. Versions are never edited.</p>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">
+                    Anyone who must use it and hasn't set it up is sent to set it up at their next page. Everyone can turn it on for themselves under My profile.
+                    <template v-if="!s.my_two_factor"> Turn it on for your own account first before requiring it.</template>
+                    Five wrong passwords lock that username for 15 minutes from the same address.
+                </p>
             </section>
 
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -151,10 +280,20 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                         <input v-model="s.init_bonus_days" type="number" min="0" max="365" :class="input" />
                     </div>
                     <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Billing day <span class="text-slate-400">(0 = each line's own start date)</span></label>
+                        <input v-model="s.bill_day" type="number" min="0" max="28" :class="input" />
+                    </div>
+                    <label class="flex items-center gap-2 pt-5 text-sm"><input v-model="s.terminate_credit_unused" type="checkbox" /> Terminating a line credits its unused paid days</label>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Postpaid packages: bill due, days into its period</label>
+                        <input v-model="s.postpaid_due_days" type="number" min="0" max="60" :class="input" />
+                    </div>
+                    <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Manual invoice due = invoice date + days</label>
                         <input v-model="s.due_days" type="number" min="0" max="90" :class="input" />
                     </div>
                 </div>
+                <p v-if="s.bill_day > 0" class="mt-2 text-xs text-slate-500">A new line's first bill also covers the days up to the {{ s.bill_day }}. of the month, at the package's daily price, so every line renews on that day (prepaid lines stay aligned when paid on the day they are billed).</p>
                 <p class="mt-2 text-xs text-slate-500">A package bill buys one billing cycle (1, 3, 6 or 12 months). The time starts the moment the bill is fully paid — or when the current paid time ends, if that is later — and runs to the same date and time. A new connection is billed when it is created.</p>
             </section>
 
@@ -164,7 +303,59 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                     <label class="flex items-center gap-2 text-sm"><input v-model="s.auto_suspend" type="checkbox" /> Auto-suspend when the expire date passes</label>
                     <label class="flex items-center gap-2 text-sm"><input v-model="s.auto_reactivate" type="checkbox" /> Auto-reactivate when payment extends the expire date</label>
                 </div>
-                <p class="mt-2 text-xs text-slate-500">No grace period. Example: paid until 5 Nov 2:30 PM → the line goes off at 5 Nov 2:30 PM (checked every minute) and comes back the moment the renewal is paid.</p>
+                <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Grace period (days after the paid time)</label>
+                        <input v-model="s.grace_days" type="number" min="0" max="60" :class="input" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Notice SMS, days before suspension <span class="text-slate-400">(0 = none)</span></label>
+                        <input v-model="s.notice_days" type="number" min="0" max="30" :class="input" />
+                    </div>
+                    <label class="flex items-center gap-2 pt-5 text-sm"><input v-model="s.notice_required" type="checkbox" :disabled="!(s.notice_days > 0)" /> Never suspend sooner than that after the notice</label>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">
+                    <template v-if="s.grace_days > 0">Example: paid until 5 Nov 2:30 PM → the line stays on for {{ s.grace_days }} more day(s) and goes off at 2:30 PM on the last grace day.</template>
+                    <template v-else>No grace period. Example: paid until 5 Nov 2:30 PM → the line goes off at 5 Nov 2:30 PM (checked every minute).</template>
+                    It comes back the moment the renewal is paid.
+                    <template v-if="s.notice_days > 0">A notice SMS goes out {{ s.notice_days }} day(s) before the suspension{{ s.notice_required ? ", and a line is never suspended sooner than that after its notice (for countries that require notice)" : '' }}.</template>
+                </p>
+            </section>
+
+            <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 class="mb-3 text-sm font-semibold text-slate-700">Late fee</h2>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Late fee</label>
+                        <select v-model="s.late_fee_type" :class="input">
+                            <option value="none">None</option>
+                            <option value="fixed">Fixed amount ({{ cur() }})</option>
+                            <option value="percent">Percent of the unpaid amount</option>
+                        </select>
+                    </div>
+                    <template v-if="s.late_fee_type !== 'none'">
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-slate-600">{{ s.late_fee_type === 'percent' ? 'Late fee (%)' : `Late fee (${cur()})` }}</label>
+                            <input v-model="s.late_fee_amount" type="number" min="0" step="0.01" :class="input" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Charged when unpaid, days after the due date</label>
+                            <input v-model="s.late_fee_after_days" type="number" min="0" max="365" :class="input" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Repeat</label>
+                            <select v-model="s.late_fee_repeat" :class="input">
+                                <option value="once">Once per invoice</option>
+                                <option value="monthly">Every 30 days while unpaid</option>
+                            </select>
+                        </div>
+                        <div v-if="s.late_fee_repeat === 'monthly'">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">At most, per invoice</label>
+                            <input v-model="s.late_fee_max" type="number" min="1" max="24" :class="input" />
+                        </div>
+                    </template>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">Added to the unpaid invoice as a debit note (in the ledger and on the customer statement), without tax. A percent fee is on the unpaid amount before earlier late fees. Credit notes can waive it.</p>
             </section>
 
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -198,11 +389,49 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
 
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <h2 class="mb-1 text-sm font-semibold text-slate-700">Customer SMS</h2>
-                <p class="mb-3 text-xs text-slate-500">Sent through the active SMS gateway. Placeholders: {name} {code} {currency} {balance} {invoice} {amount} {due_date} {receipt} {connection}</p>
+                <p class="mb-3 text-xs text-slate-500">Sent through the active SMS gateway. Placeholders: {name} {code} {currency} {balance} {invoice} {amount} {due_date} {receipt} {connection} {expire_date} {suspend_date}</p>
                 <div class="space-y-3">
-                    <div v-for="k in [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated']]" :key="k[0]" class="grid grid-cols-1 gap-2 md:grid-cols-5">
+                    <div v-for="k in [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension'], ['reminder', 'Renewal reminder']]" :key="k[0]" class="grid grid-cols-1 gap-2 md:grid-cols-5">
                         <label class="flex items-center gap-2 text-sm"><input v-model="s['sms_' + k[0]]" type="checkbox" /> {{ k[1] }}</label>
                         <textarea v-model="s['sms_tpl_' + k[0]]" rows="2" maxlength="320" class="md:col-span-4" :class="input"></textarea>
+                    </div>
+                </div>
+                            <div class="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <div class="mb-2 flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-semibold text-slate-700">Templates in another language</span>
+                        <select v-model="trLang" class="rounded-md border border-slate-300 px-2 py-1 text-xs">
+                            <option v-for="l in smsLangs" :key="l[0]" :value="l[0]">{{ l[1] }}</option>
+                        </select>
+                        <span class="text-xs text-slate-500">Used for customers whose language is set to it (customer form); an empty one falls back to the template above.</span>
+                    </div>
+                    <div class="space-y-2">
+                        <div v-for="k in smsEvents" :key="k[0]" class="grid grid-cols-1 gap-2 md:grid-cols-5">
+                            <span class="text-xs text-slate-600">{{ k[1] }}</span>
+                            <textarea v-model="translations[trLang][k[0]]" rows="2" maxlength="320" :dir="trLang === 'ar' ? 'rtl' : 'auto'" class="md:col-span-4" :class="input"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 class="mb-1 text-sm font-semibold text-slate-700">Notification channels <span class="font-normal text-slate-400">(this branch)</span></h2>
+                <p class="mb-3 text-xs text-slate-500">SMS is always there. E-mail and WhatsApp send the same messages as the SMS templates to customers who have that channel ticked (customer form). E-mail uses the server's mail settings (MAIL_* in .env).</p>
+                <div class="mb-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Renewal reminder, days before expiry <span class="text-slate-400">(0 = none)</span></label>
+                        <input v-model="s.reminder_days" type="number" min="0" max="30" :class="input" />
+                    </div>
+                </div>
+                <div v-for="c in channels" :key="c.channel" class="mb-3 rounded-md border border-slate-200 p-3">
+                    <div class="mb-2 flex items-center justify-between">
+                        <label class="flex items-center gap-2 text-sm font-medium"><input v-model="c.is_active" type="checkbox" /> {{ c.label }}</label>
+                        <button type="button" class="rounded border border-brand-500 px-2 py-0.5 text-xs text-brand-600" @click="saveChannel(c)">Save {{ c.label }}</button>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+                        <div v-for="(labelText, field) in c.fields" :key="field">
+                            <label class="mb-1 block text-xs text-slate-600">{{ labelText }}</label>
+                            <input v-model="c.values[field]" :type="c.secret.includes(field) ? 'password' : 'text'" autocomplete="new-password" :placeholder="c.secret.includes(field) && c.values['has_' + field] ? 'Saved. Leave blank to keep it.' : ''" :class="input" />
+                        </div>
                     </div>
                 </div>
             </section>

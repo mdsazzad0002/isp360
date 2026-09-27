@@ -57,11 +57,27 @@ function load() {
     secret.value = '';
     pkg.open = false;
     online.value = null;
+    radiusSessions.value = null;
     axios.post('/isp/get-connection', { id: props.connectionId }).then((res) => {
         conn.value = res.data;
         if (['pppoe', 'hotspot'].includes(res.data.connection_type)) axios.post('/isp/connection-online', { id: res.data.id }).then((r) => (online.value = r.data));
     });
 }
+
+// RADIUS accounting: past sessions with IP, MAC and data used
+const radiusSessions = ref(null);
+async function loadSessions() {
+    if (radiusSessions.value) {
+        radiusSessions.value = null; // toggle off
+        return;
+    }
+    try {
+        radiusSessions.value = (await axios.post('/isp/connection-sessions', { id: conn.value.id, limit: 50 })).data.sessions;
+    } catch (err) {
+        showError(err);
+    }
+}
+const bytes = (n) => (n >= 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.round(n / 1e3) + ' KB');
 
 async function syncNow() {
     busy.value = true;
@@ -174,7 +190,7 @@ function describe(h) {
 <template>
     <Offcanvas :show="show" width="sm:w-[760px]" @close="emit('close')">
         <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-            <h2 class="text-base font-semibold text-slate-800">Connection {{ conn?.code }} <StatusBadge v-if="conn" :status="conn.status" class="ml-2" /> <SyncBadge v-if="conn" :connection="conn" class="ml-1 align-middle" /></h2>
+            <h2 class="text-base font-semibold text-slate-800">Connection {{ conn?.code }} <StatusBadge v-if="conn" :status="conn.status" class="ms-2" /> <SyncBadge v-if="conn" :connection="conn" class="ms-1 align-middle" /></h2>
             <button type="button" class="text-slate-400 hover:text-slate-600" @click="emit('close')"><i class="bi bi-x-lg"></i></button>
         </div>
         <div v-if="!conn" class="p-8 text-center text-sm text-slate-400">Loading...</div>
@@ -184,8 +200,8 @@ function describe(h) {
                 <div><span class="text-slate-400">Package</span><br />{{ conn.package?.name }} · {{ fmtMoney(conn.package?.price) }}<span v-if="Number(conn.discount)"> − {{ money(conn.discount) }}</span></div>
                 <div><span class="text-slate-400">Type</span><br />{{ label(conn.connection_type) }}</div>
                 <div><span class="text-slate-400">{{ conn.connection_type === 'hotspot' ? 'Hotspot' : 'PPPoE' }} user</span><br /><span class="font-mono">{{ conn.pppoe_username || '—' }}</span>
-                    <button v-if="conn.pppoe_username" type="button" class="ml-1 text-slate-400 hover:text-brand-600" title="Copy" @click="copyText(conn.pppoe_username)"><i class="bi bi-copy text-xs"></i></button>
-                    <button v-if="can.connection" type="button" class="ml-2 text-xs text-brand-600 hover:underline" title="Test this connection in the terminal" @click="showTerminal = true"><i class="bi bi-terminal"></i> Terminal</button>
+                    <button v-if="conn.pppoe_username" type="button" class="ms-1 text-slate-400 hover:text-brand-600" title="Copy" @click="copyText(conn.pppoe_username)"><i class="bi bi-copy text-xs"></i></button>
+                    <button v-if="can.connection" type="button" class="ms-2 text-xs text-brand-600 hover:underline" title="Test this connection in the terminal" @click="showTerminal = true"><i class="bi bi-terminal"></i> Terminal</button>
                 </div>
                 <div>
                     <span class="text-slate-400">{{ conn.connection_type === 'hotspot' ? 'Hotspot' : 'PPPoE' }} password</span><br />
@@ -202,18 +218,35 @@ function describe(h) {
                 <div>
                     <!-- two separate facts: can we reach the router, and is the customer connected to it -->
                     <div>
-                        <i class="bi bi-router"></i> Router {{ online.router }}<span v-if="online.router_host" class="font-mono text-slate-500"> ({{ online.router_host }})</span>:
+                        <i class="bi bi-router"></i> {{ online.radius ? 'RADIUS NAS' : 'Router' }} {{ online.router }}<span v-if="online.router_host" class="font-mono text-slate-500"> ({{ online.router_host }})</span>:
                         <span v-if="online.error" class="text-red-600">not reachable · {{ online.error }}</span>
-                        <span v-else class="text-emerald-700">reachable</span>
+                        <span v-else class="text-emerald-700">{{ online.radius ? 'RADIUS database reachable' : 'reachable' }}</span>
                     </div>
                     <div v-if="!online.error">
                         <i class="bi bi-person"></i> Customer session:
-                        <span v-if="online.online" class="font-medium text-emerald-700"><i class="bi bi-circle-fill text-[8px]"></i> Online · {{ online.session?.address }} · up {{ online.session?.uptime }}</span>
+                        <span v-if="online.online" class="font-medium text-emerald-700"><i class="bi bi-circle-fill text-[8px]"></i> Online · {{ online.session?.address }} · {{ online.radius ? `since ${fmtDateTime(online.session?.start)}` : `up ${online.session?.uptime}` }}</span>
                         <span v-else class="text-slate-500"><i class="bi bi-circle text-[8px]"></i> Offline<span v-if="online.reason"> · {{ online.reason }}</span></span>
                     </div>
                 </div>
+                <button v-if="online.radius" type="button" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs" @click="loadSessions"><i class="bi bi-clock-history"></i> Sessions</button>
             </div>
-            <LiveTrafficChart v-if="online && online.managed && !online.error" :connection-id="conn.id" :package-mbps="conn.package ? { down: conn.package.download_mbps, up: conn.package.upload_mbps } : null" />
+            <div v-if="radiusSessions" class="overflow-x-auto rounded-md border border-slate-200">
+                <table class="w-full text-xs">
+                    <thead><tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600"><th class="px-2 py-1 font-medium">Start</th><th class="px-2 py-1 font-medium">Stop</th><th class="px-2 py-1 font-medium">IP</th><th class="px-2 py-1 font-medium">MAC</th><th class="px-2 py-1 text-end font-medium">Down / Up</th><th class="px-2 py-1 font-medium">Ended by</th></tr></thead>
+                    <tbody>
+                        <tr v-for="x in radiusSessions" :key="x.session_id + x.start" class="border-b border-slate-100">
+                            <td class="px-2 py-1">{{ fmtDateTime(x.start) }}</td>
+                            <td class="px-2 py-1">{{ x.stop ? fmtDateTime(x.stop) : 'online' }}</td>
+                            <td class="px-2 py-1 font-mono">{{ x.address }}</td>
+                            <td class="px-2 py-1 font-mono">{{ x.mac }}</td>
+                            <td class="px-2 py-1 text-end">{{ bytes(x.download_bytes) }} / {{ bytes(x.upload_bytes) }}</td>
+                            <td class="px-2 py-1">{{ x.terminate_cause }}</td>
+                        </tr>
+                        <tr v-if="!radiusSessions.length"><td colspan="6" class="px-2 py-3 text-center text-slate-400">No sessions recorded yet</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <LiveTrafficChart v-if="online && online.managed && !online.error && !online.radius" :connection-id="conn.id" :package-mbps="conn.package ? { down: conn.package.download_mbps, up: conn.package.upload_mbps } : null" />
             <TestDial v-if="conn.connection_type === 'pppoe' && conn.pppoe_username" :username="conn.pppoe_username" :password="secret" :can-reveal="!!can.connectionSecret" :router-name="online?.router || 'the router'" @reveal="reveal" />
             <div class="flex flex-wrap items-start justify-between gap-2 rounded-md border p-2" :class="conn.status === 'active' && !['synced', 'not_managed'].includes(conn.network_sync_status) ? 'border-red-200 bg-red-50/50' : 'border-slate-200'">
                 <div>
@@ -262,7 +295,7 @@ function describe(h) {
                             <span>{{ pkg.quote.difference > 0 ? 'Customer pays (added as due)' : pkg.quote.difference < 0 ? 'Credit to customer balance' : 'No difference' }}</span>
                             <span>{{ money(Math.abs(pkg.quote.difference_gross)) }}</span>
                         </div>
-                        <p v-if="pkg.quote.difference_tax > 0" class="text-right text-slate-400">{{ money(Math.abs(pkg.quote.difference)) }} + {{ money(pkg.quote.difference_tax) }} tax</p>
+                        <p v-if="pkg.quote.difference_tax > 0" class="text-end text-slate-400">{{ money(Math.abs(pkg.quote.difference)) }} + {{ money(pkg.quote.difference_tax) }} tax</p>
                         <p class="mt-1 text-slate-400">The expiry date stays the same. The next renewal bill uses the new price.</p>
                     </template>
                     <p v-else class="text-slate-500">No paid days are running, so nothing to adjust. The new price applies from the next bill.</p>
@@ -297,7 +330,7 @@ function describe(h) {
         </div>
         <!-- Everyday actions up front; rarely used ones in "More", each with what it does. -->
         <div v-if="conn" class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
-            <span v-if="conn.needs_payment && ['pending', 'suspended'].includes(conn.status)" class="mr-auto text-xs text-red-600"><i class="bi bi-lock"></i> Unpaid — pay first to switch it on</span>
+            <span v-if="conn.needs_payment && ['pending', 'suspended'].includes(conn.status)" class="me-auto text-xs text-red-600"><i class="bi bi-lock"></i> Unpaid — pay first to switch it on</span>
             <button v-if="can.payment && !['terminated', 'inactive'].includes(conn.status)" type="button" class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700" @click="showPay = true"><i class="bi bi-cash-coin"></i> Pay</button>
             <template v-if="can.connectionAction">
                 <button v-if="actions.activate" :disabled="busy" type="button" class="rounded-md bg-brand-500 px-3 py-1.5 text-sm text-white hover:bg-brand-600" @click="act('activate')"><i class="bi bi-power"></i> {{ conn.status === 'inactive' ? 'Turn on again' : 'Activate' }}</button>
@@ -308,20 +341,20 @@ function describe(h) {
                 <button type="button" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50" @click="moreOpen = !moreOpen">More <i class="bi bi-chevron-up text-xs"></i></button>
                 <template v-if="moreOpen">
                     <div class="fixed inset-0 z-10" @click="moreOpen = false"></div>
-                    <div class="absolute bottom-full right-0 z-20 mb-1 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white text-left shadow-lg">
-                        <button v-if="!pkg.open" type="button" class="block w-full px-3 py-2 text-left hover:bg-slate-50" @click="moreOpen = false; openPackage()">
+                    <div class="absolute bottom-full end-0 z-20 mb-1 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white text-start shadow-lg">
+                        <button v-if="!pkg.open" type="button" class="block w-full px-3 py-2 text-start hover:bg-slate-50" @click="moreOpen = false; openPackage()">
                             <div class="text-sm font-medium text-slate-800"><i class="bi bi-arrow-left-right"></i> Change package</div>
                             <div class="text-xs text-slate-500">New speed/price from the next bill.</div>
                         </button>
-                        <button v-if="actions.suspend" :disabled="busy" type="button" class="block w-full border-t border-slate-100 px-3 py-2 text-left hover:bg-amber-50" @click="moreOpen = false; act('suspend')">
+                        <button v-if="actions.suspend" :disabled="busy" type="button" class="block w-full border-t border-slate-100 px-3 py-2 text-start hover:bg-amber-50" @click="moreOpen = false; act('suspend')">
                             <div class="text-sm font-medium text-amber-700"><i class="bi bi-pause-circle"></i> Suspend</div>
                             <div class="text-xs text-slate-500">Cut the line for a while (abuse, customer request). Paid time keeps running; Reactivate brings it back.</div>
                         </button>
-                        <button v-if="actions.deactivate" :disabled="busy" type="button" class="block w-full border-t border-slate-100 px-3 py-2 text-left hover:bg-slate-50" @click="moreOpen = false; act('deactivate')">
+                        <button v-if="actions.deactivate" :disabled="busy" type="button" class="block w-full border-t border-slate-100 px-3 py-2 text-start hover:bg-slate-50" @click="moreOpen = false; act('deactivate')">
                             <div class="text-sm font-medium text-slate-700"><i class="bi bi-moon"></i> Deactivate</div>
                             <div class="text-xs text-slate-500">Customer stops using it for now (moved, abroad). No renewal bills; keeps the box port; can be turned on again.</div>
                         </button>
-                        <button v-if="actions.terminate" :disabled="busy" type="button" class="block w-full border-t border-slate-100 px-3 py-2 text-left hover:bg-red-50" @click="moreOpen = false; act('terminate')">
+                        <button v-if="actions.terminate" :disabled="busy" type="button" class="block w-full border-t border-slate-100 px-3 py-2 text-start hover:bg-red-50" @click="moreOpen = false; act('terminate')">
                             <div class="text-sm font-medium text-red-600"><i class="bi bi-x-octagon"></i> Terminate</div>
                             <div class="text-xs text-slate-500">Close it for good: no more bills, frees the box port. Can't be undone.</div>
                         </button>

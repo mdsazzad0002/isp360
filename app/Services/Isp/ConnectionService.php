@@ -4,6 +4,7 @@ namespace App\Services\Isp;
 
 use App\Jobs\SyncConnectionToNetwork;
 use App\Models\Connection;
+use App\Models\CustomerPayment;
 use App\Models\ConnectionHistory;
 use App\Models\Invoice;
 use App\Models\Customer;
@@ -24,6 +25,7 @@ class ConnectionService
         'pppoe_username' => 'username_changed',
         'pppoe_password' => 'password_changed',
         'static_ip' => 'ip_changed',
+        'ipv6_prefix' => 'ipv6_changed',
         'mac_address' => 'mac_changed',
         'box_id' => 'box_changed',
         'connection_type' => 'type_changed',
@@ -53,6 +55,7 @@ class ConnectionService
                 'pppoe_username' => $data['pppoe_username'] ?? null,
                 'pppoe_password' => $data['pppoe_password'] ?? null,
                 'static_ip' => $data['static_ip'] ?? null,
+                'ipv6_prefix' => $data['ipv6_prefix'] ?? null,
                 'mac_address' => $data['mac_address'] ?? null,
                 'discount' => $data['discount'] ?? 0,
                 'bonus_days' => (int) ($data['bonus_days'] ?? IspSettings::get($branchId, 'init_bonus_days')),
@@ -106,7 +109,7 @@ class ConnectionService
                 self::assertBoxHasRoom($data['box_id']);
             }
 
-            $allowed = ['connection_type', 'pppoe_username', 'static_ip', 'mac_address', 'box_id', 'router_id', 'discount', 'installation_date', 'notes'];
+            $allowed = ['connection_type', 'pppoe_username', 'static_ip', 'ipv6_prefix', 'mac_address', 'box_id', 'router_id', 'discount', 'installation_date', 'notes'];
             $changes = array_intersect_key($data, array_flip($allowed));
             if (! empty($data['pppoe_password'])) {
                 $changes['pppoe_password'] = $data['pppoe_password'];
@@ -153,6 +156,7 @@ class ConnectionService
             if ($connection->status !== 'pending' && $connection->status !== 'inactive') {
                 throw new RuntimeException("Only a pending or inactive connection can be activated (current: {$connection->status}).");
             }
+            ComplianceService::assertCanActivate($connection); // KYC first, where the branch requires it
             $date = Carbon::parse($date ?? now())->startOfDay();
 
             $connection->status = 'active';
@@ -222,9 +226,14 @@ class ConnectionService
         return self::simpleTransition($connection, ['active', 'suspended'], 'inactive', 'deactivated', $reason);
     }
 
-    public static function terminate(Connection $connection, string $reason): Connection
+    // $creditUnused (default: the terminate_credit_unused setting) gives the unused paid days back
+    // to the customer's balance, day-wise; $credited gets that receipt.
+    public static function terminate(Connection $connection, string $reason, ?bool $creditUnused = null, ?CustomerPayment &$credited = null): Connection
     {
-        return DB::transaction(function () use ($connection, $reason) {
+        return DB::transaction(function () use ($connection, $reason, $creditUnused, &$credited) {
+            if ($creditUnused ?? IspSettings::get($connection->branch_id, 'terminate_credit_unused')) {
+                $credited = PackageChangeService::creditUnused(Connection::with('package')->findOrFail($connection->id), $reason);
+            }
             $connection = self::simpleTransition($connection, ['pending', 'active', 'suspended', 'inactive'], 'terminated', 'terminated', $reason);
             $connection->terminated_at = now();
             $connection->save();
@@ -302,13 +311,13 @@ class ConnectionService
             ->whereNotIn('status', ['draft', 'void', 'cancelled'])
             // a bill given "on due" counts from when it was granted, and paying it later doesn't move it
             ->orderByRaw('coalesce(credit_at, paid_at) is null, coalesce(credit_at, paid_at), id')
-            ->get(['id', 'status', 'paid_at', 'credit_at', 'service_months', 'period_start', 'period_end']);
+            ->get(['id', 'status', 'paid_at', 'credit_at', 'service_months', 'service_days', 'period_start', 'period_end']);
         foreach ($invoices as $invoice) {
             $start = $end = null;
             $from = $invoice->credit_at ?? ($invoice->status === 'paid' ? $invoice->paid_at : null);
             if ($from && $connection->activated_at) {
                 $start = collect([$from, $connection->activated_at, $cursor])->filter()->max()->copy();
-                $end = $start->copy()->addMonthsNoOverflow($invoice->service_months);
+                $end = $start->copy()->addMonthsNoOverflow($invoice->service_months)->addDays((int) $invoice->service_days); // + pro-rata days to the billing day
                 if (! $cursor && $connection->bonus_days) {
                     $end->addDays($connection->bonus_days); // first paid time only
                 }
@@ -339,7 +348,15 @@ class ConnectionService
         if (! IspSettings::get($connection->branch_id, 'auto_suspend')) {
             return false;
         }
+        $connection->loadMissing('package');
+        if (OverdueService::isPostpaid($connection)) {
+            return OverdueService::overdueBill($connection) !== null;
+        }
         if ($connection->expire_at && $connection->expire_at->isFuture()) {
+            return false;
+        }
+        // still inside the grace period after its paid time
+        if ($connection->expire_at && OverdueService::graceEnd($connection)?->isFuture()) {
             return false;
         }
         return Invoice::where('connection_id', $connection->id)->whereNotNull('service_months')
@@ -349,21 +366,29 @@ class ConnectionService
             ->exists();
     }
 
-    // No grace: an active line whose time is up (or was never paid) goes off now; a line
-    // suspended for that comes back as soon as it has time again.
-    public static function applyExpiry(Connection $connection): void
+    // An active line whose time is up (or was never paid) goes off once the grace period and the
+    // notice rule allow it (OverdueService; with the defaults: at once); a line suspended for that
+    // comes back as soon as it has time again. Returns true when the line was switched.
+    public static function applyExpiry(Connection $connection): bool
     {
         $settings = IspSettings::all($connection->branch_id);
-        $hasTime = $connection->expire_at && $connection->expire_at->isFuture();
+        $connection->loadMissing('package');
+        $postpaid = OverdueService::isPostpaid($connection);
+        // postpaid: back on once no bill is overdue (its time runs on credit meanwhile)
+        $hasTime = $postpaid ? ! OverdueService::overdueBill($connection, $settings) : ($connection->expire_at && $connection->expire_at->isFuture());
 
-        if ($connection->status === 'active' && ! $hasTime && $settings['auto_suspend']) {
-            self::suspend($connection, OverdueService::SUSPEND_REASON, true);
+        if ($connection->status === 'active' && $settings['auto_suspend'] && OverdueService::isDueForSuspension($connection, $settings)) {
+            self::suspend($connection, $postpaid ? 'Overdue' : OverdueService::SUSPEND_REASON, true);
             DB::afterCommit(fn () => IspNotifier::send($connection->branch_id, $connection->customer, 'suspend', ['connection' => $connection->code]));
-        } elseif ($connection->status === 'suspended' && $hasTime && $settings['auto_reactivate']
-            && in_array($connection->suspension_reason, OverdueService::SUSPEND_REASONS, true)) {
-            self::reactivate($connection, 'Paid until ' . $connection->expire_at->format('d M Y h:i A'), true);
-            DB::afterCommit(fn () => IspNotifier::send($connection->branch_id, $connection->customer, 'reactivate', ['connection' => $connection->code]));
+            return true;
         }
+        if ($connection->status === 'suspended' && $hasTime && $settings['auto_reactivate']
+            && in_array($connection->suspension_reason, OverdueService::SUSPEND_REASONS, true)) {
+            self::reactivate($connection, $postpaid ? 'Overdue bills paid' : 'Paid until ' . $connection->expire_at->format('d M Y h:i A'), true);
+            DB::afterCommit(fn () => IspNotifier::send($connection->branch_id, $connection->customer, 'reactivate', ['connection' => $connection->code]));
+            return true;
+        }
+        return false;
     }
 
     private static function simpleTransition(Connection $connection, array $from, string $to, string $action, string $reason): Connection
@@ -439,6 +464,11 @@ class ConnectionService
         if ($box && $box->capacity > 0 && $box->usedPortsCount() >= $box->capacity) {
             throw new RuntimeException("Box {$box->name} is full ({$box->capacity} ports).");
         }
+    }
+
+    public static function logHistory(Connection $connection, string $action, ?array $old, ?array $new, ?string $reason = null): void
+    {
+        self::history($connection, $action, $old, $new, $reason);
     }
 
     private static function history(Connection $connection, string $action, ?array $old, ?array $new, ?string $reason = null): void

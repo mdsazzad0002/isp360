@@ -17,6 +17,7 @@ function emptyForm() {
         method: 'GET',
         url_template: '',
         api_key: '',
+        has_api_key: false,
         sender_id: '',
         sms_type: 'text',
         label: 'promotional',
@@ -63,7 +64,9 @@ function editRow(row) {
         provider_type: row.provider_type || 'custom',
         method: row.method,
         url_template: row.url_template || '',
-        api_key: row.api_key || '',
+        // the saved key is never sent back; blank keeps it
+        api_key: '',
+        has_api_key: !!row.has_api_key,
         sender_id: row.sender_id || '',
         sms_type: row.sms_type || 'text',
         label: row.label || 'promotional',
@@ -138,6 +141,9 @@ onMounted(load);
                             <option value="custom">Custom URL Template</option>
                             <option value="mram">MRAM (sms.mram.com.bd)</option>
                             <option value="gennet">GenNet (isms.gennet.com.bd)</option>
+                            <option value="twilio">Twilio</option>
+                            <option value="vonage">Vonage (Nexmo)</option>
+                            <option value="infobip">Infobip</option>
                         </select>
                     </div>
                     <div v-if="form.provider_type === 'custom'">
@@ -156,7 +162,7 @@ onMounted(load);
                     <template v-if="form.provider_type === 'mram'">
                         <div>
                             <label class="mb-1 block text-xs font-medium text-slate-600">API Key</label>
-                            <input type="text" autocomplete="off" v-model="form.api_key" placeholder="R700007167f50e7feb3736.24890534" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-mono" />
+                            <input type="text" autocomplete="off" v-model="form.api_key" :placeholder="form.id && form.has_api_key ? 'Saved (hidden). Leave blank to keep it' : 'R700007167f50e7feb3736.24890534'" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-mono" />
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-slate-600">Sender ID</label>
@@ -182,12 +188,27 @@ onMounted(load);
                     <template v-else-if="form.provider_type === 'gennet'">
                         <div>
                             <label class="mb-1 block text-xs font-medium text-slate-600">API Token</label>
-                            <input type="text" autocomplete="off" v-model="form.api_key" placeholder="API token provided by GenNet" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-mono" />
+                            <input type="text" autocomplete="off" v-model="form.api_key" :placeholder="form.id && form.has_api_key ? 'Saved (hidden). Leave blank to keep it' : 'API token provided by GenNet'" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-mono" />
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-slate-600">SID</label>
                             <input type="text" autocomplete="off" v-model="form.sender_id" placeholder="e.g. BDSNONMASK" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                         </div>
+                    </template>
+                    <template v-else-if="['twilio', 'vonage', 'infobip'].includes(form.provider_type)">
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-slate-600">{{ { twilio: 'Account SID:Auth Token', vonage: 'API key:API secret', infobip: 'API key' }[form.provider_type] }}</label>
+                            <input type="text" autocomplete="off" v-model="form.api_key" :placeholder="form.id && form.has_api_key ? 'Saved (hidden). Leave blank to keep it' : form.provider_type === 'infobip' ? 'App key' : 'id:secret'" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-mono" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-slate-600">From (number or sender name{{ form.provider_type === 'twilio' ? ', or Messaging Service SID MG…' : '' }})</label>
+                            <input type="text" autocomplete="off" v-model="form.sender_id" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
+                        <div v-if="form.provider_type === 'infobip'">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Base URL of your Infobip account</label>
+                            <input type="url" autocomplete="off" v-model="form.url_template" placeholder="https://xxxxx.api.infobip.com" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
+                        <p class="text-xs text-slate-500">Numbers are sent in international form (+country code), converted from the stored ones.</p>
                     </template>
                     <div v-else>
                         <label class="mb-1 block text-xs font-medium text-slate-600">URL Template</label>
@@ -212,19 +233,19 @@ onMounted(load);
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Name</th>
                             <th class="px-2 py-2 font-medium">Provider</th>
                             <th class="px-2 py-2 font-medium">Details</th>
                             <th class="px-2 py-2 font-medium">Active</th>
                             <th class="px-2 py-2 font-medium">Default</th>
-                            <th class="px-2 py-2 text-right font-medium">Action</th>
+                            <th class="px-2 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="row in rows" :key="row.id" class="border-b border-slate-100 hover:bg-slate-50">
                             <td class="px-2 py-1.5">{{ row.name }}</td>
-                            <td class="px-2 py-1.5">{{ row.provider_type === 'mram' ? 'MRAM' : row.provider_type === 'gennet' ? 'GenNet' : 'Custom (' + row.method + ')' }}</td>
+                            <td class="px-2 py-1.5">{{ { mram: 'MRAM', gennet: 'GenNet', twilio: 'Twilio', vonage: 'Vonage', infobip: 'Infobip' }[row.provider_type] || 'Custom (' + row.method + ')' }}</td>
                             <td
                                 class="max-w-xs truncate px-2 py-1.5 font-mono text-xs"
                                 :title="row.provider_type === 'mram' ? 'Sender: ' + row.sender_id : row.provider_type === 'gennet' ? 'SID: ' + row.sender_id : row.url_template"
@@ -241,7 +262,7 @@ onMounted(load);
                                 <label class="relative inline-flex cursor-pointer items-center">
                                     <input type="checkbox" :checked="!!row.is_active" @change="toggleActive(row)" class="peer sr-only" />
                                     <div class="h-5 w-9 rounded-full bg-slate-200 transition peer-checked:bg-brand-500"></div>
-                                    <div class="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition peer-checked:translate-x-4"></div>
+                                    <div class="absolute start-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition peer-checked:translate-x-4 rtl:peer-checked:-translate-x-4"></div>
                                 </label>
                             </td>
                             <td class="px-2 py-1.5">

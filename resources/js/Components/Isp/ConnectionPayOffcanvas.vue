@@ -133,7 +133,7 @@ onMounted(() => {
                                 v-for="o in quote.options"
                                 :key="o.cycles"
                                 type="button"
-                                class="rounded-md border px-2 py-1.5 text-left"
+                                class="rounded-md border px-2 py-1.5 text-start"
                                 :class="Number(form.cycles) === o.cycles ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-300 bg-white hover:bg-slate-50'"
                                 @click="form.cycles = o.cycles"
                             >

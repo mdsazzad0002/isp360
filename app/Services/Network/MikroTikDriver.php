@@ -68,6 +68,9 @@ class MikroTikDriver implements NetworkDriver
         if ($connection->pppoe_password) {
             $desired['password'] = $connection->pppoe_password;
         }
+        if ($connection->connection_type === 'pppoe' && $connection->ipv6_prefix) {
+            $desired['remote-ipv6-prefix'] = $connection->ipv6_prefix; // IPv6 prefix delegation from IPAM
+        }
 
         // A type change (PPPoE <-> Hotspot) leaves the user in the other menu: disable it there.
         foreach (self::SERVICES as $type => $other) {

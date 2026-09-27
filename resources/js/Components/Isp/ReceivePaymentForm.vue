@@ -154,20 +154,20 @@ onMounted(() => {
             <div class="max-h-72 overflow-y-auto rounded-md border border-slate-200">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-1.5 font-medium">Invoice</th>
                             <th class="px-2 py-1.5 font-medium">Due date</th>
-                            <th class="px-2 py-1.5 text-right font-medium">Due</th>
-                            <th v-if="mode === 'manual'" class="px-2 py-1.5 text-right font-medium">Pay</th>
+                            <th class="px-2 py-1.5 text-end font-medium">Due</th>
+                            <th v-if="mode === 'manual'" class="px-2 py-1.5 text-end font-medium">Pay</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="inv in dues.invoices" :key="inv.id" class="border-b border-slate-100">
                             <td class="px-2 py-1.5">{{ inv.invoice_no }} <StatusBadge :status="inv.status" /></td>
                             <td class="px-2 py-1.5">{{ fmtDate(inv.due_date) }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ money(inv.due) }}</td>
-                            <td v-if="mode === 'manual'" class="px-2 py-1 text-right">
-                                <input v-model="alloc[inv.id]" type="number" min="0" :max="inv.due" :step="moneyStep()" class="w-28 rounded border border-slate-300 px-2 py-1 text-right text-sm" />
+                            <td class="px-2 py-1.5 text-end">{{ money(inv.due) }}</td>
+                            <td v-if="mode === 'manual'" class="px-2 py-1 text-end">
+                                <input v-model="alloc[inv.id]" type="number" min="0" :max="inv.due" :step="moneyStep()" class="w-28 rounded border border-slate-300 px-2 py-1 text-end text-sm" />
                             </td>
                         </tr>
                         <tr v-if="!dues.invoices.length">

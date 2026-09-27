@@ -300,7 +300,7 @@ function onSearch() {
             <template v-if="section === 'start'">
                 <p>The terminal runs a fixed set of <b>diagnostic commands on the connection's MikroTik router</b> through its REST API. It is not a shell, and anything not listed here is refused.</p>
                 <p class="text-xs text-slate-600"><b>No router?</b> <span class="font-mono">sping</span>, <span class="font-mono">port</span> and <span class="font-mono">trace</span> run from this server instead (and <span class="font-mono">ping</span> / <span class="font-mono">diagnose</span> switch to it by themselves). They only reach IPs routed to the server.</p>
-                <ol class="list-decimal space-y-1 pl-5">
+                <ol class="list-decimal space-y-1 ps-5">
                     <li>Pick the connection at the top (or open the terminal from a connection's <b>Test</b> button).</li>
                     <li>Start with <button type="button" class="font-mono text-brand-600 hover:underline" @click="emit('run', 'diagnose')">diagnose</button>: it runs the usual checks and tells you what to do next.</li>
                     <li>Click a value chip (username, IP, MAC) to drop it into the prompt, or its copy icon to copy it.</li>
@@ -332,25 +332,25 @@ function onSearch() {
                             <i class="bi bi-arrow-left-right text-slate-400"></i>
                             <span class="rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-800" title="address= (bandwidth-server)">address={{ ctx.ip || '<ip>' }}</span>
                         </div>
-                        <ul class="mt-1 list-disc pl-4 text-slate-600">
+                        <ul class="mt-1 list-disc ps-4 text-slate-600">
                             <li><b>Client</b> = the connection's MikroTik ({{ ctx.routerIp || 'router IP' }}). The command runs here; you never type this IP.</li>
                             <li><b>address=</b> = the customer's {{ ctx.sessionIp ? 'live session IP' : ctx.staticIp ? 'static IP' : 'IP (none now: offline)' }} {{ ctx.ip || '' }}, i.e. their MikroTik CPE with bandwidth-server on. Leave it out and this IP is used.</li>
                             <li>A different server (e.g. a core MikroTik) works too: give its IP, reachable from {{ ctx.routerName || 'the router' }}, with its own user=/password=.</li>
                         </ul>
                     </div>
                     <div v-if="c.output" class="mt-1 text-xs text-slate-500"><b class="text-slate-600">Output:</b> {{ c.output }}</div>
-                    <ul v-if="c.tips" class="mt-1 list-disc pl-4 text-xs text-slate-600">
+                    <ul v-if="c.tips" class="mt-1 list-disc ps-4 text-xs text-slate-600">
                         <li v-for="t in c.tips" :key="t">{{ fill(t) }}</li>
                     </ul>
                     <div v-if="c.examples && !examplesOf(c).length" class="mt-1.5 rounded border border-dashed border-amber-300 bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
                         No example: {{ noIpText }}
                         Examples appear with the real IP once it is known.
-                        <button type="button" class="ml-1 font-medium underline" @click="emit('refresh')">Refresh</button>
+                        <button type="button" class="ms-1 font-medium underline" @click="emit('refresh')">Refresh</button>
                     </div>
                     <div v-if="examplesOf(c).length" class="mt-1.5 flex flex-wrap gap-1">
                         <span v-for="ex in examplesOf(c)" :key="ex" class="inline-flex overflow-hidden rounded border font-mono text-[11px]" :class="needsInput(ex) ? 'border-dashed border-amber-400' : 'border-slate-300'">
                             <button type="button" class="px-1.5 py-0.5 hover:bg-slate-100" :title="needsInput(ex) ? 'Put in the prompt, then fill the <…> part' : 'Put in the prompt'" @click="emit('use', ex)">{{ ex }}</button>
-                            <button v-if="!c.danger && !needsInput(ex)" type="button" class="border-l border-slate-300 px-1.5 text-emerald-600 hover:bg-emerald-50" title="Run now" @click="emit('run', ex)"><i class="bi bi-play-fill"></i></button>
+                            <button v-if="!c.danger && !needsInput(ex)" type="button" class="border-s border-slate-300 px-1.5 text-emerald-600 hover:bg-emerald-50" title="Run now" @click="emit('run', ex)"><i class="bi bi-play-fill"></i></button>
                         </span>
                     </div>
                 </div>
@@ -362,7 +362,7 @@ function onSearch() {
                     <div class="mb-1.5 font-semibold text-slate-800">{{ p.title }}</div>
                     <ol class="space-y-1">
                         <li v-for="([cmd, why], i) in p.steps.filter(([cmd]) => known(cmd))" :key="i" class="flex gap-2 text-xs">
-                            <span class="w-4 shrink-0 text-right text-slate-400">{{ i + 1 }}.</span>
+                            <span class="w-4 shrink-0 text-end text-slate-400">{{ i + 1 }}.</span>
                             <button type="button" class="shrink-0 rounded border px-1.5 font-mono hover:border-brand-400 hover:text-brand-600" :class="needsInput(fill(cmd)) ? 'border-dashed border-amber-400' : 'border-slate-300'" @click="emit('use', fill(cmd))">{{ fill(cmd) }}</button>
                             <span class="text-slate-600">{{ why }}</span>
                         </li>
@@ -375,7 +375,7 @@ function onSearch() {
                 <p class="text-xs text-slate-500">"Active" with anything other than Synced or Not managed is highlighted with a red ring: the customer may have no internet even though billing says active, or a suspended customer may still be online.</p>
                 <table class="w-full text-xs">
                     <tr v-for="[name, text] in SYNC_STATES" :key="name" class="border-b border-slate-100">
-                        <td class="py-1.5 pr-2 font-medium text-slate-700">{{ name }}</td>
+                        <td class="py-1.5 pe-2 font-medium text-slate-700">{{ name }}</td>
                         <td class="py-1.5 text-slate-600">{{ text }}</td>
                     </tr>
                 </table>
@@ -384,14 +384,14 @@ function onSearch() {
 
             <template v-if="section === 'keys'">
                 <table class="w-full text-xs">
-                    <tr class="border-b border-slate-100"><td class="py-1.5 pr-2 font-mono">Enter</td><td>Run the command</td></tr>
-                    <tr class="border-b border-slate-100"><td class="py-1.5 pr-2 font-mono">↑ / ↓</td><td>Previous / next command (history is kept in this browser)</td></tr>
-                    <tr class="border-b border-slate-100"><td class="py-1.5 pr-2 font-mono">Ctrl+L</td><td>Clear the screen</td></tr>
-                    <tr><td class="py-1.5 pr-2 font-mono">Esc</td><td>Close the terminal panel</td></tr>
+                    <tr class="border-b border-slate-100"><td class="py-1.5 pe-2 font-mono">Enter</td><td>Run the command</td></tr>
+                    <tr class="border-b border-slate-100"><td class="py-1.5 pe-2 font-mono">↑ / ↓</td><td>Previous / next command (history is kept in this browser)</td></tr>
+                    <tr class="border-b border-slate-100"><td class="py-1.5 pe-2 font-mono">Ctrl+L</td><td>Clear the screen</td></tr>
+                    <tr><td class="py-1.5 pe-2 font-mono">Esc</td><td>Close the terminal panel</td></tr>
                 </table>
                 <div class="rounded-md border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
                     <div class="mb-1 font-semibold text-slate-700">Safety & permissions</div>
-                    <ul class="list-disc space-y-0.5 pl-4">
+                    <ul class="list-disc space-y-0.5 ps-4">
                         <li>Using the terminal needs the <b>Connections</b> permission.</li>
                         <li><span class="font-mono">kick</span> and <span class="font-mono">sync</span> change the router: they need <b>Connection Activate / Suspend</b> and are written to the audit log. They are never quick buttons: type them.</li>
                         <li><span class="font-mono">ros</span> is read-only, needs <b>Routers (MikroTik)</b>, and is audited.</li>

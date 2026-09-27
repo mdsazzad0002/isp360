@@ -46,12 +46,12 @@ const props = defineProps({
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Code</th>
                             <th class="px-2 py-2 font-medium">Name</th>
                             <th class="px-2 py-2 font-medium">Phone</th>
                             <th class="px-2 py-2 font-medium">Address</th>
-                            <th class="px-2 py-2 text-right font-medium">Due</th>
+                            <th class="px-2 py-2 text-end font-medium">Due</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -60,7 +60,7 @@ const props = defineProps({
                             <td class="px-2 py-1.5">{{ row.name }}</td>
                             <td class="px-2 py-1.5">{{ row.phone }}</td>
                             <td class="px-2 py-1.5">{{ row.address }}</td>
-                            <td class="px-2 py-1.5 text-right" :class="row.ledger_balance > 0 ? 'text-red-600' : 'text-slate-500'">{{ money(Math.max(0, row.ledger_balance || 0)) }}</td>
+                            <td class="px-2 py-1.5 text-end" :class="row.ledger_balance > 0 ? 'text-red-600' : 'text-slate-500'">{{ money(Math.max(0, row.ledger_balance || 0)) }}</td>
                         </tr>
                         <tr v-if="!customers.length">
                             <td colspan="5" class="px-2 py-6 text-center text-slate-400">No customers assigned yet.</td>

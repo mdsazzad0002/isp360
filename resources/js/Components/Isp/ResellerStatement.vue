@@ -83,38 +83,38 @@ onMounted(load);
             <div v-else class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Date</th>
                             <th class="px-3 py-2 font-medium">Type</th>
                             <th class="px-3 py-2 font-medium">Description</th>
                             <th class="px-3 py-2 font-medium">Ref</th>
-                            <th class="px-3 py-2 text-right font-medium">Credit (+)</th>
-                            <th class="px-3 py-2 text-right font-medium">Debit (−)</th>
-                            <th class="px-3 py-2 text-right font-medium">Balance</th>
+                            <th class="px-3 py-2 text-end font-medium">Credit (+)</th>
+                            <th class="px-3 py-2 text-end font-medium">Debit (−)</th>
+                            <th class="px-3 py-2 text-end font-medium">Balance</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr class="border-b border-slate-100 bg-slate-50/60">
                             <td class="px-3 py-2" colspan="6">Opening balance</td>
-                            <td class="px-3 py-2 text-right font-medium">{{ signed(data.opening) }}</td>
+                            <td class="px-3 py-2 text-end font-medium">{{ signed(data.opening) }}</td>
                         </tr>
                         <tr v-for="(row, i) in data.rows" :key="i" class="border-b border-slate-100 hover:bg-slate-50">
                             <td class="whitespace-nowrap px-3 py-2">{{ fmtDate(row.date) }} <span class="text-xs text-slate-400">{{ row.time }}</span></td>
                             <td class="whitespace-nowrap px-3 py-2">{{ TYPE_LABELS[row.type] || row.type }}</td>
                             <td class="px-3 py-2 text-slate-600">{{ row.description }}</td>
                             <td class="px-3 py-2 text-xs text-slate-500">{{ row.ref }}</td>
-                            <td class="px-3 py-2 text-right text-emerald-700">{{ row.credit ? money(row.credit) : '' }}</td>
-                            <td class="px-3 py-2 text-right text-red-600">{{ row.debit ? money(row.debit) : '' }}</td>
-                            <td class="px-3 py-2 text-right font-medium" :class="row.balance < 0 ? 'text-red-600' : ''">{{ signed(row.balance) }}</td>
+                            <td class="px-3 py-2 text-end text-emerald-700">{{ row.credit ? money(row.credit) : '' }}</td>
+                            <td class="px-3 py-2 text-end text-red-600">{{ row.debit ? money(row.debit) : '' }}</td>
+                            <td class="px-3 py-2 text-end font-medium" :class="row.balance < 0 ? 'text-red-600' : ''">{{ signed(row.balance) }}</td>
                         </tr>
                         <tr v-if="!data.rows.length"><td colspan="7" class="px-3 py-6 text-center text-slate-400">No entries in this range</td></tr>
                     </tbody>
                     <tfoot>
                         <tr class="border-t-2 border-slate-200 font-semibold">
                             <td class="px-3 py-2" colspan="4">Closing balance</td>
-                            <td class="px-3 py-2 text-right text-emerald-700">{{ money(data.credit) }}</td>
-                            <td class="px-3 py-2 text-right text-red-600">{{ money(data.debit) }}</td>
-                            <td class="px-3 py-2 text-right" :class="data.closing < 0 ? 'text-red-600' : ''">{{ signed(data.closing) }}</td>
+                            <td class="px-3 py-2 text-end text-emerald-700">{{ money(data.credit) }}</td>
+                            <td class="px-3 py-2 text-end text-red-600">{{ money(data.debit) }}</td>
+                            <td class="px-3 py-2 text-end" :class="data.closing < 0 ? 'text-red-600' : ''">{{ signed(data.closing) }}</td>
                         </tr>
                     </tfoot>
                 </table>

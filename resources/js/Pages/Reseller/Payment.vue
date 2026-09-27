@@ -141,12 +141,12 @@ onMounted(load);
                     </div>
                     <table v-if="dues.invoices.length" class="w-full text-xs">
                         <thead>
-                            <tr class="text-left text-slate-500">
+                            <tr class="text-start text-slate-500">
                                 <th class="py-1 font-medium">Invoice</th>
                                 <th class="py-1 font-medium">Period</th>
                                 <th class="py-1 font-medium">Due date</th>
-                                <th class="py-1 text-right font-medium">Total</th>
-                                <th class="py-1 text-right font-medium">Due</th>
+                                <th class="py-1 text-end font-medium">Total</th>
+                                <th class="py-1 text-end font-medium">Due</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -154,8 +154,8 @@ onMounted(load);
                                 <td class="py-1">{{ inv.invoice_no }}</td>
                                 <td class="py-1">{{ fmtDateTime(inv.period_start) }}<span v-if="inv.period_end"> – {{ fmtDateTime(inv.period_end) }}</span></td>
                                 <td class="py-1">{{ fmtDate(inv.due_date) }}</td>
-                                <td class="py-1 text-right">{{ money(inv.total) }}</td>
-                                <td class="py-1 text-right font-medium text-red-600">{{ money(inv.due) }}</td>
+                                <td class="py-1 text-end">{{ money(inv.total) }}</td>
+                                <td class="py-1 text-end font-medium text-red-600">{{ money(inv.due) }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -185,7 +185,7 @@ onMounted(load);
                     </div>
                     <label class="flex items-center gap-2 pb-1.5 text-sm text-slate-600"><input v-model="filter.mine" type="checkbox" @change="reload" /> Collected by me only</label>
                 </div>
-                <div class="text-right text-sm">
+                <div class="text-end text-sm">
                     <div class="text-slate-500">{{ totals.count ?? 0 }} payments</div>
                     <div class="text-base font-semibold text-emerald-700">{{ fmtMoney(totals.amount) }}</div>
                 </div>
@@ -193,12 +193,12 @@ onMounted(load);
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Receipt</th>
                             <th class="px-2 py-2 font-medium">Date</th>
                             <th class="px-2 py-2 font-medium">Customer</th>
                             <th class="px-2 py-2 font-medium">Method</th>
-                            <th class="px-2 py-2 text-right font-medium">Amount</th>
+                            <th class="px-2 py-2 text-end font-medium">Amount</th>
                             <th class="px-2 py-2 font-medium">Collected by</th>
                             <th class="px-2 py-2 font-medium">Status</th>
                         </tr>
@@ -209,7 +209,7 @@ onMounted(load);
                             <td class="px-2 py-2">{{ fmtDate(row.payment_date) }}</td>
                             <td class="px-2 py-2">{{ row.customer?.name }}<div class="text-xs text-slate-400">{{ row.customer?.code }} · {{ row.customer?.phone }}</div></td>
                             <td class="px-2 py-2">{{ label(row.method) }}<div v-if="row.transaction_id" class="text-xs text-slate-400">{{ row.transaction_id }}</div></td>
-                            <td class="px-2 py-2 text-right font-medium">{{ money(row.amount) }}</td>
+                            <td class="px-2 py-2 text-end font-medium">{{ money(row.amount) }}</td>
                             <td class="px-2 py-2">
                                 <span v-if="row.collected_by_reseller_id" class="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700">Me</span>
                                 <span v-else class="text-xs text-slate-500">Company ({{ label(row.source) }})</span>

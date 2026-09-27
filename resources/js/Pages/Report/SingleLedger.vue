@@ -140,7 +140,7 @@ onMounted(() => {
         </div>
 
         <div v-if="isLoading" class="mt-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-            <div class="mb-2 text-right">
+            <div class="mb-2 text-end">
                 <button type="button" @click="print" title="Print" class="text-slate-500 hover:text-brand-500">
                     <i class="bi bi-printer text-lg"></i>
                 </button>
@@ -148,7 +148,7 @@ onMounted(() => {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Date</th>
                             <th class="px-2 py-2 font-medium">Description</th>
                             <th v-if="mode === 'bank'" class="px-2 py-2 font-medium">Bank</th>
@@ -161,21 +161,21 @@ onMounted(() => {
                         <tr class="border-b border-slate-100">
                             <td class="px-2 py-1.5"></td>
                             <td :colspan="mode === 'bank' ? 4 : 3" class="px-2 py-1.5">Previous Balance</td>
-                            <td class="px-2 py-1.5 text-right">{{ previousBalance }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ previousBalance }}</td>
                         </tr>
                         <tr v-for="(item, index) in ledgers" :key="index" class="border-b border-slate-100">
                             <td class="px-2 py-1.5">{{ item.date }}</td>
                             <td class="px-2 py-1.5">{{ item.description }}</td>
                             <td v-if="mode === 'bank'" class="px-2 py-1.5">{{ item.bank_name }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ item[inField] }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ item[outField] }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ parseFloat(item.balance).toFixed(2) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ item[inField] }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ item[outField] }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ parseFloat(item.balance).toFixed(2) }}</td>
                         </tr>
                         <tr v-if="ledgers.length > 0" class="bg-slate-50 font-semibold">
                             <td :colspan="mode === 'bank' ? 3 : 2" class="px-2 py-2 text-center">Total</td>
-                            <td class="px-2 py-2 text-right">{{ sumField(inField) }}</td>
-                            <td class="px-2 py-2 text-right">{{ sumField(outField) }}</td>
-                            <td class="px-2 py-2 text-right">{{ lastBalance() }}</td>
+                            <td class="px-2 py-2 text-end">{{ sumField(inField) }}</td>
+                            <td class="px-2 py-2 text-end">{{ sumField(outField) }}</td>
+                            <td class="px-2 py-2 text-end">{{ lastBalance() }}</td>
                         </tr>
                     </tbody>
                 </table>

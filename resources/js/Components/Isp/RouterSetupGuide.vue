@@ -239,7 +239,7 @@ const undoCommands = computed(() =>
             </div>
             <ul v-if="attention || showAll" class="mb-4 divide-y divide-slate-100 rounded-md border border-slate-200 text-xs">
                 <li v-for="i in items" :key="i.key">
-                    <button v-if="clickable(i)" type="button" class="flex w-full gap-2 px-3 py-1.5 text-left hover:bg-slate-50" @click="fixKey = i.key">
+                    <button v-if="clickable(i)" type="button" class="flex w-full gap-2 px-3 py-1.5 text-start hover:bg-slate-50" @click="fixKey = i.key">
                         <i class="bi mt-px" :class="ICON[i.status]"></i>
                         <span class="w-48 shrink-0 font-medium text-slate-700">{{ i.title }}</span>
                         <span class="flex-1 text-slate-600">{{ i.text }}</span>

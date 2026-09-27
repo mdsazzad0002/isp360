@@ -80,7 +80,7 @@ onMounted(load);
                         <input v-model="filter.dateTo" type="date" @change="reload" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
                     </div>
                 </div>
-                <div class="text-right text-sm">
+                <div class="text-end text-sm">
                     <div class="text-slate-500">{{ totals.count ?? 0 }} payments</div>
                     <div class="text-base font-semibold text-emerald-700">{{ fmtMoney((totals.amount || 0) - (totals.refunded || 0)) }} <span class="text-xs font-normal text-slate-400">net</span></div>
                 </div>
@@ -88,13 +88,13 @@ onMounted(load);
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Receipt</th>
                             <th class="px-2 py-2 font-medium">Date</th>
                             <th class="px-2 py-2 font-medium">Customer</th>
                             <th class="px-2 py-2 font-medium">Method</th>
-                            <th class="px-2 py-2 text-right font-medium">Amount</th>
-                            <th class="px-2 py-2 text-right font-medium">Advance</th>
+                            <th class="px-2 py-2 text-end font-medium">Amount</th>
+                            <th class="px-2 py-2 text-end font-medium">Advance</th>
                             <th class="px-2 py-2 font-medium">Received by</th>
                             <th class="px-2 py-2 font-medium">Status</th>
                         </tr>
@@ -105,8 +105,8 @@ onMounted(load);
                             <td class="px-2 py-2">{{ fmtDate(row.payment_date) }}</td>
                             <td class="px-2 py-2"><Link :href="`/isp/customer/${row.customer_id}`" class="hover:underline" @click.stop>{{ row.customer?.name }}</Link><div class="text-xs text-slate-400">{{ row.customer?.code }} · {{ row.customer?.phone }}</div></td>
                             <td class="px-2 py-2">{{ label(row.method) }}<div v-if="row.transaction_id" class="text-xs text-slate-400">{{ row.transaction_id }}</div></td>
-                            <td class="px-2 py-2 text-right font-medium">{{ money(row.amount) }}</td>
-                            <td class="px-2 py-2 text-right text-emerald-700">{{ Number(row.unallocated) ? money(row.unallocated) : '' }}</td>
+                            <td class="px-2 py-2 text-end font-medium">{{ money(row.amount) }}</td>
+                            <td class="px-2 py-2 text-end text-emerald-700">{{ Number(row.unallocated) ? money(row.unallocated) : '' }}</td>
                             <td class="px-2 py-2 text-slate-500">{{ row.received_by?.name || row.source }}</td>
                             <td class="px-2 py-2"><StatusBadge :status="row.status" /></td>
                         </tr>

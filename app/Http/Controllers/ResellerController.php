@@ -72,9 +72,10 @@ class ResellerController extends Controller
 
     public function store(Request $request)
     {
+        normalizePhone($request);
         $validator = Validator::make($request->all(), [
             'name'     => 'required',
-            'phone'    => 'required',
+            'phone'    => ['required', new \App\Rules\PhoneNumber],
             'username' => [
                 'required',
                 Rule::unique('resellers')->whereNull('deleted_at'),
@@ -106,9 +107,10 @@ class ResellerController extends Controller
 
     public function update(Request $request)
     {
+        normalizePhone($request);
         $validator = Validator::make($request->all(), [
             'name'     => 'required',
-            'phone'    => 'required',
+            'phone'    => ['required', new \App\Rules\PhoneNumber],
             'username' => [
                 'required',
                 Rule::unique('resellers')->ignore($request->id)->whereNull('deleted_at'),
@@ -248,6 +250,12 @@ class ResellerController extends Controller
                 $errors[] = "$rowLabel: name, phone and username are required";
                 continue;
             }
+            if (! ($normalized = \App\Support\Phone::normalize($phone))) {
+                $skipped++;
+                $errors[] = "$rowLabel: phone \"$phone\" is not a valid number";
+                continue;
+            }
+            $phone = $normalized;
             if (!preg_match('/^[A-Za-z0-9._@-]{3,50}$/', $username)) {
                 $skipped++;
                 $errors[] = "$rowLabel: username \"$username\" may only contain letters, numbers and . _ @ - (3-50 characters)";

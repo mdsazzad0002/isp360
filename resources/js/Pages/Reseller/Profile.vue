@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue';
 import axios from 'axios';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
 import { useToast } from '../../lib/toast';
+import TwoFactorCard from '../../Components/TwoFactorCard.vue';
 
 const props = defineProps({
     reseller: { type: Object, required: true },
@@ -64,11 +65,12 @@ async function save() {
                     class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
                 />
             </div>
-            <div class="text-right">
+            <div class="text-end">
                 <button type="submit" :disabled="onProgress" class="rounded-md bg-brand-500 px-5 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50">
                     Save Changes
                 </button>
             </div>
         </form>
+        <TwoFactorCard class="mt-4" base="/reseller/two-factor" />
     </PortalLayout>
 </template>

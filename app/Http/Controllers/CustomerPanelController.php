@@ -27,6 +27,8 @@ class CustomerPanelController extends Controller
 
         return \Inertia\Inertia::render('CustomerPortal/Dashboard', [
             'customer' => $customer->only(['id', 'code', 'name', 'phone', 'email', 'address', 'billing_address', 'account_status', 'area', 'box']),
+            // terms / privacy versions not accepted yet (asked on the dashboard)
+            'pendingLegal' => \App\Services\Isp\ComplianceService::pendingFor($customer),
             'summary' => [
                 'balance' => LedgerService::balance($customer->id),
                 'advance' => CollectionService::advanceCredit($customer->id),
@@ -104,6 +106,20 @@ class CustomerPanelController extends Controller
         return response()->json(LedgerService::statement($customer->id, sqlDate($request->dateFrom), sqlDate($request->dateTo)));
     }
 
+    // The customer accepts the current terms / privacy (recorded with time, IP and browser).
+    public function acceptLegal()
+    {
+        $count = \App\Services\Isp\ComplianceService::acceptAll(Auth::guard('customer')->user(), 'portal');
+        return response()->json(['status' => true, 'accepted' => $count]);
+    }
+
+    public function marketing(Request $request)
+    {
+        $customer = Auth::guard('customer')->user();
+        \App\Services\Isp\ComplianceService::record($customer, 'marketing', ! $request->boolean('opt_out'), 'portal');
+        return response()->json(['status' => true]);
+    }
+
     public function profile()
     {
         return \Inertia\Inertia::render('CustomerPortal/Profile', [
@@ -115,9 +131,10 @@ class CustomerPanelController extends Controller
     {
         $customer = Auth::guard('customer')->user();
 
+        normalizePhone($request);
         $validator = Validator::make($request->all(), [
             'name'  => 'required',
-            'phone' => 'required',
+            'phone' => ['required', new \App\Rules\PhoneNumber],
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
 

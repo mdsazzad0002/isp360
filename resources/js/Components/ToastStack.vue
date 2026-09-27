@@ -6,7 +6,7 @@ const { toasts } = useToast();
 
 <template>
     <Teleport to="body">
-        <div class="fixed bottom-4 right-4 z-[2200] flex w-72 flex-col-reverse gap-2">
+        <div class="fixed bottom-4 end-4 z-[2200] flex w-72 flex-col-reverse gap-2">
             <TransitionGroup
                 enter-active-class="transition ease-out duration-200"
                 enter-from-class="opacity-0 translate-y-4"

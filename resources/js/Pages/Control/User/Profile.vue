@@ -4,6 +4,7 @@ import axios from 'axios';
 import AppLayout from '../../../Layouts/AppLayout.vue';
 import { useToast } from '../../../lib/toast';
 import { resizeImageFile } from '../../../lib/imageResize';
+import TwoFactorCard from '../../../Components/TwoFactorCard.vue';
 
 defineOptions({ layout: AppLayout });
 
@@ -65,12 +66,12 @@ async function updateUser() {
         <form @submit.prevent="updateUser" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div class="flex flex-col items-center gap-4 border-b border-slate-100 bg-slate-50 p-6 sm:flex-row">
                 <img :src="imageSrc" alt="Profile" class="h-24 w-24 shrink-0 rounded-full border-4 border-white object-cover shadow" />
-                <div class="min-w-0 flex-1 text-center sm:text-left">
+                <div class="min-w-0 flex-1 text-center sm:text-start">
                     <div class="text-base font-bold text-slate-800">{{ user.name }}</div>
                     <span class="mt-1 inline-block rounded-full bg-brand-500/10 px-3 py-0.5 text-xs font-semibold capitalize text-brand-600">{{ user.role }}</span>
                 </div>
                 <label class="cursor-pointer rounded-md border border-brand-500 px-3 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50">
-                    <i class="bi bi-camera mr-1"></i> Change Photo
+                    <i class="bi bi-camera me-1"></i> Change Photo
                     <input type="file" accept="image/*" class="hidden" @change="onImageChange" />
                 </label>
             </div>
@@ -139,12 +140,13 @@ async function updateUser() {
                     </div>
                 </div>
 
-                <div class="mt-6 text-right">
+                <div class="mt-6 text-end">
                     <button type="submit" :disabled="onProgress" class="rounded-md bg-brand-500 px-5 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50">
                         Save Changes
                     </button>
                 </div>
             </div>
         </form>
+        <TwoFactorCard class="mt-4" base="/two-factor" />
     </div>
 </template>

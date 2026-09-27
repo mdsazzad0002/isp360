@@ -135,7 +135,7 @@ onMounted(async () => {
                 </div>
                 <div class="col-span-2 flex items-end gap-3 md:col-span-6">
                     <label class="flex items-center gap-2 pb-1.5 text-sm text-slate-600"><input v-model="form.is_active" type="checkbox" /> Active</label>
-                    <button type="button" class="ml-auto rounded-md bg-red-600 px-4 py-1.5 text-sm text-white" @click="Object.assign(form, blank()); formArea = null">Reset</button>
+                    <button type="button" class="ms-auto rounded-md bg-red-600 px-4 py-1.5 text-sm text-white" @click="Object.assign(form, blank()); formArea = null">Reset</button>
                     <button type="submit" :disabled="saving" class="rounded-md bg-brand-500 px-4 py-1.5 text-sm text-white disabled:opacity-50">{{ form.id ? 'Update' : 'Save' }}</button>
                 </div>
             </form>
@@ -154,14 +154,14 @@ onMounted(async () => {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Box</th>
                             <th class="px-3 py-2 font-medium">Area / Zone</th>
                             <th class="px-3 py-2 font-medium">Location</th>
                             <th class="w-56 px-3 py-2 font-medium">Ports</th>
-                            <th class="px-3 py-2 text-right font-medium">Customers</th>
+                            <th class="px-3 py-2 text-end font-medium">Customers</th>
                             <th class="px-3 py-2 font-medium">Status</th>
-                            <th class="px-3 py-2 text-right font-medium">Action</th>
+                            <th class="px-3 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -170,7 +170,7 @@ onMounted(async () => {
                             <td class="px-3 py-2">{{ r.area?.name }}<div class="text-xs text-slate-400">{{ r.area?.zone?.name }}</div></td>
                             <td class="px-3 py-2 text-slate-500">
                                 {{ r.location }}
-                                <a v-if="r.latitude && r.longitude" :href="`https://www.google.com/maps?q=${r.latitude},${r.longitude}`" target="_blank" rel="noopener" class="ml-1 text-brand-600" title="Open in Google Maps"><i class="bi bi-geo-alt-fill"></i></a>
+                                <a v-if="r.latitude && r.longitude" :href="`https://www.google.com/maps?q=${r.latitude},${r.longitude}`" target="_blank" rel="noopener" class="ms-1 text-brand-600" title="Open in Google Maps"><i class="bi bi-geo-alt-fill"></i></a>
                             </td>
                             <td class="px-3 py-2">
                                 <div class="flex items-center gap-2 text-xs text-slate-500">
@@ -181,7 +181,7 @@ onMounted(async () => {
                                 </div>
                                 <div v-if="r.capacity" class="text-[11px]" :class="r.available_ports === 0 ? 'font-medium text-red-600' : 'text-slate-400'">{{ r.available_ports === 0 ? 'Full' : `${r.available_ports} free` }}</div>
                             </td>
-                            <td class="px-3 py-2 text-right">{{ r.customers_count }}</td>
+                            <td class="px-3 py-2 text-end">{{ r.customers_count }}</td>
                             <td class="px-3 py-2"><span :class="r.is_active ? 'text-emerald-600' : 'text-slate-400'">{{ r.is_active ? 'Active' : 'Inactive' }}</span></td>
                             <td class="px-3 py-2">
                                 <div class="flex justify-end gap-3">

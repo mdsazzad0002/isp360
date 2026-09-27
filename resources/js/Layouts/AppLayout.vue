@@ -175,13 +175,13 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
                 <div class="relative">
                     <button
                         type="button"
-                        class="flex cursor-pointer items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2.5 transition hover:bg-white/10"
+                        class="flex cursor-pointer items-center gap-2 rounded-lg py-1.5 ps-1.5 pe-2.5 transition hover:bg-white/10"
                         @click="profileOpen = !profileOpen"
                     >
                         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-sm font-semibold text-white shadow-sm ring-2 ring-white/30">
                             {{ (auth?.name || '?').charAt(0).toUpperCase() }}
                         </span>
-                        <span class="hidden text-left sm:block">
+                        <span class="hidden text-start sm:block">
                             <span class="block text-sm font-semibold leading-tight text-white">{{ auth?.name }}</span>
                             <span class="block text-xs leading-tight text-brand-100">{{ auth?.designation || auth?.role }}</span>
                         </span>
@@ -189,7 +189,7 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
                     </button>
                     <div
                         v-if="profileOpen"
-                        class="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl"
+                        class="absolute end-0 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl"
                         @click="profileOpen = false"
                     >
                         <div class="border-b border-slate-100 px-4 py-2.5">
@@ -210,18 +210,18 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
         <!-- Sidebar -->
         <aside
             v-if="!isPosPage"
-            class="fixed inset-y-0 left-0 z-30 flex w-64 flex-col overflow-hidden bg-brand-600 transition-transform print:hidden"
-            :class="[impersonating ? 'top-[88px]' : 'top-14', sidebarOpen ? 'translate-x-0' : '-translate-x-full']"
+            class="fixed inset-y-0 start-0 z-30 flex w-64 flex-col overflow-hidden bg-brand-600 transition-transform print:hidden"
+            :class="[impersonating ? 'top-[88px]' : 'top-14', sidebarOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full']"
         >
             <div class="shrink-0 p-3">
                 <div class="relative">
-                    <i class="bi bi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+                    <i class="bi bi-search absolute start-3.5 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
                     <input
                         ref="menuSearchInput"
                         v-model="menuSearch"
                         type="search"
                         :placeholder="t('nav.search_menu')"
-                        class="w-full rounded-full border-0 bg-white py-2 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        class="w-full rounded-full border-0 bg-white py-2 ps-9 pe-3 text-sm text-slate-700 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                     />
                 </div>
             </div>
@@ -229,7 +229,7 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
             <nav class="flex-1 overflow-y-auto pb-6 sidebar-scroll">
                 <Link
                     href="/"
-                    class="flex items-center gap-3 border-l-4 px-4 py-3 text-sm font-medium transition"
+                    class="flex items-center gap-3 border-s-4 px-4 py-3 text-sm font-medium transition"
                     :class="isDashboard() ? 'border-amber-400 bg-brand-700 text-white' : 'border-transparent text-brand-100 hover:bg-brand-700/60 hover:text-white'"
                     @click="closeOnMobileNav"
                 >
@@ -247,7 +247,7 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
                     </div>
                     <button
                         type="button"
-                        class="flex w-full cursor-pointer items-center gap-3 border-l-4 px-4 py-3 text-left text-sm font-medium transition"
+                        class="flex w-full cursor-pointer items-center gap-3 border-s-4 px-4 py-3 text-start text-sm font-medium transition"
                         :class="groupHasActive(group) ? 'border-amber-400 bg-brand-700 text-white' : 'border-transparent text-brand-100 hover:bg-brand-700/60 hover:text-white'"
                         @click="toggleGroup(group.key, $event)"
                     >
@@ -260,7 +260,7 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
                             v-for="item in group.items"
                             :key="item.uri"
                             :href="item.uri || '#'"
-                            class="flex items-center gap-2.5 py-2 pl-11 pr-4 text-sm transition"
+                            class="flex items-center gap-2.5 py-2 ps-11 pe-4 text-sm transition"
                             :class="isActive(item.match) ? 'font-semibold text-amber-300' : 'text-brand-100 hover:text-white'"
                             @click="closeOnMobileNav"
                         >
@@ -274,7 +274,7 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
                 <button
                     v-if="!menuSearch.trim() || 'license upgrade'.includes(menuSearch.trim().toLowerCase())"
                     type="button"
-                    class="flex w-full cursor-pointer items-center gap-3 border-l-4 border-transparent px-4 py-3 text-left text-sm font-medium text-brand-100 transition hover:bg-brand-700/60 hover:text-white"
+                    class="flex w-full cursor-pointer items-center gap-3 border-s-4 border-transparent px-4 py-3 text-start text-sm font-medium text-brand-100 transition hover:bg-brand-700/60 hover:text-white"
                     @click="openLicensePanel"
                 >
                     <i class="bi bi-arrow-repeat text-base"></i>
@@ -308,13 +308,13 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
         <div v-if="sidebarOpen && !isPosPage" class="fixed inset-0 z-20 bg-slate-900/40 lg:hidden print:hidden" @click="sidebarOpen = false"></div>
 
         <!-- Content -->
-        <main class="transition-all print:!pt-0 print:!pl-0" :class="isPosPage ? '' : [impersonating ? 'pt-[88px]' : 'pt-14', sidebarOpen ? 'lg:pl-64' : '']">
+        <main class="transition-all print:!pt-0 print:!ps-0" :class="isPosPage ? '' : [impersonating ? 'pt-[88px]' : 'pt-14', sidebarOpen ? 'lg:ps-64' : '']">
             <slot />
             <footer v-if="!isPosPage" class="px-4 py-3 text-center text-[11px] font-bold text-emerald-600 print:hidden">
                 <a :href="footerCreditUrl" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-700">
                     <span v-for="(ch, i) in footerCreditChars" :key="i">{{ ch }}</span>
                 </a>
-                <span v-if="page.props.appVersion" class="ml-1">| {{ company.title }} {{ page.props.appVersion }}</span>
+                <span v-if="page.props.appVersion" class="ms-1">| {{ company.title }} {{ page.props.appVersion }}</span>
             </footer>
         </main>
     </div>

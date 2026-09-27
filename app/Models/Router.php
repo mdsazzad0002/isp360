@@ -8,15 +8,25 @@ class Router extends Model
 {
     protected $guarded = ['id'];
 
-    protected $hidden = ['password'];
+    protected $hidden = ['password', 'radius_secret'];
+
+    public const DRIVERS = ['mikrotik' => 'MikroTik (REST API)', 'radius' => 'RADIUS (FreeRADIUS)'];
+    // which speed attributes a RADIUS NAS understands (see RadiusDriver::rateAttributes)
+    public const NAS_TYPES = ['mikrotik' => 'MikroTik', 'huawei' => 'Huawei BRAS', 'cisco' => 'Cisco BNG', 'other' => 'Other (speeds set on the NAS)'];
 
     protected $casts = [
         'password' => 'encrypted',
+        'radius_secret' => 'encrypted',
         'use_https' => 'boolean',
         'is_default' => 'boolean',
         'is_active' => 'boolean',
         'last_checked_at' => 'datetime',
     ];
+
+    public function isRadius(): bool
+    {
+        return $this->driver === 'radius';
+    }
 
     public function baseUrl(): string
     {

@@ -184,7 +184,8 @@ class DashboardController extends Controller
             return response()->json(['status' => false, 'message' => 'Multi branch is not enabled']);
         }
 
-        if (!in_array(auth()->user()->role, ['Superadmin', 'admin'])) {
+        // admins, and regional managers within their region
+        if (!in_array(auth()->user()->role, ['Superadmin', 'admin']) && !auth()->user()->region_id) {
             return response()->json(['status' => false, 'message' => 'You are not allowed to switch branch']);
         }
 

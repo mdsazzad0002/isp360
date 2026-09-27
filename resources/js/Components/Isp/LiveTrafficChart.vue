@@ -242,20 +242,20 @@ const showTable = ref(false);
                     <div v-for="s in SERIES" :key="s.key" class="flex items-center gap-1.5">
                         <span class="inline-block h-2 w-2 rounded-sm" :style="{ background: s.color }"></span>
                         <span class="text-slate-600">{{ s.name }}</span>
-                        <span class="ml-auto pl-3 font-medium text-slate-900">{{ fmt(toMbps(hover[s.key])) }}</span>
+                        <span class="ms-auto ps-3 font-medium text-slate-900">{{ fmt(toMbps(hover[s.key])) }}</span>
                     </div>
                 </div>
             </div>
             <div v-if="showTable" class="max-h-48 overflow-y-auto">
                 <table class="w-full text-xs">
-                    <thead class="sticky top-0 bg-white text-left text-slate-500">
-                        <tr><th class="py-1 font-medium">Time</th><th class="py-1 text-right font-medium">Download</th><th class="py-1 text-right font-medium">Upload</th></tr>
+                    <thead class="sticky top-0 bg-white text-start text-slate-500">
+                        <tr><th class="py-1 font-medium">Time</th><th class="py-1 text-end font-medium">Download</th><th class="py-1 text-end font-medium">Upload</th></tr>
                     </thead>
                     <tbody>
                         <tr v-for="p in [...points].reverse()" :key="p.at" class="border-t border-slate-100">
                             <td class="py-0.5 text-slate-600">{{ clock(p.at) }}</td>
-                            <td class="py-0.5 text-right text-slate-900">{{ fmt(toMbps(p.down)) }}</td>
-                            <td class="py-0.5 text-right text-slate-900">{{ fmt(toMbps(p.up)) }}</td>
+                            <td class="py-0.5 text-end text-slate-900">{{ fmt(toMbps(p.down)) }}</td>
+                            <td class="py-0.5 text-end text-slate-900">{{ fmt(toMbps(p.up)) }}</td>
                         </tr>
                     </tbody>
                 </table>

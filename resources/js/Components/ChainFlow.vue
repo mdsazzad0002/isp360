@@ -35,7 +35,7 @@ const emit = defineEmits(['info']);
                         <p v-if="node.desc" class="mt-0.5 text-[11px] leading-snug text-slate-500">{{ node.desc }}</p>
                     </div>
                 </div>
-                <span class="shrink-0 pl-2 text-sm font-bold" :class="node.sign === 'result' ? 'text-brand-700' : 'text-slate-800'">{{ node.amount }}</span>
+                <span class="shrink-0 ps-2 text-sm font-bold" :class="node.sign === 'result' ? 'text-brand-700' : 'text-slate-800'">{{ node.amount }}</span>
             </div>
             <div v-if="idx < nodes.length - 1" class="flex h-6 items-center text-slate-300">
                 <i class="bi bi-arrow-down text-lg"></i>

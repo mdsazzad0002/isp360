@@ -130,14 +130,14 @@ onMounted(() => {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Invoice</th>
                             <th class="px-2 py-2 font-medium">Customer</th>
                             <th class="px-2 py-2 font-medium">Period</th>
                             <th class="px-2 py-2 font-medium">Date / Due</th>
-                            <th class="px-2 py-2 text-right font-medium">Total</th>
-                            <th class="px-2 py-2 text-right font-medium">Paid</th>
-                            <th class="px-2 py-2 text-right font-medium">Due</th>
+                            <th class="px-2 py-2 text-end font-medium">Total</th>
+                            <th class="px-2 py-2 text-end font-medium">Paid</th>
+                            <th class="px-2 py-2 text-end font-medium">Due</th>
                             <th class="px-2 py-2 font-medium">Status</th>
                         </tr>
                     </thead>
@@ -150,9 +150,9 @@ onMounted(() => {
                             </td>
                             <td class="px-2 py-2 text-xs">{{ row.period_start ? `${fmtDateTime(row.period_start)} – ${fmtDateTime(row.period_end)}` : row.service_months ? 'Starts when paid' : '—' }}</td>
                             <td class="px-2 py-2">{{ fmtDate(row.invoice_date) }}<div class="text-xs text-slate-400">due {{ fmtDate(row.due_date) }}</div></td>
-                            <td class="px-2 py-2 text-right">{{ money(row.total) }}</td>
-                            <td class="px-2 py-2 text-right text-emerald-700">{{ money(row.paid) }}</td>
-                            <td class="px-2 py-2 text-right font-medium" :class="Number(row.due) > 0 ? 'text-red-600' : ''">{{ money(row.due) }}</td>
+                            <td class="px-2 py-2 text-end">{{ money(row.total) }}</td>
+                            <td class="px-2 py-2 text-end text-emerald-700">{{ money(row.paid) }}</td>
+                            <td class="px-2 py-2 text-end font-medium" :class="Number(row.due) > 0 ? 'text-red-600' : ''">{{ money(row.due) }}</td>
                             <td class="px-2 py-2"><StatusBadge :status="row.status" /></td>
                         </tr>
                         <tr v-if="!rows.length"><td colspan="8" class="px-2 py-6 text-center text-slate-400">No invoices found</td></tr>

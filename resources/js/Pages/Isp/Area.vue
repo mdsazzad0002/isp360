@@ -107,14 +107,14 @@ onMounted(async () => {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Area</th>
                             <th class="px-3 py-2 font-medium">Code</th>
                             <th class="px-3 py-2 font-medium">Zone</th>
                             <th class="px-3 py-2 font-medium">Description</th>
-                            <th class="px-3 py-2 text-right font-medium">Boxes</th>
-                            <th class="px-3 py-2 text-right font-medium">Customers</th>
-                            <th class="px-3 py-2 text-right font-medium">Action</th>
+                            <th class="px-3 py-2 text-end font-medium">Boxes</th>
+                            <th class="px-3 py-2 text-end font-medium">Customers</th>
+                            <th class="px-3 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -123,8 +123,8 @@ onMounted(async () => {
                             <td class="px-3 py-2">{{ r.code }}</td>
                             <td class="px-3 py-2">{{ r.zone?.name || '—' }}</td>
                             <td class="px-3 py-2 text-slate-500">{{ r.description }}</td>
-                            <td class="px-3 py-2 text-right"><Link :href="`/isp/boxes?areaId=${r.id}`" class="text-brand-600 hover:underline">{{ r.boxes_count }}</Link></td>
-                            <td class="px-3 py-2 text-right">{{ r.customers_count }}</td>
+                            <td class="px-3 py-2 text-end"><Link :href="`/isp/boxes?areaId=${r.id}`" class="text-brand-600 hover:underline">{{ r.boxes_count }}</Link></td>
+                            <td class="px-3 py-2 text-end">{{ r.customers_count }}</td>
                             <td class="px-3 py-2">
                                 <div class="flex justify-end gap-3">
                                     <i class="bi bi-pen cursor-pointer text-brand-500" title="Edit" @click="edit(r)"></i>

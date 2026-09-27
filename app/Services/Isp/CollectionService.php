@@ -39,7 +39,8 @@ class CollectionService
             // they settle with the company, so it has no company account and no cash-book entry.
             $resellerId = $data['collected_by_reseller_id'] ?? null;
             // referral commission and package-change credit are company credit, not money received: no account, no cash book
-            $noCash = in_array($method, ['referral', 'adjustment'], true);
+            // a deposit applied to dues was already in the books when it was received
+            $noCash = in_array($method, ['referral', 'adjustment', 'deposit'], true);
             if ($method !== 'cash' && empty($data['bank_id']) && ! $resellerId && ! $noCash) {
                 throw new RuntimeException('Select the bank / mobile-banking account this money was received into.');
             }

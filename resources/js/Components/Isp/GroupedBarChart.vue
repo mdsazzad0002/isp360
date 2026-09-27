@@ -42,7 +42,7 @@ function barPath(x, top, w, base) {
     <div class="viz">
         <div class="mb-2 flex flex-wrap items-center gap-4 text-xs text-slate-600">
             <span v-for="s in series" :key="s.key" class="flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm" :style="{ background: `var(--series-${s.slot})` }"></span>{{ s.label }}</span>
-            <button type="button" class="ml-auto text-slate-400 hover:text-slate-600" @click="showTable = !showTable">{{ showTable ? 'Chart' : 'Table' }}</button>
+            <button type="button" class="ms-auto text-slate-400 hover:text-slate-600" @click="showTable = !showTable">{{ showTable ? 'Chart' : 'Table' }}</button>
         </div>
         <div v-if="!showTable" class="relative">
             <svg :viewBox="`0 0 ${W} ${height}`" class="h-auto w-full" role="img" :aria-label="series.map((s) => s.label).join(' vs ')" @mouseleave="hover = null">
@@ -71,8 +71,8 @@ function barPath(x, top, w, base) {
             </div>
         </div>
         <table v-else class="w-full text-xs">
-            <thead><tr class="border-b border-slate-200 text-left text-slate-500"><th class="py-1">Month</th><th v-for="s in series" :key="s.key" class="py-1 text-right">{{ s.label }}</th></tr></thead>
-            <tbody><tr v-for="r in rows" :key="r.label" class="border-b border-slate-100"><td class="py-1">{{ r.label }}</td><td v-for="s in series" :key="s.key" class="py-1 text-right">{{ money(r[s.key]) }}</td></tr></tbody>
+            <thead><tr class="border-b border-slate-200 text-start text-slate-500"><th class="py-1">Month</th><th v-for="s in series" :key="s.key" class="py-1 text-end">{{ s.label }}</th></tr></thead>
+            <tbody><tr v-for="r in rows" :key="r.label" class="border-b border-slate-100"><td class="py-1">{{ r.label }}</td><td v-for="s in series" :key="s.key" class="py-1 text-end">{{ money(r[s.key]) }}</td></tr></tbody>
         </table>
     </div>
 </template>

@@ -128,24 +128,24 @@ onMounted(load);
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Provider</th>
                             <th class="px-3 py-2 font-medium">Type</th>
-                            <th class="px-3 py-2 text-right font-medium">Mbps</th>
-                            <th class="px-3 py-2 text-right font-medium">Monthly cost</th>
-                            <th class="px-3 py-2 text-right font-medium">{{ cur() }} / Mbps</th>
+                            <th class="px-3 py-2 text-end font-medium">Mbps</th>
+                            <th class="px-3 py-2 text-end font-medium">Monthly cost</th>
+                            <th class="px-3 py-2 text-end font-medium">{{ cur() }} / Mbps</th>
                             <th class="px-3 py-2 font-medium">Period</th>
                             <th class="px-3 py-2 font-medium">Status</th>
-                            <th class="px-3 py-2 text-right font-medium">Action</th>
+                            <th class="px-3 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="r in visible" :key="r.id" class="border-b border-slate-100 hover:bg-slate-50">
                             <td class="px-3 py-2 font-medium text-slate-800">{{ r.provider }}<div v-if="r.notes" class="text-xs font-normal text-slate-400">{{ r.notes }}</div></td>
                             <td class="px-3 py-2">{{ TYPES[r.type] }}</td>
-                            <td class="px-3 py-2 text-right">{{ money(r.bandwidth_mbps) }}</td>
-                            <td class="px-3 py-2 text-right">{{ money(r.monthly_cost) }}</td>
-                            <td class="px-3 py-2 text-right text-slate-500">{{ money(r.monthly_cost / r.bandwidth_mbps) }}</td>
+                            <td class="px-3 py-2 text-end">{{ money(r.bandwidth_mbps) }}</td>
+                            <td class="px-3 py-2 text-end">{{ money(r.monthly_cost) }}</td>
+                            <td class="px-3 py-2 text-end text-slate-500">{{ money(r.monthly_cost / r.bandwidth_mbps) }}</td>
                             <td class="px-3 py-2">{{ fmtDate(r.start_date) }} – {{ r.end_date ? fmtDate(r.end_date) : 'running' }}</td>
                             <td class="px-3 py-2">
                                 <span v-if="r.running" class="text-emerald-600">Running</span>

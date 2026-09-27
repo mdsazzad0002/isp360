@@ -38,35 +38,35 @@ defineExpose({ load });
                 <input v-model="dateTo" type="date" class="rounded-md border border-slate-300 px-2 py-1 text-sm" />
             </div>
             <button type="button" class="rounded-md bg-brand-500 px-3 py-1 text-sm text-white" @click="load">Show</button>
-            <button v-if="statement" type="button" class="ml-auto rounded-md border border-slate-300 px-3 py-1 text-sm" @click="print"><i class="bi bi-printer"></i> Print statement</button>
+            <button v-if="statement" type="button" class="ms-auto rounded-md border border-slate-300 px-3 py-1 text-sm" @click="print"><i class="bi bi-printer"></i> Print statement</button>
         </div>
         <div v-if="statement" class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                    <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                         <th class="px-2 py-1.5 font-medium">Date</th>
                         <th class="px-2 py-1.5 font-medium">Type</th>
                         <th class="px-2 py-1.5 font-medium">Description</th>
-                        <th class="px-2 py-1.5 text-right font-medium">Debit</th>
-                        <th class="px-2 py-1.5 text-right font-medium">Credit</th>
-                        <th class="px-2 py-1.5 text-right font-medium">Balance</th>
+                        <th class="px-2 py-1.5 text-end font-medium">Debit</th>
+                        <th class="px-2 py-1.5 text-end font-medium">Credit</th>
+                        <th class="px-2 py-1.5 text-end font-medium">Balance</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr class="border-b border-slate-100 text-slate-500"><td class="px-2 py-1.5" colspan="5">Opening balance</td><td class="px-2 py-1.5 text-right">{{ money(statement.opening) }}</td></tr>
+                    <tr class="border-b border-slate-100 text-slate-500"><td class="px-2 py-1.5" colspan="5">Opening balance</td><td class="px-2 py-1.5 text-end">{{ money(statement.opening) }}</td></tr>
                     <tr v-for="r in statement.rows" :key="r.id" class="border-b border-slate-100">
                         <td class="whitespace-nowrap px-2 py-1.5">{{ fmtDate(r.entry_date) }}</td>
                         <td class="whitespace-nowrap px-2 py-1.5 text-xs text-slate-500">{{ label(r.type) }}</td>
                         <td class="px-2 py-1.5">{{ r.description }}</td>
-                        <td class="px-2 py-1.5 text-right">{{ Number(r.debit) ? money(r.debit) : '' }}</td>
-                        <td class="px-2 py-1.5 text-right text-emerald-700">{{ Number(r.credit) ? money(r.credit) : '' }}</td>
-                        <td class="px-2 py-1.5 text-right font-medium" :class="r.balance > 0 ? 'text-red-600' : 'text-slate-700'">{{ money(r.balance) }}</td>
+                        <td class="px-2 py-1.5 text-end">{{ Number(r.debit) ? money(r.debit) : '' }}</td>
+                        <td class="px-2 py-1.5 text-end text-emerald-700">{{ Number(r.credit) ? money(r.credit) : '' }}</td>
+                        <td class="px-2 py-1.5 text-end font-medium" :class="r.balance > 0 ? 'text-red-600' : 'text-slate-700'">{{ money(r.balance) }}</td>
                     </tr>
                     <tr class="font-semibold">
                         <td class="px-2 py-1.5" colspan="3">Total</td>
-                        <td class="px-2 py-1.5 text-right">{{ money(statement.total_debit) }}</td>
-                        <td class="px-2 py-1.5 text-right">{{ money(statement.total_credit) }}</td>
-                        <td class="px-2 py-1.5 text-right">{{ money(statement.closing) }}</td>
+                        <td class="px-2 py-1.5 text-end">{{ money(statement.total_debit) }}</td>
+                        <td class="px-2 py-1.5 text-end">{{ money(statement.total_credit) }}</td>
+                        <td class="px-2 py-1.5 text-end">{{ money(statement.closing) }}</td>
                     </tr>
                 </tbody>
             </table>

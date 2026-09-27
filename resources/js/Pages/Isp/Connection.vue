@@ -149,7 +149,7 @@ onMounted(() => {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Code</th>
                             <th class="px-2 py-2 font-medium">Customer</th>
                             <th class="px-2 py-2 font-medium">Area / Box</th>
@@ -177,7 +177,7 @@ onMounted(() => {
                                 <span :class="expiryClass(row.expire_at)">{{ fmtDateTime(row.expire_at) || 'Unpaid' }}</span>
                                 <div v-if="Number(row.open_due) > 0" class="mt-0.5 text-xs text-red-600">
                                     {{ fmtMoney(row.open_due) }} due
-                                    <span v-if="Number(row.on_credit)" class="ml-1 rounded bg-amber-100 px-1 py-px font-medium text-amber-700" title="Running on due — the customer pays later">On due</span>
+                                    <span v-if="Number(row.on_credit)" class="ms-1 rounded bg-amber-100 px-1 py-px font-medium text-amber-700" title="Running on due — the customer pays later">On due</span>
                                 </div>
                             </td>
                             <td class="px-2 py-2"><StatusBadge :status="row.status" /></td>

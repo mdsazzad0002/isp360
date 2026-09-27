@@ -15,6 +15,14 @@ defineOptions({ layout: AppLayout });
 
 const toast = useToast();
 const page = usePage();
+// country pack: address labels and the phone example (HandleInertiaRequests "region")
+const region = computed(() => page.props.region || {});
+// channels the customer gets billing messages on (comma list)
+function toggleChannel(ch, on) {
+    const set = new Set(form.notify_channels.split(',').filter(Boolean));
+    on ? set.add(ch) : set.delete(ch);
+    form.notify_channels = [...set].join(',');
+}
 
 function emptyForm() {
     return {
@@ -25,6 +33,11 @@ function emptyForm() {
         phone: '',
         type: 'retail',
         address: '',
+        city: '',
+        state: '',
+        postcode: '',
+        language: '',
+        notify_channels: 'sms',
         previous_due: 0,
         credit_limit: 0,
         is_membership: 'no',
@@ -378,6 +391,11 @@ function editRow(row) {
         phone: row.phone,
         type: row.type,
         address: row.address,
+        city: row.city ?? '',
+        state: row.state ?? '',
+        postcode: row.postcode ?? '',
+        language: row.language ?? '',
+        notify_channels: row.notify_channels || 'sms',
         previous_due: row.previous_due,
         credit_limit: row.credit_limit,
         is_membership: row.is_membership,
@@ -450,6 +468,20 @@ onMounted(() => {
                         <label class="mb-1 block text-xs font-medium text-slate-600">Service Address</label>
                         <input type="text" autocomplete="off" v-model="form.address" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                     </div>
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">City</label>
+                            <input type="text" autocomplete="off" v-model="form.city" maxlength="100" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
+                        <div class="flex-1">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">{{ region.state_label || 'State' }}</label>
+                            <input type="text" autocomplete="off" v-model="form.state" maxlength="100" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
+                        <div class="w-28">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">{{ region.postcode_label || 'Postcode' }}<span v-if="region.postcode_required" class="text-red-500">*</span></label>
+                            <input type="text" autocomplete="off" v-model="form.postcode" maxlength="20" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
+                    </div>
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Billing Address <span class="font-normal text-slate-400">(if different)</span></label>
                         <input type="text" autocomplete="off" v-model="form.billing_address" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
@@ -468,8 +500,21 @@ onMounted(() => {
                         <SearchSelect :options="boxes" v-model="selectedBox" label="display_name" placeholder="Select box" @update:model-value="onBoxChange" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-slate-600">Mobile</label>
-                        <input type="text" autocomplete="off" v-model="form.phone" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        <div class="mb-1 flex flex-wrap gap-3 text-xs text-slate-600">
+                            <span class="font-medium">Notify by</span>
+                            <label v-for="ch in ['sms', 'email', 'whatsapp']" :key="ch" class="flex items-center gap-1">
+                                <input type="checkbox" :checked="form.notify_channels.split(',').includes(ch)" @change="toggleChannel(ch, $event.target.checked)" /> {{ { sms: 'SMS', email: 'E-mail', whatsapp: 'WhatsApp' }[ch] }}
+                            </label>
+                        </div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Mobile <span class="font-normal text-slate-400">· message language</span></label>
+                        <select v-model="form.language" class="mb-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm">
+                            <option value="">Default templates</option>
+                            <option value="en">English</option>
+                            <option value="bn">বাংলা</option>
+                            <option value="hi">हिन्दी</option>
+                            <option value="ar">العربية</option>
+                        </select>
+                        <input type="tel" autocomplete="off" v-model="form.phone" :placeholder="region.phone_example ? `${region.phone_example} or +${region.calling_code}…` : ''" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                     </div>
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Reseller <span class="font-normal text-slate-400">(Optional)</span></label>
@@ -596,7 +641,7 @@ onMounted(() => {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Sl</th>
                             <th class="px-2 py-2 font-medium">Code</th>
                             <th class="px-2 py-2 font-medium">Name</th>
@@ -609,7 +654,7 @@ onMounted(() => {
                             <th class="px-2 py-2 font-medium">Member</th>
                             <th class="px-2 py-2 font-medium">Point</th>
                             <th class="px-2 py-2 font-medium">Status</th>
-                            <th class="px-2 py-2 text-right font-medium">Action</th>
+                            <th class="px-2 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -617,7 +662,7 @@ onMounted(() => {
                             <td class="px-2 py-1.5">{{ row.sl }}</td>
                             <td class="px-2 py-1.5">{{ row.code }}</td>
                             <td class="px-2 py-1.5">
-                                <button type="button" class="text-left font-medium text-brand-600 hover:underline" title="Open ledger" @click="openLedger(row)">{{ row.name }}</button>
+                                <button type="button" class="text-start font-medium text-brand-600 hover:underline" title="Open ledger" @click="openLedger(row)">{{ row.name }}</button>
                             </td>
                             <td class="px-2 py-1.5">{{ row.owner }}</td>
                             <td class="px-2 py-1.5 capitalize">{{ row.type }}</td>
@@ -766,8 +811,8 @@ onMounted(() => {
                                     <table class="w-full text-xs">
                                         <thead class="sticky top-0 bg-slate-50">
                                             <tr>
-                                                <th class="px-2 py-1.5 text-left font-medium text-slate-600">#</th>
-                                                <th v-for="col in previewColumns" :key="col" class="px-2 py-1.5 text-left font-medium text-slate-600">{{ col }}</th>
+                                                <th class="px-2 py-1.5 text-start font-medium text-slate-600">#</th>
+                                                <th v-for="col in previewColumns" :key="col" class="px-2 py-1.5 text-start font-medium text-slate-600">{{ col }}</th>
                                             </tr>
                                         </thead>
                                         <tbody>

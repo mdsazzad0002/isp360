@@ -82,7 +82,7 @@ class ConnectionController extends IspController
             if ($request->id) {
                 $connection = ConnectionService::update(
                     Connection::where('branch_id', $this->branchId)->findOrFail($request->id),
-                    $request->only(['connection_type', 'pppoe_username', 'pppoe_password', 'static_ip', 'mac_address', 'box_id', 'router_id', 'discount', 'installation_date', 'notes', 'reason'])
+                    $request->only(['connection_type', 'pppoe_username', 'pppoe_password', 'static_ip', 'ipv6_prefix', 'mac_address', 'box_id', 'router_id', 'discount', 'installation_date', 'notes', 'reason'])
                 );
                 return $this->ok('Connection updated successfully', ['id' => $connection->id]);
             }
@@ -181,18 +181,22 @@ class ConnectionController extends IspController
             'action' => 'required|in:activate,suspend,reactivate,deactivate,terminate',
             'reason' => 'required_unless:action,activate|nullable|max:255',
             'date' => 'nullable|date',
+            'credit_unused' => 'nullable|boolean',
         ])) return $r;
 
         try {
             $connection = Connection::where('branch_id', $this->branchId)->findOrFail($request->id);
+            $credited = null;
             $connection = match ($request->action) {
                 'activate' => ConnectionService::activate($connection, $request->date),
                 'suspend' => ConnectionService::suspend($connection, $request->reason),
                 'reactivate' => ConnectionService::reactivate($connection, $request->reason),
                 'deactivate' => ConnectionService::deactivate($connection, $request->reason),
-                'terminate' => ConnectionService::terminate($connection, $request->reason),
+                'terminate' => ConnectionService::terminate($connection, $request->reason,
+                    $request->has('credit_unused') ? $request->boolean('credit_unused') : null, $credited),
             };
-            return $this->ok("Connection {$connection->code} is now {$connection->status}" . ($request->action === 'activate' ? $this->billingSummary($connection) : ''));
+            return $this->ok("Connection {$connection->code} is now {$connection->status}" . ($request->action === 'activate' ? $this->billingSummary($connection) : '')
+                . ($credited ? '. ' . \App\Support\Money::format($credited->amount) . " of unused time credited to the customer ({$credited->receipt_no})" : ''));
         } catch (\Throwable $th) {
             return $this->fail($th);
         }
@@ -250,6 +254,15 @@ class ConnectionController extends IspController
         if (! $router || ! $connection->pppoe_username) {
             return response()->json(['managed' => false]);
         }
+        if ($router->isRadius()) {
+            try {
+                $session = \App\Services\Network\RadiusDriver::activeSession($connection);
+                $reason = $session ? null : $this->radiusOfflineReason($connection);
+                return response()->json(['managed' => true, 'radius' => true, 'router' => $router->name, 'router_host' => $router->host, 'online' => (bool) $session, 'session' => $session, 'reason' => $reason]);
+            } catch (\Throwable $th) {
+                return response()->json(['managed' => true, 'radius' => true, 'router' => $router->name, 'router_host' => $router->host, 'error' => $th->getMessage()]);
+            }
+        }
         try {
             $api = new \App\Services\Network\MikroTikClient($router);
             $session = \App\Services\Network\MikroTikDriver::activeSession($api, $connection);
@@ -260,13 +273,45 @@ class ConnectionController extends IspController
         }
     }
 
+    // Why a RADIUS user is offline, from the last login attempt FreeRADIUS logged (radpostauth).
+    private function radiusOfflineReason(Connection $connection): ?string
+    {
+        if ($connection->status !== 'active') {
+            return "The connection is {$connection->status}: RADIUS rejects its login.";
+        }
+        $last = \App\Services\Network\RadiusDriver::db()->table('radpostauth')->where('username', $connection->pppoe_username)->orderByDesc('id')->first();
+        if (! $last) {
+            return 'No login attempt reached RADIUS yet (router off, or not pointing at this RADIUS server).';
+        }
+        return str_contains(strtolower($last->reply), 'reject')
+            ? "Last login {$last->authdate} was rejected (wrong password, or the MAC lock)."
+            : "Last login {$last->authdate} was accepted; no session is open now.";
+    }
+
+    // RADIUS session history: start/stop, IP, MAC and data used per session.
+    public function sessions(Request $request)
+    {
+        if ($r = $this->deny('connection')) return $r;
+        $connection = Connection::where('branch_id', $this->branchId)->findOrFail($request->id);
+        $router = \App\Models\Router::forConnection($connection);
+        if (! $router?->isRadius() || ! $connection->pppoe_username) {
+            return response()->json(['radius' => false, 'sessions' => []]);
+        }
+        try {
+            return response()->json(['radius' => true, 'sessions' => \App\Services\Network\RadiusDriver::sessions($connection, min(200, (int) ($request->limit ?: 50)))]);
+        } catch (\Throwable $th) {
+            return send_error($th->getMessage(), null, 422);
+        }
+    }
+
     // One live traffic reading for the connection panel's graph (polled every few seconds while it is open).
     public function traffic(Request $request)
     {
         if ($r = $this->deny('connection')) return $r;
         $connection = Connection::where('branch_id', $this->branchId)->findOrFail($request->id);
         $router = \App\Models\Router::forConnection($connection);
-        if (! $router || ! $connection->pppoe_username || ! isset(\App\Services\Network\MikroTikDriver::SERVICES[$connection->connection_type])) {
+        // live graphs read the MikroTik interface; a RADIUS NAS only reports totals (see sessions)
+        if (! $router || $router->isRadius() || ! $connection->pppoe_username || ! isset(\App\Services\Network\MikroTikDriver::SERVICES[$connection->connection_type])) {
             return response()->json(['managed' => false]);
         }
         try {
@@ -315,7 +360,15 @@ class ConnectionController extends IspController
             'connection_type' => 'required|in:pppoe,hotspot,static,dhcp',
             'pppoe_username' => ['nullable', 'required_if:connection_type,pppoe,hotspot', 'max:100', Rule::unique('connections')->ignore($request->id)->where('branch_id', $branchId)],
             'pppoe_password' => 'nullable|max:100',
-            'static_ip' => ['nullable', 'required_if:connection_type,static', 'ip'],
+            // one live connection per address in a branch (IPAM)
+            'static_ip' => ['nullable', 'required_if:connection_type,static', 'ip', function ($attr, $value, $fail) use ($request, $branchId) {
+                try {
+                    \App\Services\Isp\IpamService::assertStaticFree($branchId, $value, $request->id ? (int) $request->id : null);
+                } catch (\RuntimeException $e) {
+                    $fail($e->getMessage());
+                }
+            }],
+            'ipv6_prefix' => ['nullable', 'max:64', 'regex:/^[0-9a-fA-F:]+\/\d{1,3}$/'],
             'mac_address' => 'nullable|max:32',
             'box_id' => 'nullable|integer|exists:boxes,id',
             'router_id' => 'nullable|integer|exists:routers,id',

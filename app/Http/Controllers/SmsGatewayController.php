@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendSmsBatch;
 use App\Models\Customer;
 use App\Models\SmsGateway;
 use App\Models\SmsLog;
@@ -35,18 +36,23 @@ class SmsGatewayController extends Controller
 
     public function index(Request $request)
     {
+        if (!checkAccess('smsSetting')) {
+            return send_error('You are not authorized for this action', null, 403);
+        }
         $gateways = SmsGateway::where('branch_id', $this->branchId)->latest()->get();
         return response()->json($gateways);
     }
 
-    private function validatePayload(Request $request, array $extraRules = [])
+    private function validatePayload(Request $request, array $extraRules = [], bool $keySaved = false)
     {
         $rules = [
             'name' => 'required|string|max:255',
-            'provider_type' => 'required|in:custom,mram,gennet',
+            'provider_type' => 'required|in:custom,mram,gennet,twilio,vonage,infobip',
         ];
+        // on edit an empty key keeps the saved one (the key is never sent back to the browser)
+        $key = $keySaved ? 'nullable|string' : 'required|string';
         if ($request->provider_type === 'mram') {
-            $rules['api_key'] = 'required|string';
+            $rules['api_key'] = $key;
             $rules['sender_id'] = 'required|string';
             $rules['sms_type'] = 'required|in:text,unicode';
             $rules['label'] = 'required|in:transactional,promotional';
@@ -55,8 +61,15 @@ class SmsGatewayController extends Controller
             // the same columns "mram" uses for its analogous fields rather than
             // adding gennet-specific columns. Base URL (isms.gennet.com.bd) is
             // fixed in code, same as mram, so no url_template is needed here.
-            $rules['api_key'] = 'required|string';
+            $rules['api_key'] = $key;
             $rules['sender_id'] = 'required|string';
+        } elseif (in_array($request->provider_type, ['twilio', 'vonage', 'infobip'], true)) {
+            // api_key = "account:secret" (Twilio SID:token, Vonage key:secret) or the Infobip API key
+            $rules['api_key'] = $key;
+            $rules['sender_id'] = 'required|string|max:100';
+            if ($request->provider_type === 'infobip') {
+                $rules['url_template'] = 'required|url'; // the account's base URL, e.g. https://xxxxx.api.infobip.com
+            }
         } else {
             $rules['method'] = 'required|in:GET,POST';
             $rules['url_template'] = 'required|string';
@@ -75,10 +88,10 @@ class SmsGatewayController extends Controller
             $data->provider_type = $request->provider_type;
             $data->method = match ($request->provider_type) {
                 'mram' => 'GET',
-                'gennet' => 'POST',
+                'gennet', 'twilio', 'vonage', 'infobip' => 'POST',
                 default => $request->method,
             };
-            $data->url_template = in_array($request->provider_type, ['mram', 'gennet']) ? null : $request->url_template;
+            $data->url_template = in_array($request->provider_type, ['mram', 'gennet', 'twilio', 'vonage']) ? null : $request->url_template;
             $data->api_key = $request->api_key;
             $data->sender_id = $request->sender_id;
             $data->sms_type = $request->sms_type ?? 'text';
@@ -103,22 +116,24 @@ class SmsGatewayController extends Controller
 
     public function update(Request $request)
     {
-        $validator = $this->validatePayload($request, ['id' => 'required']);
+        $data = SmsGateway::where('id', $request->id)->where('branch_id', $this->branchId)->first();
+        if (empty($data)) return send_error('SMS gateway not found', null, 404);
+        $validator = $this->validatePayload($request, ['id' => 'required'], $data->has_api_key && $data->provider_type === $request->provider_type);
         if ($validator->fails()) return send_error('Validation Error', $validator->errors(), 422);
 
         try {
-            $data = SmsGateway::where('id', $request->id)->where('branch_id', $this->branchId)->first();
-            if (empty($data)) return send_error('SMS gateway not found', null, 404);
 
             $data->name = $request->name;
             $data->provider_type = $request->provider_type;
             $data->method = match ($request->provider_type) {
                 'mram' => 'GET',
-                'gennet' => 'POST',
+                'gennet', 'twilio', 'vonage', 'infobip' => 'POST',
                 default => $request->method,
             };
-            $data->url_template = in_array($request->provider_type, ['mram', 'gennet']) ? null : $request->url_template;
-            $data->api_key = $request->api_key;
+            $data->url_template = in_array($request->provider_type, ['mram', 'gennet', 'twilio', 'vonage']) ? null : $request->url_template;
+            if ($request->filled('api_key') || $request->provider_type === 'custom') {
+                $data->api_key = $request->api_key;
+            }
             $data->sender_id = $request->sender_id;
             $data->sms_type = $request->sms_type ?? 'text';
             $data->label = $request->label ?? 'promotional';
@@ -227,13 +242,9 @@ class SmsGatewayController extends Controller
             return send_error('No active SMS gateway is configured', null, 422);
         }
 
-        $customers = Customer::where('branch_id', $this->branchId)->whereIn('id', $request->customerIds)->get();
+        // customers who opted out of marketing SMS (or were erased) never get promotions
+        $customers = Customer::where('branch_id', $this->branchId)->whereIn('id', $request->customerIds)->where('marketing_opt_out', false)->get();
         $validCustomers = $customers->filter(fn ($c) => !empty($c->phone))->values();
-
-        $sent = 0;
-        $failed = $customers->count() - $validCustomers->count();
-        $lastError = null;
-        $now = Carbon::now();
         $ip = request()->ip();
 
         foreach ($customers as $customer) {
@@ -248,7 +259,7 @@ class SmsGatewayController extends Controller
                     'is_success' => false,
                     'response' => 'Customer has no phone number',
                     'created_by' => $this->userId,
-                    'created_at' => $now,
+                    'created_at' => Carbon::now(),
                     'ipAddress' => $ip,
                     'branch_id' => $this->branchId,
                 ]);
@@ -257,47 +268,32 @@ class SmsGatewayController extends Controller
 
         // Sent in batches (one API call reaches many numbers at once) rather than one call per
         // customer — cheaper and faster, and matches how gateways like MRAM's "many-to-many" API work.
-        foreach ($validCustomers->chunk(100) as $batch) {
-            $numbers = $batch->pluck('phone')->all();
-            $delivered = false;
-            $usedGateway = null;
-            $response = null;
-
-            foreach ($gateways as $gateway) {
-                $result = sendSmsViaGateway($gateway, $numbers, $request->message);
-                $usedGateway = $gateway;
-                $response = $result['response'];
-                if ($result['status']) {
-                    $delivered = true;
-                    break;
-                }
-                $lastError = $result['response'];
+        // With a queue worker the batches go to the "sms" queue and the page returns at once;
+        // without one (QUEUE_CONNECTION=sync) they are sent here and counted.
+        $queued = config('queue.default') !== 'sync';
+        $sent = 0;
+        $failed = $customers->count() - $validCustomers->count();
+        $lastError = null;
+        foreach ($validCustomers->chunk(SendSmsBatch::SIZE) as $batch) {
+            $job = new SendSmsBatch($this->branchId, $batch->pluck('id')->all(), $request->message, $gateways->pluck('id')->all(), $this->userId, $ip);
+            if ($queued) {
+                dispatch($job);
+                continue;
             }
-
-            foreach ($batch as $customer) {
-                SmsLog::create([
-                    'customer_id' => $customer->id,
-                    'sms_gateway_id' => $usedGateway?->id,
-                    'gateway_name' => $usedGateway?->name,
-                    'phone' => $customer->phone,
-                    'message' => $request->message,
-                    'purpose' => 'promotional',
-                    'is_success' => $delivered,
-                    'response' => $response,
-                    'created_by' => $this->userId,
-                    'created_at' => $now,
-                    'ipAddress' => $ip,
-                    'branch_id' => $this->branchId,
-                ]);
-            }
-
-            if ($delivered) {
-                $sent += count($numbers);
-            } else {
-                $failed += count($numbers);
-            }
+            $result = $job->handle();
+            $sent += $result['sent'];
+            $failed += $result['failed'];
+            $lastError = $result['error'] ?? $lastError;
         }
 
+        if ($queued) {
+            return response()->json([
+                'status' => true,
+                'message' => "SMS queued for {$validCustomers->count()} customer(s)" . ($failed ? ", {$failed} without a phone number" : '') . '. Results appear in the SMS log.',
+                'queued' => $validCustomers->count(),
+                'failed' => $failed,
+            ]);
+        }
         return response()->json([
             'status' => true,
             'message' => "SMS sent to {$sent} customer(s)" . ($failed ? ", {$failed} failed" . ($lastError ? " ({$lastError})" : '') : ''),

@@ -276,14 +276,14 @@ onMounted(() => {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Invoice</th>
                             <th class="px-3 py-2 font-medium">Date</th>
                             <th class="px-3 py-2 font-medium">Account</th>
                             <th class="px-3 py-2 font-medium">Amount</th>
                             <th class="px-3 py-2 font-medium">Note</th>
                             <th class="px-3 py-2 font-medium">Added By</th>
-                            <th class="px-3 py-2 text-right font-medium">Action</th>
+                            <th class="px-3 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -306,7 +306,7 @@ onMounted(() => {
                             <td colspan="7" class="px-3 py-6 text-center text-slate-400">No records found</td>
                         </tr>
                         <tr v-else class="bg-slate-50 font-semibold">
-                            <td colspan="3" class="px-3 py-2 text-right">Total</td>
+                            <td colspan="3" class="px-3 py-2 text-end">Total</td>
                             <td class="px-3 py-2">{{ totalAmount }}</td>
                             <td colspan="3"></td>
                         </tr>

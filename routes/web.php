@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountHeadController;
 use App\Http\Controllers\AreaController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\BankController;
 use App\Http\Controllers\BankTransactionController;
 use App\Http\Controllers\BranchController;
@@ -35,7 +36,18 @@ Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('p
 
 // user login route
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login.show');
-Route::post('/login', [LoginController::class, 'login'])->name('login');
+Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:login')->name('login');
+Route::post('/login/two-factor', [LoginController::class, 'twoFactor'])->middleware('throttle:login')->name('login.twoFactor');
+
+// the signed-in staff user's own two-factor login (resellers: see the reseller group)
+Route::group(['prefix' => 'two-factor', 'middleware' => ['auth', 'throttle:20,1']], function () {
+    Route::get('/setup', [TwoFactorController::class, 'setupPage'])->name('twoFactor.setup');
+    Route::post('/status', [TwoFactorController::class, 'status'])->name('twoFactor.status');
+    Route::post('/enable', [TwoFactorController::class, 'enable'])->name('twoFactor.enable');
+    Route::post('/confirm', [TwoFactorController::class, 'confirm'])->name('twoFactor.confirm');
+    Route::post('/recovery-codes', [TwoFactorController::class, 'recoveryCodes'])->name('twoFactor.recoveryCodes');
+    Route::post('/disable', [TwoFactorController::class, 'disable'])->name('twoFactor.disable');
+});
 Route::get('/logout', [DashboardController::class, 'Logout'])->middleware('auth')->name('logout');
 
 //company profile update
@@ -94,6 +106,14 @@ Route::group(['prefix' => 'reseller', 'middleware' => 'auth:reseller'], function
     Route::get('/ledger', [ResellerPanelController::class, 'ledger'])->name('reseller.ledger');
     Route::post('/get-ledger', [ResellerPanelController::class, 'getLedger'])->name('reseller.ledger.data');
     Route::get('/logout', [ResellerPanelController::class, 'logout'])->name('reseller.logout');
+    Route::group(['prefix' => 'two-factor', 'middleware' => 'throttle:20,1'], function () {
+        Route::get('/setup', [TwoFactorController::class, 'setupPage'])->defaults('guard', 'reseller')->name('reseller.twoFactor.setup');
+        Route::post('/status', [TwoFactorController::class, 'status'])->defaults('guard', 'reseller')->name('reseller.twoFactor.status');
+        Route::post('/enable', [TwoFactorController::class, 'enable'])->defaults('guard', 'reseller')->name('reseller.twoFactor.enable');
+        Route::post('/confirm', [TwoFactorController::class, 'confirm'])->defaults('guard', 'reseller')->name('reseller.twoFactor.confirm');
+        Route::post('/recovery-codes', [TwoFactorController::class, 'recoveryCodes'])->defaults('guard', 'reseller')->name('reseller.twoFactor.recoveryCodes');
+        Route::post('/disable', [TwoFactorController::class, 'disable'])->defaults('guard', 'reseller')->name('reseller.twoFactor.disable');
+    });
 
     Route::get('/tickets', [\App\Http\Controllers\PortalTicketController::class, 'page'])->name('reseller.tickets');
     Route::post('/get-tickets', [\App\Http\Controllers\PortalTicketController::class, 'index'])->name('reseller.tickets.index');
@@ -111,6 +131,8 @@ Route::group(['prefix' => 'customer-portal', 'middleware' => 'auth:customer'], f
     Route::post('/invoice', [CustomerPanelController::class, 'invoice'])->name('customerPortal.invoice');
     Route::post('/statement', [CustomerPanelController::class, 'statement'])->name('customerPortal.statement');
     Route::post('/update-profile', [CustomerPanelController::class, 'updateProfile'])->name('customerPortal.profile.update');
+    Route::post('/accept-legal', [CustomerPanelController::class, 'acceptLegal'])->name('customerPortal.legal.accept');
+    Route::post('/marketing', [CustomerPanelController::class, 'marketing'])->name('customerPortal.marketing');
     Route::get('/logout', [CustomerPanelController::class, 'logout'])->name('customerPortal.logout');
     Route::get('/pay', [\App\Http\Controllers\CustomerPortalPaymentController::class, 'page'])->name('customerPortal.pay');
     Route::post('/pay/start', [\App\Http\Controllers\CustomerPortalPaymentController::class, 'start'])->middleware('throttle:10,1')->name('customerPortal.pay.start');
@@ -349,6 +371,21 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/get-connection-secret', [Isp\ConnectionController::class, 'secret'])->name('isp.connection.secret');
     Route::post('/connection', [Isp\ConnectionController::class, 'store'])->name('isp.connection.store');
     Route::post('/connection-action', [Isp\ConnectionController::class, 'action'])->name('isp.connection.action');
+    Route::post('/get-compliance', [Isp\ComplianceController::class, 'data'])->name('isp.compliance.data');
+    Route::post('/kyc-document', [Isp\ComplianceController::class, 'upload'])->name('isp.kyc.upload');
+    Route::post('/kyc-review', [Isp\ComplianceController::class, 'review'])->name('isp.kyc.review');
+    Route::get('/kyc-file/{id}', [Isp\ComplianceController::class, 'file'])->whereNumber('id')->name('isp.kyc.file');
+    Route::post('/customer-marketing', [Isp\ComplianceController::class, 'marketing'])->name('isp.customer.marketing');
+    Route::post('/customer-data-export', [Isp\ComplianceController::class, 'export'])->name('isp.customer.export');
+    Route::post('/customer-erase', [Isp\ComplianceController::class, 'erase'])->name('isp.customer.erase');
+    Route::post('/get-messaging', [Isp\MessagingController::class, 'index'])->name('isp.messaging');
+    Route::post('/messaging', [Isp\MessagingController::class, 'store'])->name('isp.messaging.store');
+    Route::post('/get-notification-log', [Isp\MessagingController::class, 'log'])->name('isp.notification_log');
+    Route::post('/get-legal', [Isp\ComplianceController::class, 'legal'])->name('isp.legal');
+    Route::post('/legal-publish', [Isp\ComplianceController::class, 'publish'])->name('isp.legal.publish');
+    Route::post('/deposit', [Isp\DepositController::class, 'store'])->name('isp.deposit.store');
+    Route::post('/deposit-refund', [Isp\DepositController::class, 'refund'])->name('isp.deposit.refund');
+    Route::post('/deposit-apply', [Isp\DepositController::class, 'apply'])->name('isp.deposit.apply');
     Route::post('/connection-pay-quote', [Isp\ConnectionController::class, 'payQuote'])->name('isp.connection.payQuote');
     Route::post('/connection-pay', [Isp\ConnectionController::class, 'pay'])->name('isp.connection.pay');
     Route::post('/connection-credit', [Isp\ConnectionController::class, 'credit'])->name('isp.connection.credit');
@@ -356,6 +393,7 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/connection-package-quote', [Isp\ConnectionController::class, 'packageQuote'])->name('isp.connection.packageQuote');
     Route::post('/connection-sync', [Isp\ConnectionController::class, 'sync'])->name('isp.connection.sync');
     Route::post('/connection-online', [Isp\ConnectionController::class, 'online'])->name('isp.connection.online');
+    Route::post('/connection-sessions', [Isp\ConnectionController::class, 'sessions'])->name('isp.connection.sessions');
     Route::post('/connection-traffic', [Isp\ConnectionController::class, 'traffic'])->middleware('throttle:90,1')->name('isp.connection.traffic');
     Route::post('/connection-verify', [Isp\ConnectionController::class, 'verify'])->middleware('throttle:30,1')->name('isp.connection.verify');
     Route::post('/connection-terminal', [Isp\ConnectionController::class, 'terminal'])->middleware('throttle:60,1')->name('isp.connection.terminal');
@@ -418,8 +456,31 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::get('/settings', [Isp\SettingController::class, 'create'])->name('isp.settings');
     Route::post('/get-settings', [Isp\SettingController::class, 'show'])->name('isp.settings.show');
     Route::post('/settings', [Isp\SettingController::class, 'update'])->name('isp.settings.update');
+    Route::post('/country-pack', [Isp\SettingController::class, 'applyCountryPack'])->name('isp.country_pack.apply');
     Route::post('/tax-rate', [Isp\TaxRateController::class, 'store'])->name('isp.tax_rate.store');
     Route::post('/get-tax-rates', [Isp\TaxRateController::class, 'index'])->name('isp.tax_rate.index');
+
+    Route::get('/ip-pools', [Isp\IpPoolController::class, 'create'])->name('isp.ip_pool');
+    Route::post('/get-ip-pools', [Isp\IpPoolController::class, 'index'])->name('isp.ip_pool.index');
+    Route::post('/ip-pool', [Isp\IpPoolController::class, 'store'])->name('isp.ip_pool.store');
+    Route::post('/delete-ip-pool', [Isp\IpPoolController::class, 'destroy'])->name('isp.ip_pool.delete');
+    Route::post('/ip-pool-next', [Isp\IpPoolController::class, 'next'])->name('isp.ip_pool.next');
+    Route::get('/company-dashboard', [Isp\CompanyDashboardController::class, 'create'])->name('isp.company_dashboard');
+    Route::post('/get-company-dashboard', [Isp\CompanyDashboardController::class, 'index'])->name('isp.company_dashboard.index');
+    Route::get('/company-dashboard-export', [Isp\CompanyDashboardController::class, 'export'])->name('isp.company_dashboard.export');
+    Route::get('/regions', [Isp\RegionController::class, 'create'])->name('isp.region');
+    Route::post('/get-regions', [Isp\RegionController::class, 'index'])->name('isp.region.index');
+    Route::post('/region', [Isp\RegionController::class, 'store'])->name('isp.region.store');
+    Route::post('/delete-region', [Isp\RegionController::class, 'destroy'])->name('isp.region.delete');
+    Route::post('/cgnat-lookup', [Isp\IpPoolController::class, 'lookup'])->name('isp.cgnat.lookup');
+    Route::get('/cgnat-script/{id}', [Isp\IpPoolController::class, 'script'])->whereNumber('id')->name('isp.cgnat.script');
+    Route::get('/session-log', [Isp\SessionLogController::class, 'create'])->name('isp.session_log');
+    Route::post('/get-session-log', [Isp\SessionLogController::class, 'index'])->name('isp.session_log.index');
+    Route::post('/session-log-export', [Isp\SessionLogController::class, 'export'])->name('isp.session_log.export');
+    Route::get('/queue', [Isp\QueueController::class, 'create'])->name('isp.queue');
+    Route::post('/get-queue', [Isp\QueueController::class, 'index'])->name('isp.queue.index');
+    Route::post('/queue/retry', [Isp\QueueController::class, 'retry'])->name('isp.queue.retry');
+    Route::post('/queue/forget', [Isp\QueueController::class, 'forget'])->name('isp.queue.forget');
 
     Route::get('/audit-log', [Isp\AuditLogController::class, 'create'])->name('isp.audit');
     Route::post('/get-audit-log', [Isp\AuditLogController::class, 'index'])->name('isp.audit.index');

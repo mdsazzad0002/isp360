@@ -126,8 +126,8 @@ onMounted(load);
                 <div class="mb-1 font-semibold">The company changed this package:</div>
                 <table class="w-full max-w-md">
                     <tr v-for="(pair, field) in reviewing" :key="field">
-                        <td class="py-0.5 pr-3 text-amber-700">{{ FIELD_LABELS[field] || field }}</td>
-                        <td class="py-0.5 pr-2 line-through opacity-70">{{ fmtField(field, pair[0]) }}</td>
+                        <td class="py-0.5 pe-3 text-amber-700">{{ FIELD_LABELS[field] || field }}</td>
+                        <td class="py-0.5 pe-2 line-through opacity-70">{{ fmtField(field, pair[0]) }}</td>
                         <td class="py-0.5 font-semibold">→ {{ fmtField(field, pair[1]) }}</td>
                     </tr>
                 </table>
@@ -193,16 +193,16 @@ onMounted(load);
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Package</th>
                             <th class="px-3 py-2 font-medium">Speed</th>
                             <th class="px-3 py-2 font-medium">Cycle</th>
-                            <th class="px-3 py-2 text-right font-medium">Company price</th>
-                            <th class="px-3 py-2 text-right font-medium">My price</th>
-                            <th class="px-3 py-2 text-right font-medium">Earning</th>
-                            <th class="px-3 py-2 text-right font-medium">Live conn.</th>
+                            <th class="px-3 py-2 text-end font-medium">Company price</th>
+                            <th class="px-3 py-2 text-end font-medium">My price</th>
+                            <th class="px-3 py-2 text-end font-medium">Earning</th>
+                            <th class="px-3 py-2 text-end font-medium">Live conn.</th>
                             <th class="px-3 py-2 font-medium">Status</th>
-                            <th class="px-3 py-2 text-right font-medium">Action</th>
+                            <th class="px-3 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -216,10 +216,10 @@ onMounted(load);
                             </td>
                             <td class="px-3 py-2">{{ row.download_mbps }}/{{ row.upload_mbps }} Mbps</td>
                             <td class="px-3 py-2">{{ label(row.billing_cycle) }}</td>
-                            <td class="px-3 py-2 text-right">{{ row.base_price !== null ? money(row.base_price) : '—' }}</td>
-                            <td class="px-3 py-2 text-right font-medium">{{ money(row.price) }}</td>
-                            <td class="px-3 py-2 text-right text-emerald-700">{{ row.base_price !== null ? money(row.price - row.base_price) : '—' }}</td>
-                            <td class="px-3 py-2 text-right">{{ row.active_connections }}</td>
+                            <td class="px-3 py-2 text-end">{{ row.base_price !== null ? money(row.base_price) : '—' }}</td>
+                            <td class="px-3 py-2 text-end font-medium">{{ money(row.price) }}</td>
+                            <td class="px-3 py-2 text-end text-emerald-700">{{ row.base_price !== null ? money(row.price - row.base_price) : '—' }}</td>
+                            <td class="px-3 py-2 text-end">{{ row.active_connections }}</td>
                             <td class="px-3 py-2"><span class="rounded-full border px-2 py-0.5 text-xs" :class="statusOf(row).cls">{{ statusOf(row).text }}</span></td>
                             <td class="px-3 py-2">
                                 <div class="flex justify-end gap-3">

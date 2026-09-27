@@ -55,14 +55,14 @@ const filtered = computed(() => {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Connection</th>
                             <th class="px-3 py-2 font-medium">Customer</th>
                             <th class="px-3 py-2 font-medium">Package</th>
                             <th class="px-3 py-2 font-medium">Type / Username</th>
                             <th class="px-3 py-2 font-medium">Activated</th>
                             <th class="px-3 py-2 font-medium">Expire date</th>
-                            <th class="px-3 py-2 text-right font-medium">Customer due</th>
+                            <th class="px-3 py-2 text-end font-medium">Customer due</th>
                             <th class="px-3 py-2 font-medium">Status</th>
                         </tr>
                     </thead>
@@ -80,7 +80,7 @@ const filtered = computed(() => {
                             <td class="px-3 py-2">{{ label(row.connection_type) }}<div class="text-xs text-slate-400">{{ row.pppoe_username }}</div></td>
                             <td class="px-3 py-2">{{ fmtDate(row.activation_date) || '—' }}</td>
                             <td class="px-3 py-2" :class="expiryClass(row.expire_at)">{{ fmtDateTime(row.expire_at) || 'Unpaid' }}</td>
-                            <td class="px-3 py-2 text-right" :class="row.customer?.ledger_balance > 0 ? 'font-medium text-red-600' : 'text-slate-500'">{{ money(Math.max(0, row.customer?.ledger_balance || 0)) }}</td>
+                            <td class="px-3 py-2 text-end" :class="row.customer?.ledger_balance > 0 ? 'font-medium text-red-600' : 'text-slate-500'">{{ money(Math.max(0, row.customer?.ledger_balance || 0)) }}</td>
                             <td class="px-3 py-2"><StatusBadge :status="row.status" /></td>
                         </tr>
                         <tr v-if="!filtered.length"><td colspan="8" class="px-3 py-6 text-center text-slate-400">No connections</td></tr>

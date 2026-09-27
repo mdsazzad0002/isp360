@@ -36,7 +36,7 @@ onMounted(load);
             <div><label class="mb-1 block text-xs font-medium text-slate-600">From</label><input v-model="filter.dateFrom" type="date" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" /></div>
             <div><label class="mb-1 block text-xs font-medium text-slate-600">To</label><input v-model="filter.dateTo" type="date" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" /></div>
             <button type="button" class="rounded-md bg-brand-500 px-4 py-1.5 text-sm text-white" @click="load">Show</button>
-            <button v-if="data" type="button" class="ml-auto text-slate-500 hover:text-brand-500" title="Print" @click="print"><i class="bi bi-printer text-lg"></i></button>
+            <button v-if="data" type="button" class="ms-auto text-slate-500 hover:text-brand-500" title="Print" @click="print"><i class="bi bi-printer text-lg"></i></button>
         </div>
         <template v-if="data">
             <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -52,9 +52,9 @@ onMounted(load);
             <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                 <h2 class="mb-2 text-sm font-semibold text-slate-700">Day-wise</h2>
                 <table class="w-full text-sm">
-                    <thead><tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600"><th class="px-2 py-2 font-medium">Date</th><th class="px-2 py-2 text-right font-medium">Payments</th><th class="px-2 py-2 text-right font-medium">Amount</th></tr></thead>
+                    <thead><tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600"><th class="px-2 py-2 font-medium">Date</th><th class="px-2 py-2 text-end font-medium">Payments</th><th class="px-2 py-2 text-end font-medium">Amount</th></tr></thead>
                     <tbody>
-                        <tr v-for="d in data.by_day" :key="d.label" class="border-b border-slate-100"><td class="px-2 py-1.5">{{ fmtDate(d.label) }}</td><td class="px-2 py-1.5 text-right">{{ d.count }}</td><td class="px-2 py-1.5 text-right font-medium">{{ money(d.amount) }}</td></tr>
+                        <tr v-for="d in data.by_day" :key="d.label" class="border-b border-slate-100"><td class="px-2 py-1.5">{{ fmtDate(d.label) }}</td><td class="px-2 py-1.5 text-end">{{ d.count }}</td><td class="px-2 py-1.5 text-end font-medium">{{ money(d.amount) }}</td></tr>
                         <tr v-if="!data.by_day.length"><td colspan="3" class="px-2 py-6 text-center text-slate-400">No collections in this range</td></tr>
                     </tbody>
                 </table>

@@ -59,7 +59,7 @@ defineEmits(['update:dateFrom', 'update:dateTo', 'date-input', 'quick-range', 's
         <div class="overflow-x-auto">
             <table class="w-full border border-collapse border-slate-200 text-sm">
                 <thead>
-                    <tr class="bg-slate-50 text-left text-slate-600">
+                    <tr class="bg-slate-50 text-start text-slate-600">
                         <th class="border border-slate-200 px-2 py-2 font-medium">Date</th>
                         <th class="border border-slate-200 px-2 py-2 font-medium">Description</th>
                         <th class="border border-slate-200 px-2 py-2 font-medium">{{ columnLabels.bill }}</th>
@@ -75,31 +75,31 @@ defineEmits(['update:dateFrom', 'update:dateTo', 'date-input', 'quick-range', 's
                     <tr>
                         <td class="border border-slate-200 px-2 py-1.5"></td>
                         <td colspan="7" class="border border-slate-200 px-2 py-1.5">Previous Balance</td>
-                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ previousBalance }}</td>
+                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ previousBalance }}</td>
                     </tr>
                     <tr v-for="(item, index) in ledgers" :key="index">
                         <td class="border border-slate-200 px-2 py-1.5">{{ item.date }}</td>
                         <td class="border border-slate-200 px-2 py-1.5">{{ item.description }}</td>
-                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ item.bill }}</td>
-                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ item.paid }}</td>
-                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ item.due }}</td>
-                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ item.cash_payment }}</td>
-                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ item.cash_receive }}</td>
-                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ item.return_amount }}</td>
-                        <td class="border border-slate-200 px-2 py-1.5 text-right font-medium" :class="balanceClass(item.balance)">{{ parseFloat(item.balance).toFixed(2) }}</td>
+                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.bill }}</td>
+                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.paid }}</td>
+                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.due }}</td>
+                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.cash_payment }}</td>
+                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.cash_receive }}</td>
+                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.return_amount }}</td>
+                        <td class="border border-slate-200 px-2 py-1.5 text-end font-medium" :class="balanceClass(item.balance)">{{ parseFloat(item.balance).toFixed(2) }}</td>
                     </tr>
                     <tr v-if="ledgers.length === 0">
                         <td colspan="9" class="border border-slate-200 px-2 py-6 text-center text-slate-400">No records found</td>
                     </tr>
                     <tr v-else class="bg-slate-50 font-semibold">
                         <td colspan="2" class="border border-slate-200 px-2 py-2 text-center">Total</td>
-                        <td class="border border-slate-200 px-2 py-2 text-right">{{ sumField('bill') }}</td>
-                        <td class="border border-slate-200 px-2 py-2 text-right">{{ sumField('paid') }}</td>
-                        <td class="border border-slate-200 px-2 py-2 text-right">{{ sumField('due') }}</td>
-                        <td class="border border-slate-200 px-2 py-2 text-right">{{ sumField('cash_payment') }}</td>
-                        <td class="border border-slate-200 px-2 py-2 text-right">{{ sumField('cash_receive') }}</td>
-                        <td class="border border-slate-200 px-2 py-2 text-right">{{ sumField('return_amount') }}</td>
-                        <td class="border border-slate-200 px-2 py-2 text-right" :class="balanceClass(lastBalance())">{{ lastBalance() }}</td>
+                        <td class="border border-slate-200 px-2 py-2 text-end">{{ sumField('bill') }}</td>
+                        <td class="border border-slate-200 px-2 py-2 text-end">{{ sumField('paid') }}</td>
+                        <td class="border border-slate-200 px-2 py-2 text-end">{{ sumField('due') }}</td>
+                        <td class="border border-slate-200 px-2 py-2 text-end">{{ sumField('cash_payment') }}</td>
+                        <td class="border border-slate-200 px-2 py-2 text-end">{{ sumField('cash_receive') }}</td>
+                        <td class="border border-slate-200 px-2 py-2 text-end">{{ sumField('return_amount') }}</td>
+                        <td class="border border-slate-200 px-2 py-2 text-end" :class="balanceClass(lastBalance())">{{ lastBalance() }}</td>
                     </tr>
                 </tbody>
             </table>

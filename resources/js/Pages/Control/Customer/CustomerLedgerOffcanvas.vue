@@ -201,7 +201,7 @@ function openInvoice(item) {
                                 <input type="date" v-model="dateTo" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                             </div>
                             <button type="submit" class="rounded-md bg-brand-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-600">Show</button>
-                            <button type="button" @click="print" title="Print" class="ml-auto text-slate-500 hover:text-brand-500">
+                            <button type="button" @click="print" title="Print" class="ms-auto text-slate-500 hover:text-brand-500">
                                 <i class="bi bi-printer text-lg"></i>
                             </button>
                         </form>
@@ -211,7 +211,7 @@ function openInvoice(item) {
                         <div class="overflow-x-auto">
                             <table class="w-full border border-collapse border-slate-200 text-sm">
                                 <thead>
-                                    <tr class="bg-slate-50 text-left text-slate-600">
+                                    <tr class="bg-slate-50 text-start text-slate-600">
                                         <th class="border border-slate-200 px-2 py-2 font-medium">Date</th>
                                         <th class="border border-slate-200 px-2 py-2 font-medium">Description</th>
                                         <th class="border border-slate-200 px-2 py-2 font-medium">Bill</th>
@@ -227,7 +227,7 @@ function openInvoice(item) {
                                     <tr>
                                         <td class="border border-slate-200 px-2 py-1.5"></td>
                                         <td colspan="7" class="border border-slate-200 px-2 py-1.5">Previous Balance</td>
-                                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ previousBalance }}</td>
+                                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ previousBalance }}</td>
                                     </tr>
                                     <tr
                                         v-for="(item, index) in ledgers"
@@ -239,23 +239,23 @@ function openInvoice(item) {
                                         <td class="border border-slate-200 px-2 py-1.5">
                                             <span :class="isClickableLedgerRow(item) ? 'text-brand-600 underline decoration-dotted' : ''">{{ item.description }}</span>
                                         </td>
-                                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ item.bill }}</td>
-                                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ item.paid }}</td>
-                                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ item.due }}</td>
-                                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ item.cash_payment }}</td>
-                                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ item.cash_receive }}</td>
-                                        <td class="border border-slate-200 px-2 py-1.5 text-right">{{ item.return_amount }}</td>
-                                        <td class="border border-slate-200 px-2 py-1.5 text-right font-medium">{{ parseFloat(item.balance).toFixed(2) }}</td>
+                                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.bill }}</td>
+                                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.paid }}</td>
+                                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.due }}</td>
+                                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.cash_payment }}</td>
+                                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.cash_receive }}</td>
+                                        <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.return_amount }}</td>
+                                        <td class="border border-slate-200 px-2 py-1.5 text-end font-medium">{{ parseFloat(item.balance).toFixed(2) }}</td>
                                     </tr>
                                     <tr v-if="ledgers.length > 0" class="bg-slate-50 font-semibold">
                                         <td colspan="2" class="border border-slate-200 px-2 py-2 text-center">Total</td>
-                                        <td class="border border-slate-200 px-2 py-2 text-right">{{ sumField('bill') }}</td>
-                                        <td class="border border-slate-200 px-2 py-2 text-right">{{ sumField('paid') }}</td>
-                                        <td class="border border-slate-200 px-2 py-2 text-right">{{ sumField('due') }}</td>
-                                        <td class="border border-slate-200 px-2 py-2 text-right">{{ sumField('cash_payment') }}</td>
-                                        <td class="border border-slate-200 px-2 py-2 text-right">{{ sumField('cash_receive') }}</td>
-                                        <td class="border border-slate-200 px-2 py-2 text-right">{{ sumField('return_amount') }}</td>
-                                        <td class="border border-slate-200 px-2 py-2 text-right">
+                                        <td class="border border-slate-200 px-2 py-2 text-end">{{ sumField('bill') }}</td>
+                                        <td class="border border-slate-200 px-2 py-2 text-end">{{ sumField('paid') }}</td>
+                                        <td class="border border-slate-200 px-2 py-2 text-end">{{ sumField('due') }}</td>
+                                        <td class="border border-slate-200 px-2 py-2 text-end">{{ sumField('cash_payment') }}</td>
+                                        <td class="border border-slate-200 px-2 py-2 text-end">{{ sumField('cash_receive') }}</td>
+                                        <td class="border border-slate-200 px-2 py-2 text-end">{{ sumField('return_amount') }}</td>
+                                        <td class="border border-slate-200 px-2 py-2 text-end">
                                             <div class="flex items-center justify-end gap-2">
                                                 <span>{{ lastBalance() }}</span>
                                                 <button

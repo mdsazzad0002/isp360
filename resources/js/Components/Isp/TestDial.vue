@@ -52,7 +52,7 @@ const mikrotik = computed(() =>
 
 <template>
     <div class="rounded-md border border-slate-200">
-        <button type="button" class="flex w-full items-center justify-between px-2 py-1.5 text-left text-xs font-medium text-slate-700 hover:bg-slate-50" @click="open = !open">
+        <button type="button" class="flex w-full items-center justify-between px-2 py-1.5 text-start text-xs font-medium text-slate-700 hover:bg-slate-50" @click="open = !open">
             <span><i class="bi bi-plug"></i> Test dial <span class="font-normal text-slate-500">· connect as this customer to check it end to end (lab)</span></span>
             <i class="bi" :class="open ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
         </button>

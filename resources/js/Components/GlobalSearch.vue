@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
         @click="openModal"
     >
         <i class="bi bi-search text-sm"></i>
-        <span class="hidden flex-1 text-left text-sm lg:inline">{{ t('topbar.search_placeholder') }}</span>
+        <span class="hidden flex-1 text-start text-sm lg:inline">{{ t('topbar.search_placeholder') }}</span>
         <kbd class="hidden rounded border border-white/25 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold lg:inline">Ctrl K</kbd>
     </button>
 

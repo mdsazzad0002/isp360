@@ -68,7 +68,8 @@ function appMenuGroups()
             'label' => 'MikroTik & Packages',
             'icon' => 'bi-router',
             'items' => [
-                ['access' => 'router', 'uri' => '/isp/routers', 'match' => 'isp/routers', 'icon' => 'bi-router', 'label' => 'Routers (MikroTik)'],
+                ['access' => 'router', 'uri' => '/isp/routers', 'match' => 'isp/routers', 'icon' => 'bi-router', 'label' => 'Routers (MikroTik / RADIUS)'],
+                ['access' => 'ipPool', 'uri' => '/isp/ip-pools', 'match' => 'isp/ip-pools', 'icon' => 'bi-diagram-2', 'label' => 'IP Pools (IPAM / CGNAT)'],
                 ['access' => 'networkBlock', 'uri' => '/isp/blocks', 'match' => 'isp/blocks', 'icon' => 'bi-shield-x', 'label' => 'Site / IP Block'],
                 ['access' => 'package', 'uri' => '/isp/packages', 'match' => 'isp/packages', 'icon' => 'bi-speedometer2', 'label' => 'Packages'],
                 ['access' => 'bandwidth', 'uri' => '/isp/bandwidth', 'match' => 'isp/bandwidth', 'icon' => 'bi-cloud-download', 'label' => 'Bandwidth Purchase'],
@@ -122,6 +123,7 @@ function appMenuGroups()
             'label' => 'Billing Reports',
             'icon' => 'bi-graph-up',
             'items' => [
+                ['access' => 'companyDashboard', 'uri' => '/isp/company-dashboard', 'match' => 'isp/company-dashboard', 'icon' => 'bi-buildings', 'label' => 'Company Dashboard (all branches)'],
                 ['access' => 'ispReport', 'uri' => '/isp/due-report', 'match' => 'isp/due-report', 'icon' => 'bi-exclamation-triangle', 'label' => 'Due & Overdue'],
                 ['access' => 'ispReport', 'uri' => '/isp/collection-report', 'match' => 'isp/collection-report', 'icon' => 'bi-graph-up', 'label' => 'Collection Report'],
                 ['access' => 'ispReport', 'uri' => '/isp/tax-report', 'match' => 'isp/tax-report', 'icon' => 'bi-receipt-cutoff', 'label' => 'Tax Report'],
@@ -180,6 +182,7 @@ function appMenuGroups()
                 ['access' => 'companyProfile', 'uri' => '/companyProfile', 'match' => 'companyProfile', 'icon' => 'bi-house-fill', 'label' => 'Company Profile'],
                 ['access' => 'company', 'uri' => '/company', 'match' => 'company', 'icon' => 'bi-plus-circle', 'label' => 'Company Entry'],
                 ['access' => 'branch', 'uri' => '/branch', 'match' => 'branch', 'icon' => 'bi-shop', 'label' => 'Branch'],
+                ['access' => 'region', 'uri' => '/isp/regions', 'match' => 'isp/regions', 'icon' => 'bi-map', 'label' => 'Regions'],
                 ['access' => 'branchManage', 'uri' => '/branchManage', 'match' => 'branchManage', 'icon' => 'bi-diagram-3', 'label' => 'Branch Manage'],
                 ['access' => 'ispSettings', 'uri' => '/isp/settings', 'match' => 'isp/settings', 'icon' => 'bi-sliders', 'label' => 'ISP Billing Settings'],
                 ['access' => 'paymentGateway', 'uri' => '/isp/payment-gateways', 'match' => 'isp/payment-gateways', 'icon' => 'bi-credit-card', 'label' => 'Payment Gateways'],
@@ -193,6 +196,8 @@ function appMenuGroups()
             'icon' => 'bi-shield-check',
             'items' => [
                 ['access' => 'auditLog', 'uri' => '/isp/audit-log', 'match' => 'isp/audit-log', 'icon' => 'bi-shield-check', 'label' => 'Audit Log'],
+                ['access' => 'sessionLog', 'uri' => '/isp/session-log', 'match' => 'isp/session-log', 'icon' => 'bi-person-bounding-box', 'label' => 'Session Log (who had which IP)'],
+                ['access' => 'queueMonitor', 'uri' => '/isp/queue', 'match' => 'isp/queue', 'icon' => 'bi-hourglass-split', 'label' => 'Background Jobs'],
                 ['access' => null, 'uri' => '/notifications', 'match' => 'notifications', 'icon' => 'bi-bell', 'label' => 'Notifications'],
             ],
         ],
@@ -368,6 +373,16 @@ function make_slug($string)
 }
 
 //credentials check
+// Puts the request's phone in its stored form (App\Support\Phone) before validation, so "+880 1712-345678"
+// and "01712345678" are the same number for uniqueness checks. An invalid number is left as typed
+// for the PhoneNumber rule to report.
+function normalizePhone(\Illuminate\Http\Request $request, string $field = 'phone'): void
+{
+    if ($request->filled($field) && ($phone = \App\Support\Phone::normalize((string) $request->input($field)))) {
+        $request->merge([$field => $phone]);
+    }
+}
+
 function credentials($username, $password)
 {
     if (filter_var($username, FILTER_VALIDATE_EMAIL)) {
@@ -541,11 +556,56 @@ function clearCompanyCache()
     \App\Support\Money::flush();
 }
 
+// Twilio, Vonage and Infobip (global SMS). The gateway's api_key holds "account:secret" (Twilio
+// Account SID:Auth Token, Vonage key:secret) or the Infobip API key; sender_id is the "from" number /
+// sender name (a Twilio Messaging Service SID "MG…" works too); Infobip's account base URL is in url_template.
+function sendSmsInternational(\App\Models\SmsGateway $gateway, array $numbers, string $message): array
+{
+    $to = array_values(array_filter(array_map(fn ($n) => \App\Support\Phone::e164($n), $numbers)));
+    if (! $to) {
+        return ['status' => false, 'response' => 'No valid phone number'];
+    }
+    $http = \Illuminate\Support\Facades\Http::timeout(20);
+    switch ($gateway->provider_type) {
+        case 'twilio':
+            [$sid, $token] = array_pad(explode(':', (string) $gateway->api_key, 2), 2, '');
+            $ok = 0;
+            $last = null;
+            foreach ($to as $number) {
+                $from = str_starts_with((string) $gateway->sender_id, 'MG') ? ['MessagingServiceSid' => $gateway->sender_id] : ['From' => $gateway->sender_id];
+                $res = $http->asForm()->withBasicAuth($sid, $token)->post("https://api.twilio.com/2010-04-01/Accounts/{$sid}/Messages.json", ['To' => $number, 'Body' => $message] + $from);
+                $last = $res->body();
+                $ok += $res->successful() ? 1 : 0;
+            }
+            return ['status' => $ok > 0, 'response' => $last];
+        case 'vonage':
+            [$key, $secret] = array_pad(explode(':', (string) $gateway->api_key, 2), 2, '');
+            $ok = 0;
+            $last = null;
+            foreach ($to as $number) {
+                $res = $http->asForm()->post('https://rest.nexmo.com/sms/json', [
+                    'api_key' => $key, 'api_secret' => $secret, 'from' => $gateway->sender_id, 'to' => ltrim($number, '+'), 'text' => $message,
+                ] + (preg_match('/[^\x00-\x7F]/', $message) ? ['type' => 'unicode'] : []));
+                $last = $res->body();
+                $ok += ($res->json('messages.0.status') === '0') ? 1 : 0;
+            }
+            return ['status' => $ok > 0, 'response' => $last];
+        default: // infobip
+            $res = $http->withHeaders(['Authorization' => 'App ' . $gateway->api_key])->acceptJson()
+                ->post(rtrim((string) $gateway->url_template, '/') . '/sms/2/text/advanced', ['messages' => [[
+                    'destinations' => array_map(fn ($n) => ['to' => ltrim($n, '+')], $to),
+                    'from' => $gateway->sender_id,
+                    'text' => $message,
+                ]]]);
+            return ['status' => $res->successful(), 'response' => $res->body()];
+    }
+}
+
 // Sends a single transactional SMS (e.g. sale confirmation) through the branch's active
 // gateways, trying the default one first, and records the attempt in sms_logs. No-op
 // (returns false) if no active gateway is configured — callers should treat that as
 // "notification skipped", not an error.
-function sendTransactionalSms($branchId, $userId, $phone, string $message, $customerId = null, string $purpose = 'transactional')
+function sendTransactionalSms($branchId, $userId, $phone, string $message, $customerId = null, string $purpose = 'transactional', ?string $ipAddress = null)
 {
     if (empty($phone)) {
         return false;
@@ -585,7 +645,7 @@ function sendTransactionalSms($branchId, $userId, $phone, string $message, $cust
         'response' => $response,
         'created_by' => $userId,
         'created_at' => \Illuminate\Support\Carbon::now(),
-        'ipAddress' => request()->ip() ?? '127.0.0.1',
+        'ipAddress' => $ipAddress ?? request()->ip() ?? '127.0.0.1',
         'branch_id' => $branchId,
     ]);
 
@@ -629,6 +689,10 @@ function mramErrorCodes()
 function sendSmsViaGateway(\App\Models\SmsGateway $gateway, array $numbers, string $message)
 {
     try {
+        // international providers: numbers in E.164, one request per provider batch rules
+        if (in_array($gateway->provider_type, ['twilio', 'vonage', 'infobip'], true)) {
+            return sendSmsInternational($gateway, $numbers, $message);
+        }
         if ($gateway->provider_type === 'mram') {
             $url = 'https://sms.mram.com.bd/smsapi'
                 . '?api_key=' . rawurlencode($gateway->api_key)

@@ -159,16 +159,16 @@ onMounted(() => {
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                            <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                 <th class="px-3 py-2 font-medium">Ref</th>
                                 <th class="px-3 py-2 font-medium">Date</th>
                                 <th class="px-3 py-2 font-medium">Reseller</th>
                                 <th class="px-3 py-2 font-medium">Type</th>
                                 <th class="px-3 py-2 font-medium">Method / account</th>
-                                <th class="px-3 py-2 text-right font-medium">Amount</th>
-                                <th class="px-3 py-2 text-right font-medium">Reseller balance</th>
+                                <th class="px-3 py-2 text-end font-medium">Amount</th>
+                                <th class="px-3 py-2 text-end font-medium">Reseller balance</th>
                                 <th class="px-3 py-2 font-medium">Status</th>
-                                <th class="px-3 py-2 text-right font-medium">Action</th>
+                                <th class="px-3 py-2 text-end font-medium">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -183,10 +183,10 @@ onMounted(() => {
                                     <div v-if="row.reseller_note" class="text-xs text-slate-500">Reseller: {{ row.reseller_note }}</div>
                                     <div v-if="row.admin_note" class="text-xs text-slate-500">Note: {{ row.admin_note }}</div>
                                 </td>
-                                <td class="px-3 py-2 text-right font-medium">{{ money(row.amount) }}</td>
-                                <td class="px-3 py-2 text-right text-xs" :class="walletOf(row.reseller_id).balance < 0 ? 'text-red-600' : 'text-slate-600'">{{ money(walletOf(row.reseller_id).balance) }}</td>
+                                <td class="px-3 py-2 text-end font-medium">{{ money(row.amount) }}</td>
+                                <td class="px-3 py-2 text-end text-xs" :class="walletOf(row.reseller_id).balance < 0 ? 'text-red-600' : 'text-slate-600'">{{ money(walletOf(row.reseller_id).balance) }}</td>
                                 <td class="px-3 py-2"><StatusBadge :status="row.status" /></td>
-                                <td class="px-3 py-2 text-right">
+                                <td class="px-3 py-2 text-end">
                                     <div v-if="row.type === 'withdrawal' && row.status === 'pending' && can.settle" class="flex justify-end gap-2">
                                         <button type="button" class="rounded-md bg-emerald-600 px-2.5 py-1 text-xs text-white" @click="openPay(row)">Mark paid</button>
                                         <button type="button" class="rounded-md bg-red-600 px-2.5 py-1 text-xs text-white" @click="Object.assign(rejectForm, { show: true, row, note: '', saving: false })">Reject</button>
@@ -208,27 +208,27 @@ onMounted(() => {
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                            <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                 <th class="px-3 py-2 font-medium">Reseller</th>
-                                <th class="px-3 py-2 text-right font-medium">Earned</th>
-                                <th class="px-3 py-2 text-right font-medium">Collected</th>
-                                <th class="px-3 py-2 text-right font-medium">Deposited</th>
-                                <th class="px-3 py-2 text-right font-medium">Withdrawn</th>
-                                <th class="px-3 py-2 text-right font-medium">Pending</th>
-                                <th class="px-3 py-2 text-right font-medium">Balance</th>
-                                <th class="px-3 py-2 text-right font-medium">Action</th>
+                                <th class="px-3 py-2 text-end font-medium">Earned</th>
+                                <th class="px-3 py-2 text-end font-medium">Collected</th>
+                                <th class="px-3 py-2 text-end font-medium">Deposited</th>
+                                <th class="px-3 py-2 text-end font-medium">Withdrawn</th>
+                                <th class="px-3 py-2 text-end font-medium">Pending</th>
+                                <th class="px-3 py-2 text-end font-medium">Balance</th>
+                                <th class="px-3 py-2 text-end font-medium">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="w in wallets" :key="w.id" class="border-b border-slate-100 hover:bg-slate-50">
                                 <td class="px-3 py-2">{{ w.name }}<div class="text-xs text-slate-400">{{ w.code }} · {{ w.phone }}</div></td>
-                                <td class="px-3 py-2 text-right">{{ money(w.earned) }}</td>
-                                <td class="px-3 py-2 text-right">{{ money(w.collected) }}</td>
-                                <td class="px-3 py-2 text-right">{{ money(w.deposits) }}</td>
-                                <td class="px-3 py-2 text-right">{{ money(w.withdrawn) }}</td>
-                                <td class="px-3 py-2 text-right text-amber-700">{{ money(w.pending) }}</td>
-                                <td class="px-3 py-2 text-right font-semibold" :class="w.balance < 0 ? 'text-red-600' : 'text-emerald-700'">{{ w.balance < 0 ? '−' : '' }}{{ money(Math.abs(w.balance)) }}</td>
-                                <td class="px-3 py-2 text-right">
+                                <td class="px-3 py-2 text-end">{{ money(w.earned) }}</td>
+                                <td class="px-3 py-2 text-end">{{ money(w.collected) }}</td>
+                                <td class="px-3 py-2 text-end">{{ money(w.deposits) }}</td>
+                                <td class="px-3 py-2 text-end">{{ money(w.withdrawn) }}</td>
+                                <td class="px-3 py-2 text-end text-amber-700">{{ money(w.pending) }}</td>
+                                <td class="px-3 py-2 text-end font-semibold" :class="w.balance < 0 ? 'text-red-600' : 'text-emerald-700'">{{ w.balance < 0 ? '−' : '' }}{{ money(Math.abs(w.balance)) }}</td>
+                                <td class="px-3 py-2 text-end">
                                     <div class="flex justify-end gap-2">
                                         <a :href="`/isp/reseller-ledger?resellerId=${w.id}`" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs">Ledger</a>
                                         <button v-if="can.settle" type="button" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs" @click="openDeposit(w)">Record deposit</button>

@@ -1,9 +1,26 @@
 import { usePage } from '@inertiajs/vue3';
 import { useToast } from './toast';
+import { i18n } from './i18n';
 
 // Billing currency of the branch in view, shared by HandleInertiaRequests.
 export function currency() {
     return usePage().props?.currency || { code: 'BDT', symbol: 'Tk', decimals: 2 };
+}
+
+// The company's country pack formats (HandleInertiaRequests "region"): number grouping locale
+// ("1,00,000.00" in en-IN, "1.000,00" in pt-BR) and whether dates read day-first or month-first.
+export function region() {
+    try {
+        return usePage().props?.region || {};
+    } catch (e) {
+        return {};
+    }
+}
+function numberLocale() {
+    return region().number_locale || 'en-US';
+}
+function dateLocale() {
+    return String(region().date_format || 'd/m/Y').startsWith('m') ? 'en-US' : 'en-GB';
 }
 
 // "Tk" / "$" — for labels like "Amount (Tk)".
@@ -38,7 +55,7 @@ export function invoiceTaxes(invoice) {
 export function money(value) {
     const n = Number(value || 0);
     const decimals = currency().decimals ?? 2;
-    return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    return n.toLocaleString(numberLocale(), { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 // With the symbol: "Tk 1,200.00", "$1,200.00", "-Tk 50.00" (letter symbols get a space).
@@ -52,7 +69,8 @@ export function fmtDate(value) {
     if (!value) return '';
     const d = new Date(String(value).length === 10 ? value + 'T00:00:00' : String(value).replace(' ', 'T'));
     if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    // "05 Nov 2026" (day first), "Nov 05, 2026" (month-first countries)
+    return d.toLocaleDateString(dateLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 // "05 Nov 2026, 2:30 PM" for server datetimes ("Y-m-d H:i:s", app timezone).
@@ -136,6 +154,8 @@ export const GATEWAY_STYLES = {
     nagad: { label: 'Nagad', initial: 'N', badge: 'bg-orange-500', ring: 'ring-orange-500', text: 'text-orange-600', soft: 'bg-orange-50' },
     rocket: { label: 'Rocket', initial: 'R', badge: 'bg-purple-700', ring: 'ring-purple-600', text: 'text-purple-700', soft: 'bg-purple-50' },
     sslcommerz: { label: 'SSLCommerz', initial: 'S', badge: 'bg-sky-700', ring: 'ring-sky-600', text: 'text-sky-700', soft: 'bg-sky-50' },
+    paypal: { label: 'PayPal', initial: 'P', badge: 'bg-blue-700', ring: 'ring-blue-600', text: 'text-blue-700', soft: 'bg-blue-50' },
+    stripe: { label: 'Stripe', initial: 'S', badge: 'bg-indigo-600', ring: 'ring-indigo-500', text: 'text-indigo-600', soft: 'bg-indigo-50' },
 };
 
 export const PAYMENT_METHODS = [
@@ -149,7 +169,10 @@ export const PAYMENT_METHODS = [
     { value: 'other', label: 'Other' },
 ];
 
+// "partially_paid" -> "Partially Paid", or its translation (lang "labels") in the language in use.
 export function label(value) {
+    const key = `labels.${value}`;
+    if (value && i18n.global.te(key)) return i18n.global.t(key);
     return String(value || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 

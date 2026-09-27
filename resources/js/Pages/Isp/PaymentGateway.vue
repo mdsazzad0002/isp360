@@ -69,7 +69,7 @@ onMounted(load);
 
         <div class="space-y-3">
             <div v-for="g in gateways" :key="g.gateway" class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-                <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left" @click="open = open === g.gateway ? '' : g.gateway">
+                <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-start" @click="open = open === g.gateway ? '' : g.gateway">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold text-white" :class="GATEWAY_STYLES[g.gateway].badge">
                         {{ GATEWAY_STYLES[g.gateway].initial }}
                     </span>
@@ -135,6 +135,20 @@ onMounted(load);
                         </div>
                         <p v-if="g.gateway === 'sslcommerz'" class="text-xs text-slate-500 md:col-span-2">
                             IPN URL for the SSLCommerz merchant panel: <code class="rounded bg-slate-100 px-1.5 py-0.5">{{ ipnUrl }}</code>
+                        </p>
+                        <p v-if="g.gateway === 'paypal'" class="text-xs text-slate-500 md:col-span-2">
+                            Create a REST app in the PayPal developer dashboard (sandbox app in sandbox mode) and copy its client ID and secret.
+                            <template v-if="g.webhook_url">Add a webhook to the app with the URL <code class="break-all rounded bg-slate-100 px-1.5 py-0.5">{{ g.webhook_url }}</code> and the events
+                                <code>CHECKOUT.ORDER.APPROVED</code>, <code>PAYMENT.CAPTURE.COMPLETED</code>, <code>PAYMENT.CAPTURE.DENIED</code>, then paste its Webhook ID above. It finishes payments whose customer closed the browser before returning.</template>
+                            <template v-else>Save once to get the webhook URL.</template>
+                        </p>
+                        <p v-if="g.gateway === 'stripe'" class="text-xs text-slate-500 md:col-span-2">
+                            <template v-if="g.webhook_url">
+                                In the Stripe dashboard (Developers → Webhooks) add the endpoint <code class="break-all rounded bg-slate-100 px-1.5 py-0.5">{{ g.webhook_url }}</code>
+                                with the events <code>checkout.session.completed</code>, <code>checkout.session.async_payment_succeeded</code>, <code>checkout.session.async_payment_failed</code> and <code>checkout.session.expired</code>, then paste its signing secret above.
+                            </template>
+                            <template v-else>Save once to get the webhook URL for the Stripe dashboard.</template>
+                            Use test keys (sk_test_…) in sandbox mode and live keys (sk_live_…) otherwise. Customers pay on Stripe's own page; card details never reach this server.
                         </p>
                     </div>
 

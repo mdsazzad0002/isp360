@@ -97,7 +97,7 @@ async function updateCompanyProfile() {
                             <p class="mb-2 text-xs text-red-500">Logo (150 x 150) PX</p>
                             <div class="relative mx-auto w-32">
                                 <img :src="logoSrc" class="h-32 w-32 rounded-md border border-dashed border-slate-300 bg-slate-50 object-contain p-1" />
-                                <button type="button" @click="removeLogo" class="absolute -right-2 -top-2 h-6 w-6 rounded-full bg-red-500 text-xs text-white">X</button>
+                                <button type="button" @click="removeLogo" class="absolute -end-2 -top-2 h-6 w-6 rounded-full bg-red-500 text-xs text-white">X</button>
                             </div>
                             <label class="mt-2 block text-xs font-medium text-slate-600">Upload Logo</label>
                             <input type="file" @change="onLogoChange" class="w-full text-xs" />
@@ -106,7 +106,7 @@ async function updateCompanyProfile() {
                             <p class="mb-2 text-xs text-red-500">Favicon (100 x 100) PX</p>
                             <div class="relative mx-auto w-32">
                                 <img :src="faviconSrc" class="h-32 w-32 rounded-md border border-dashed border-slate-300 bg-slate-50 object-contain p-1" />
-                                <button type="button" @click="removeFavicon" class="absolute -right-2 -top-2 h-6 w-6 rounded-full bg-red-500 text-xs text-white">X</button>
+                                <button type="button" @click="removeFavicon" class="absolute -end-2 -top-2 h-6 w-6 rounded-full bg-red-500 text-xs text-white">X</button>
                             </div>
                             <label class="mt-2 block text-xs font-medium text-slate-600">Upload Favicon</label>
                             <input type="file" @change="onFaviconChange" class="w-full text-xs" />
@@ -144,7 +144,7 @@ async function updateCompanyProfile() {
                             <label class="col-span-1 pt-1.5 text-sm text-slate-600">Address</label>
                             <textarea v-model="form.address" rows="4" class="col-span-3 rounded-md border border-slate-300 px-3 py-1.5 text-sm"></textarea>
                         </div>
-                        <div class="text-right">
+                        <div class="text-end">
                             <button type="submit" class="rounded-md bg-gradient-to-r from-brand-500 to-brand-600 px-6 py-2 text-sm font-medium text-white shadow-sm cursor-pointer">Update Profile</button>
                         </div>
                     </form>
