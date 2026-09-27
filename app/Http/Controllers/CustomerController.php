@@ -82,10 +82,12 @@ class CustomerController extends Controller
     public function store(Request $request)
     {
         $branchId = $this->branchId;
+        normalizePhone($request);
         $validator = Validator::make($request->all(), [
             'name'     => 'required',
             'phone' => [
                 'required',
+                new \App\Rules\PhoneNumber,
                 Rule::unique('customers')
                     ->where(function ($query) use ($branchId) {
                         $query->where('branch_id', $branchId);
@@ -96,6 +98,10 @@ class CustomerController extends Controller
                 'nullable',
                 Rule::unique('customers')->whereNull('deleted_at'),
             ],
+            // required where the country pack says so (IN PIN code, US ZIP, UK postcode...)
+            'postcode' => (\App\Support\CountryPack::current()['address']['postcode_required'] ? 'required' : 'nullable') . '|max:20',
+            'city' => 'nullable|max:100',
+            'state' => 'nullable|max:100',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
@@ -142,10 +148,12 @@ class CustomerController extends Controller
     public function update(Request $request)
     {
         $branchId = $this->branchId;
+        normalizePhone($request);
         $validator = Validator::make($request->all(), [
             'name'     => 'required',
             'phone' => [
                 'required',
+                new \App\Rules\PhoneNumber,
                 Rule::unique('customers')
                     ->ignore($request->id)
                     ->where(function ($query) use ($branchId) {
@@ -325,6 +333,12 @@ class CustomerController extends Controller
                 $errors[] = "$rowLabel: name and phone are required";
                 continue;
             }
+            if (! ($normalized = \App\Support\Phone::normalize($phone))) {
+                $skipped++;
+                $errors[] = "$rowLabel: phone \"$phone\" is not a valid number";
+                continue;
+            }
+            $phone = $normalized;
 
             $exists = Customer::where('branch_id', $this->branchId)->where('phone', $phone)->exists();
             if ($exists) {

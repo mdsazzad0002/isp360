@@ -169,8 +169,8 @@ A country pack holds: currency, timezone(s), language, date/number format, phone
 - [ ] RTL layout for Arabic (`dir="rtl"`, logical CSS properties) — `ar.json` exists but the layout is LTR.
 - [ ] Per-user language and per-customer language (SMS/email templates in the customer's language).
 - [ ] Locale-aware dates and numbers (`Intl.NumberFormat`, `Intl.DateTimeFormat`).
-- [ ] Phone numbers: validate and store in E.164 (`libphonenumber`).
-- [ ] Address: generic fields (line1, line2, city, state, postcode, country) next to Zone/Area/Box.
+- [x] Phone numbers (`App\Support\Phone`, libphonenumber-lite): customer / reseller forms, portal profiles and imports accept any valid number of the company's country (any format) or any international `+` number; stored as national digits for the home country (BD unchanged: `01712345678`) and E.164 for others, so one number can't be entered twice in two spellings; `Phone::e164()` for providers that need it.
+- [x] Address: city, state and postcode on customers next to Zone/Area/Box, labelled from the country pack (Division / State / County, Post code / PIN / ZIP / CEP); postcode required where the pack says so.
 
 ---
 

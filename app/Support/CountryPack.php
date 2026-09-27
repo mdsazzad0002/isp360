@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 //   name, currency, timezone      from config/countries.php (a pack file may override them)
 //   language                      default UI language for users who haven't picked one (resources/js/lang)
 //   date_format                   PHP date format for printed dates, e.g. d/m/Y
+//   number_locale                 BCP 47 locale for numbers in the UI (grouping, decimal mark)
 //   phone                         calling_code, national_prefix (trunk "0"), lengths (national digits), example
 //   address                       state and postcode labels, postcode_required
 //   id_types                      code => label, for customer KYC
@@ -36,6 +37,8 @@ class CountryPack
     public const GENERIC = [
         'language' => 'en',
         'date_format' => 'd/m/Y',
+        // BCP 47 locale for number grouping in the UI (Intl.NumberFormat): "1,00,000" in en-IN, "1.000,00" in pt-BR
+        'number_locale' => 'en-US',
         'phone' => ['calling_code' => null, 'national_prefix' => '', 'lengths' => [], 'example' => ''],
         'address' => ['state_label' => 'State / province', 'postcode_label' => 'Postcode', 'postcode_required' => false],
         'id_types' => ['national_id' => 'National ID', 'passport' => 'Passport'],

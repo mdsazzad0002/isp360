@@ -369,6 +369,16 @@ function make_slug($string)
 }
 
 //credentials check
+// Puts the request's phone in its stored form (App\Support\Phone) before validation, so "+880 1712-345678"
+// and "01712345678" are the same number for uniqueness checks. An invalid number is left as typed
+// for the PhoneNumber rule to report.
+function normalizePhone(\Illuminate\Http\Request $request, string $field = 'phone'): void
+{
+    if ($request->filled($field) && ($phone = \App\Support\Phone::normalize((string) $request->input($field)))) {
+        $request->merge([$field => $phone]);
+    }
+}
+
 function credentials($username, $password)
 {
     if (filter_var($username, FILTER_VALIDATE_EMAIL)) {

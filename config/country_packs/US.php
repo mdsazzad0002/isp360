@@ -5,6 +5,7 @@
 return [
     'language' => 'en',
     'date_format' => 'm/d/Y',
+    'number_locale' => 'en-US',
     'phone' => ['calling_code' => '1', 'national_prefix' => '1', 'lengths' => [10], 'example' => '2015550123'],
     'address' => ['state_label' => 'State', 'postcode_label' => 'ZIP code', 'postcode_required' => true],
     'id_types' => ['drivers_license' => "Driver's license", 'state_id' => 'State ID', 'passport' => 'Passport', 'ssn_last4' => 'SSN (last 4)'],

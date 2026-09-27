@@ -4,6 +4,7 @@
 return [
     'language' => 'en',
     'date_format' => 'd/m/Y',
+    'number_locale' => 'en-US',
     'phone' => ['calling_code' => '880', 'national_prefix' => '0', 'lengths' => [10], 'example' => '01712345678'],
     'address' => ['state_label' => 'Division', 'postcode_label' => 'Post code', 'postcode_required' => false],
     'id_types' => ['nid' => 'National ID (NID)', 'birth_certificate' => 'Birth certificate', 'passport' => 'Passport'],

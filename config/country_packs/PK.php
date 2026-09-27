@@ -4,6 +4,7 @@
 return [
     'language' => 'en',
     'date_format' => 'd/m/Y',
+    'number_locale' => 'en-PK',
     'phone' => ['calling_code' => '92', 'national_prefix' => '0', 'lengths' => [10], 'example' => '03001234567'],
     'address' => ['state_label' => 'Province', 'postcode_label' => 'Postal code', 'postcode_required' => false],
     'id_types' => ['cnic' => 'CNIC', 'passport' => 'Passport'],

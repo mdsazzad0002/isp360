@@ -5,6 +5,7 @@
 return [
     'language' => 'en',
     'date_format' => 'd/m/Y',
+    'number_locale' => 'pt-BR',
     'phone' => ['calling_code' => '55', 'national_prefix' => '', 'lengths' => [10, 11], 'example' => '11912345678'],
     'address' => ['state_label' => 'State (UF)', 'postcode_label' => 'CEP', 'postcode_required' => true],
     'id_types' => ['cpf' => 'CPF', 'cnpj' => 'CNPJ', 'rg' => 'RG'],

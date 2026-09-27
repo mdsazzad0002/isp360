@@ -4,6 +4,7 @@
 return [
     'language' => 'en',
     'date_format' => 'd/m/Y',
+    'number_locale' => 'en-IN',
     'phone' => ['calling_code' => '91', 'national_prefix' => '0', 'lengths' => [10], 'example' => '9812345678'],
     'address' => ['state_label' => 'State', 'postcode_label' => 'PIN code', 'postcode_required' => true],
     'id_types' => ['aadhaar' => 'Aadhaar', 'pan' => 'PAN', 'voter_id' => 'Voter ID', 'driving_licence' => 'Driving licence', 'passport' => 'Passport'],

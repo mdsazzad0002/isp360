@@ -15,6 +15,8 @@ defineOptions({ layout: AppLayout });
 
 const toast = useToast();
 const page = usePage();
+// country pack: address labels and the phone example (HandleInertiaRequests "region")
+const region = computed(() => page.props.region || {});
 
 function emptyForm() {
     return {
@@ -25,6 +27,9 @@ function emptyForm() {
         phone: '',
         type: 'retail',
         address: '',
+        city: '',
+        state: '',
+        postcode: '',
         previous_due: 0,
         credit_limit: 0,
         is_membership: 'no',
@@ -378,6 +383,9 @@ function editRow(row) {
         phone: row.phone,
         type: row.type,
         address: row.address,
+        city: row.city ?? '',
+        state: row.state ?? '',
+        postcode: row.postcode ?? '',
         previous_due: row.previous_due,
         credit_limit: row.credit_limit,
         is_membership: row.is_membership,
@@ -450,6 +458,20 @@ onMounted(() => {
                         <label class="mb-1 block text-xs font-medium text-slate-600">Service Address</label>
                         <input type="text" autocomplete="off" v-model="form.address" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                     </div>
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">City</label>
+                            <input type="text" autocomplete="off" v-model="form.city" maxlength="100" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
+                        <div class="flex-1">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">{{ region.state_label || 'State' }}</label>
+                            <input type="text" autocomplete="off" v-model="form.state" maxlength="100" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
+                        <div class="w-28">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">{{ region.postcode_label || 'Postcode' }}<span v-if="region.postcode_required" class="text-red-500">*</span></label>
+                            <input type="text" autocomplete="off" v-model="form.postcode" maxlength="20" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
+                    </div>
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Billing Address <span class="font-normal text-slate-400">(if different)</span></label>
                         <input type="text" autocomplete="off" v-model="form.billing_address" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
@@ -469,7 +491,7 @@ onMounted(() => {
                     </div>
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Mobile</label>
-                        <input type="text" autocomplete="off" v-model="form.phone" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        <input type="tel" autocomplete="off" v-model="form.phone" :placeholder="region.phone_example ? `${region.phone_example} or +${region.calling_code}…` : ''" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                     </div>
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Reseller <span class="font-normal text-slate-400">(Optional)</span></label>

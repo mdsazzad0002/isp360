@@ -4,6 +4,7 @@
 return [
     'language' => 'en',
     'date_format' => 'Y-m-d',
+    'number_locale' => 'en-US',
     'phone' => ['calling_code' => '977', 'national_prefix' => '', 'lengths' => [10], 'example' => '9801234567'],
     'address' => ['state_label' => 'Province', 'postcode_label' => 'Postal code', 'postcode_required' => false],
     'id_types' => ['citizenship' => 'Citizenship certificate', 'national_id' => 'National ID', 'passport' => 'Passport'],

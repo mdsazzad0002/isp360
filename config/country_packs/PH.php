@@ -4,6 +4,7 @@
 return [
     'language' => 'en',
     'date_format' => 'm/d/Y',
+    'number_locale' => 'en-PH',
     'phone' => ['calling_code' => '63', 'national_prefix' => '0', 'lengths' => [10], 'example' => '09171234567'],
     'address' => ['state_label' => 'Province', 'postcode_label' => 'ZIP code', 'postcode_required' => false],
     'id_types' => ['philsys' => 'PhilSys ID', 'drivers_license' => "Driver's license", 'umid' => 'UMID', 'passport' => 'Passport'],

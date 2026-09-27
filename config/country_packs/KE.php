@@ -4,6 +4,7 @@
 return [
     'language' => 'en',
     'date_format' => 'd/m/Y',
+    'number_locale' => 'en-KE',
     'phone' => ['calling_code' => '254', 'national_prefix' => '0', 'lengths' => [9], 'example' => '0712345678'],
     'address' => ['state_label' => 'County', 'postcode_label' => 'Postal code', 'postcode_required' => false],
     'id_types' => ['national_id' => 'National ID', 'kra_pin' => 'KRA PIN', 'passport' => 'Passport'],

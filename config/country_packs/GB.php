@@ -4,6 +4,7 @@
 return [
     'language' => 'en',
     'date_format' => 'd/m/Y',
+    'number_locale' => 'en-GB',
     'phone' => ['calling_code' => '44', 'national_prefix' => '0', 'lengths' => [10], 'example' => '07400123456'],
     'address' => ['state_label' => 'County', 'postcode_label' => 'Postcode', 'postcode_required' => true],
     'id_types' => ['passport' => 'Passport', 'driving_licence' => 'Driving licence'],

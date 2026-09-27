@@ -78,6 +78,20 @@ class HandleInertiaRequests extends Middleware
             'currency' => fn () => Money::currency(),
             // the company's timezone: server times are its wall-clock time, and "today" is its date
             'timezone' => fn () => \App\Support\Region::timezone(),
+            // the company's country pack, for forms: phone example, address labels, number/date style
+            'region' => function () {
+                $pack = \App\Support\CountryPack::current();
+                return [
+                    'country' => $pack['code'],
+                    'calling_code' => $pack['phone']['calling_code'],
+                    'phone_example' => \App\Support\Phone::example($pack['code']),
+                    'state_label' => $pack['address']['state_label'],
+                    'postcode_label' => $pack['address']['postcode_label'],
+                    'postcode_required' => (bool) $pack['address']['postcode_required'],
+                    'number_locale' => $pack['number_locale'],
+                    'date_format' => $pack['date_format'],
+                ];
+            },
             // default UI language from the country pack; a user's own pick in the switcher wins
             'defaultLocale' => fn () => company()?->language ?? 'en',
             'portalUser' => function () use ($request) {
