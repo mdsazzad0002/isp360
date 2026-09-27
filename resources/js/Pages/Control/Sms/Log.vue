@@ -107,7 +107,7 @@ onMounted(fetchLogs);
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Date/Time</th>
                             <th class="px-2 py-2 font-medium">Customer</th>
                             <th class="px-2 py-2 font-medium">Phone</th>

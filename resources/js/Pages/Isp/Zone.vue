@@ -73,7 +73,7 @@ onMounted(load);
                 </div>
                 <div class="flex items-end gap-3 md:col-span-3">
                     <label class="flex items-center gap-2 pb-1.5 text-sm text-slate-600"><input v-model="form.is_active" type="checkbox" /> Active</label>
-                    <button type="button" class="ml-auto rounded-md bg-red-600 px-4 py-1.5 text-sm text-white" @click="Object.assign(form, blank())">Reset</button>
+                    <button type="button" class="ms-auto rounded-md bg-red-600 px-4 py-1.5 text-sm text-white" @click="Object.assign(form, blank())">Reset</button>
                     <button type="submit" :disabled="saving" class="rounded-md bg-brand-500 px-4 py-1.5 text-sm text-white disabled:opacity-50">{{ form.id ? 'Update' : 'Save' }}</button>
                 </div>
             </form>
@@ -87,14 +87,14 @@ onMounted(load);
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Zone</th>
                             <th class="px-3 py-2 font-medium">Code</th>
                             <th class="px-3 py-2 font-medium">Description</th>
-                            <th class="px-3 py-2 text-right font-medium">Areas</th>
-                            <th class="px-3 py-2 text-right font-medium">Customers</th>
+                            <th class="px-3 py-2 text-end font-medium">Areas</th>
+                            <th class="px-3 py-2 text-end font-medium">Customers</th>
                             <th class="px-3 py-2 font-medium">Status</th>
-                            <th class="px-3 py-2 text-right font-medium">Action</th>
+                            <th class="px-3 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -102,8 +102,8 @@ onMounted(load);
                             <td class="px-3 py-2 font-medium text-slate-800">{{ r.name }}</td>
                             <td class="px-3 py-2">{{ r.code }}</td>
                             <td class="px-3 py-2 text-slate-500">{{ r.description }}</td>
-                            <td class="px-3 py-2 text-right"><Link :href="`/isp/areas?zoneId=${r.id}`" class="text-brand-600 hover:underline">{{ r.areas_count }}</Link></td>
-                            <td class="px-3 py-2 text-right">{{ r.customers_count }}</td>
+                            <td class="px-3 py-2 text-end"><Link :href="`/isp/areas?zoneId=${r.id}`" class="text-brand-600 hover:underline">{{ r.areas_count }}</Link></td>
+                            <td class="px-3 py-2 text-end">{{ r.customers_count }}</td>
                             <td class="px-3 py-2"><span :class="r.is_active ? 'text-emerald-600' : 'text-slate-400'">{{ r.is_active ? 'Active' : 'Inactive' }}</span></td>
                             <td class="px-3 py-2">
                                 <div class="flex justify-end gap-3">

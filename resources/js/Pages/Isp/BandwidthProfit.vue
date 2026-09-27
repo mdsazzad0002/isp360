@@ -67,23 +67,23 @@ onMounted(load);
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                            <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                 <th class="px-3 py-2 font-medium">Month</th>
-                                <th class="px-3 py-2 text-right font-medium">Bought Mbps</th>
-                                <th class="px-3 py-2 text-right font-medium">Revenue</th>
-                                <th class="px-3 py-2 text-right font-medium">Bandwidth cost</th>
-                                <th class="px-3 py-2 text-right font-medium">Profit</th>
-                                <th class="px-3 py-2 text-right font-medium">Margin</th>
+                                <th class="px-3 py-2 text-end font-medium">Bought Mbps</th>
+                                <th class="px-3 py-2 text-end font-medium">Revenue</th>
+                                <th class="px-3 py-2 text-end font-medium">Bandwidth cost</th>
+                                <th class="px-3 py-2 text-end font-medium">Profit</th>
+                                <th class="px-3 py-2 text-end font-medium">Margin</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="m in data.months" :key="m.month" class="border-b border-slate-100">
                                 <td class="px-3 py-2">{{ m.label }}</td>
-                                <td class="px-3 py-2 text-right">{{ money(m.purchased_mbps) }}</td>
-                                <td class="px-3 py-2 text-right">{{ money(m.revenue) }}</td>
-                                <td class="px-3 py-2 text-right">{{ money(m.cost) }}</td>
-                                <td class="px-3 py-2 text-right font-medium" :class="m.profit < 0 ? 'text-red-600' : 'text-slate-800'">{{ money(m.profit) }}</td>
-                                <td class="px-3 py-2 text-right text-slate-500">{{ m.margin !== null ? `${m.margin}%` : '—' }}</td>
+                                <td class="px-3 py-2 text-end">{{ money(m.purchased_mbps) }}</td>
+                                <td class="px-3 py-2 text-end">{{ money(m.revenue) }}</td>
+                                <td class="px-3 py-2 text-end">{{ money(m.cost) }}</td>
+                                <td class="px-3 py-2 text-end font-medium" :class="m.profit < 0 ? 'text-red-600' : 'text-slate-800'">{{ money(m.profit) }}</td>
+                                <td class="px-3 py-2 text-end text-slate-500">{{ m.margin !== null ? `${m.margin}%` : '—' }}</td>
                             </tr>
                         </tbody>
                     </table>

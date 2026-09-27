@@ -133,7 +133,7 @@ onMounted(load);
                 <div v-if="!routers.length" class="text-sm text-amber-700">No active router — add one under Routers (MikroTik).</div>
                 <div v-for="r in routers" :key="r.id" class="flex items-start justify-between gap-2 py-0.5 text-sm">
                     <span class="text-slate-700"><i class="bi bi-router"></i> {{ r.name }} <span class="text-xs text-slate-400">{{ r.host }}</span></span>
-                    <span class="text-right text-xs">
+                    <span class="text-end text-xs">
                         <span v-if="r.block_sync_status === 'synced'" class="text-emerald-600"><i class="bi bi-check-circle"></i> Synced</span>
                         <span v-else-if="r.block_sync_status === 'warning'" class="text-amber-600" :title="r.block_sync_note"><i class="bi bi-exclamation-triangle"></i> Synced with warnings</span>
                         <span v-else-if="r.block_sync_status === 'failed'" class="text-red-600" :title="r.block_sync_note"><i class="bi bi-x-circle"></i> Failed</span>
@@ -165,14 +165,14 @@ onMounted(load);
                     </button>
                 </div>
                 <div class="relative">
-                    <i class="bi bi-search absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
-                    <input v-model="search" placeholder="Search site, IP, note..." class="w-64 rounded-md border border-slate-300 py-1.5 pl-8 pr-3 text-sm" />
+                    <i class="bi bi-search absolute start-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
+                    <input v-model="search" placeholder="Search site, IP, note..." class="w-64 rounded-md border border-slate-300 py-1.5 ps-8 pe-3 text-sm" />
                 </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-xs uppercase tracking-wide text-slate-500">
                             <th class="w-8 px-3 py-2"><input type="checkbox" :checked="allChecked" @change="toggleAll" /></th>
                             <th class="px-3 py-2 font-medium">Site / IP</th>
                             <th class="px-3 py-2 font-medium">Type</th>
@@ -180,14 +180,14 @@ onMounted(load);
                             <th class="px-3 py-2 font-medium">Note</th>
                             <th class="px-3 py-2 font-medium">Added</th>
                             <th class="px-3 py-2 font-medium">Status</th>
-                            <th class="px-3 py-2 text-right font-medium">Action</th>
+                            <th class="px-3 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="b in filtered" :key="b.id" class="border-b border-slate-100 hover:bg-slate-50" :class="!b.is_active && 'opacity-60'">
                             <td class="px-3 py-2"><input v-model="checked" type="checkbox" :value="b.id" /></td>
                             <td class="px-3 py-2 font-medium text-slate-800">
-                                <i class="bi mr-1" :class="b.type === 'domain' ? 'bi-globe2 text-sky-500' : 'bi-hdd-network text-violet-500'"></i>{{ b.value }}
+                                <i class="bi me-1" :class="b.type === 'domain' ? 'bi-globe2 text-sky-500' : 'bi-hdd-network text-violet-500'"></i>{{ b.value }}
                             </td>
                             <td class="px-3 py-2">
                                 <span class="rounded-full px-2 py-0.5 text-xs" :class="b.type === 'domain' ? 'bg-sky-50 text-sky-700' : 'bg-violet-50 text-violet-700'">{{ b.type === 'domain' ? 'Website' : b.value.includes('/') ? 'Subnet' : 'IP' }}</span>
@@ -253,12 +253,12 @@ onMounted(load);
                         <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Block for</h3>
                         <div class="grid grid-cols-2 gap-2">
                             <label class="cursor-pointer rounded-md border p-2.5" :class="panel.scope === 'all' ? 'border-brand-500 bg-brand-50' : 'border-slate-200'">
-                                <input v-model="panel.scope" type="radio" value="all" class="mr-1" />
+                                <input v-model="panel.scope" type="radio" value="all" class="me-1" />
                                 <span class="font-medium text-slate-700">All customers</span>
                                 <span class="mt-0.5 block text-xs text-slate-500">Everyone on the network.</span>
                             </label>
                             <label class="cursor-pointer rounded-md border p-2.5" :class="panel.scope === 'package' ? 'border-brand-500 bg-brand-50' : 'border-slate-200'">
-                                <input v-model="panel.scope" type="radio" value="package" class="mr-1" />
+                                <input v-model="panel.scope" type="radio" value="package" class="me-1" />
                                 <span class="font-medium text-slate-700">One package</span>
                                 <span class="mt-0.5 block text-xs text-slate-500">Only customers on it.</span>
                             </label>

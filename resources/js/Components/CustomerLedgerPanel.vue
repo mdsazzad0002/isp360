@@ -217,7 +217,7 @@ watch(
                             </div>
                             <button type="button" @click="loadLedger" class="rounded-md bg-brand-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-600">Show</button>
                             <button type="button" @click="clearDates" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">Clear</button>
-                            <button type="button" @click="print" title="Print" class="ml-auto text-slate-500 hover:text-brand-500">
+                            <button type="button" @click="print" title="Print" class="ms-auto text-slate-500 hover:text-brand-500">
                                 <i class="bi bi-printer text-lg"></i>
                             </button>
                         </div>
@@ -225,23 +225,23 @@ watch(
                         <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
                             <table class="w-full text-sm">
                                 <thead>
-                                    <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                                    <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                         <th class="px-2 py-2 font-medium">Date</th>
                                         <th class="px-2 py-2 font-medium">Description</th>
-                                        <th class="px-2 py-2 font-medium text-right">Bill</th>
-                                        <th class="px-2 py-2 font-medium text-right">Inv.Paid</th>
-                                        <th class="px-2 py-2 font-medium text-right">Inv.Due</th>
-                                        <th class="px-2 py-2 font-medium text-right">Payment</th>
-                                        <th class="px-2 py-2 font-medium text-right">Receive</th>
-                                        <th class="px-2 py-2 font-medium text-right">Returned</th>
-                                        <th class="px-2 py-2 font-medium text-right">Balance</th>
+                                        <th class="px-2 py-2 font-medium text-end">Bill</th>
+                                        <th class="px-2 py-2 font-medium text-end">Inv.Paid</th>
+                                        <th class="px-2 py-2 font-medium text-end">Inv.Due</th>
+                                        <th class="px-2 py-2 font-medium text-end">Payment</th>
+                                        <th class="px-2 py-2 font-medium text-end">Receive</th>
+                                        <th class="px-2 py-2 font-medium text-end">Returned</th>
+                                        <th class="px-2 py-2 font-medium text-end">Balance</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr class="border-b border-slate-100">
                                         <td class="px-2 py-1.5"></td>
                                         <td colspan="7" class="px-2 py-1.5">Previous Balance</td>
-                                        <td class="px-2 py-1.5 text-right">{{ previousBalance }}</td>
+                                        <td class="px-2 py-1.5 text-end">{{ previousBalance }}</td>
                                     </tr>
                                     <tr
                                         v-for="(item, index) in ledgers"
@@ -254,26 +254,26 @@ watch(
                                         <td class="px-2 py-1.5">
                                             <span :class="isClickableLedgerRow(item) ? 'text-brand-600 underline decoration-dotted' : ''">{{ item.description }}</span>
                                         </td>
-                                        <td class="px-2 py-1.5 text-right">{{ item.bill }}</td>
-                                        <td class="px-2 py-1.5 text-right">{{ item.paid }}</td>
-                                        <td class="px-2 py-1.5 text-right">{{ item.due }}</td>
-                                        <td class="px-2 py-1.5 text-right">{{ item.cash_payment }}</td>
-                                        <td class="px-2 py-1.5 text-right">{{ item.cash_receive }}</td>
-                                        <td class="px-2 py-1.5 text-right">{{ item.return_amount }}</td>
-                                        <td class="px-2 py-1.5 text-right font-medium">{{ parseFloat(item.balance).toFixed(2) }}</td>
+                                        <td class="px-2 py-1.5 text-end">{{ item.bill }}</td>
+                                        <td class="px-2 py-1.5 text-end">{{ item.paid }}</td>
+                                        <td class="px-2 py-1.5 text-end">{{ item.due }}</td>
+                                        <td class="px-2 py-1.5 text-end">{{ item.cash_payment }}</td>
+                                        <td class="px-2 py-1.5 text-end">{{ item.cash_receive }}</td>
+                                        <td class="px-2 py-1.5 text-end">{{ item.return_amount }}</td>
+                                        <td class="px-2 py-1.5 text-end font-medium">{{ parseFloat(item.balance).toFixed(2) }}</td>
                                     </tr>
                                     <tr v-if="ledgers.length === 0">
                                         <td colspan="9" class="px-2 py-6 text-center text-slate-400">No ledger entries found</td>
                                     </tr>
                                     <tr v-if="ledgers.length > 0" class="bg-slate-50 font-semibold">
                                         <td colspan="2" class="px-2 py-2 text-center">Total</td>
-                                        <td class="px-2 py-2 text-right">{{ sumField('bill') }}</td>
-                                        <td class="px-2 py-2 text-right">{{ sumField('paid') }}</td>
-                                        <td class="px-2 py-2 text-right">{{ sumField('due') }}</td>
-                                        <td class="px-2 py-2 text-right">{{ sumField('cash_payment') }}</td>
-                                        <td class="px-2 py-2 text-right">{{ sumField('cash_receive') }}</td>
-                                        <td class="px-2 py-2 text-right">{{ sumField('return_amount') }}</td>
-                                        <td class="px-2 py-2 text-right">{{ lastBalance() }}</td>
+                                        <td class="px-2 py-2 text-end">{{ sumField('bill') }}</td>
+                                        <td class="px-2 py-2 text-end">{{ sumField('paid') }}</td>
+                                        <td class="px-2 py-2 text-end">{{ sumField('due') }}</td>
+                                        <td class="px-2 py-2 text-end">{{ sumField('cash_payment') }}</td>
+                                        <td class="px-2 py-2 text-end">{{ sumField('cash_receive') }}</td>
+                                        <td class="px-2 py-2 text-end">{{ sumField('return_amount') }}</td>
+                                        <td class="px-2 py-2 text-end">{{ lastBalance() }}</td>
                                     </tr>
                                 </tbody>
                             </table>

@@ -71,20 +71,20 @@ async function act(url, uuid, question) {
             <div v-else class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 text-left text-xs text-slate-500">
-                            <th class="py-1.5 pr-2 font-medium">Failed at</th>
-                            <th class="py-1.5 pr-2 font-medium">Job</th>
-                            <th class="py-1.5 pr-2 font-medium">Error</th>
+                        <tr class="border-b border-slate-200 text-start text-xs text-slate-500">
+                            <th class="py-1.5 pe-2 font-medium">Failed at</th>
+                            <th class="py-1.5 pe-2 font-medium">Job</th>
+                            <th class="py-1.5 pe-2 font-medium">Error</th>
                             <th class="py-1.5"></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="j in data.failed" :key="j.uuid" class="border-b border-slate-100 align-top">
-                            <td class="whitespace-nowrap py-1.5 pr-2">{{ j.failed_at }}</td>
-                            <td class="py-1.5 pr-2">{{ j.job }} <span class="text-xs text-slate-400">({{ j.queue }})</span></td>
-                            <td class="py-1.5 pr-2 text-xs text-slate-600">{{ j.error }}</td>
-                            <td class="whitespace-nowrap py-1.5 text-right">
-                                <button type="button" class="mr-1 rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-50" @click="act('/isp/queue/retry', j.uuid)">Retry</button>
+                            <td class="whitespace-nowrap py-1.5 pe-2">{{ j.failed_at }}</td>
+                            <td class="py-1.5 pe-2">{{ j.job }} <span class="text-xs text-slate-400">({{ j.queue }})</span></td>
+                            <td class="py-1.5 pe-2 text-xs text-slate-600">{{ j.error }}</td>
+                            <td class="whitespace-nowrap py-1.5 text-end">
+                                <button type="button" class="me-1 rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-50" @click="act('/isp/queue/retry', j.uuid)">Retry</button>
                                 <button type="button" class="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50" @click="act('/isp/queue/forget', j.uuid)">Delete</button>
                             </td>
                         </tr>

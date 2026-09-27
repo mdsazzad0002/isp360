@@ -39,13 +39,13 @@ onMounted(loadPackages);
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                            <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                 <th class="px-3 py-2 font-medium">Reseller</th>
                                 <th class="px-3 py-2 font-medium">Package</th>
                                 <th class="px-3 py-2 font-medium">Company package</th>
-                                <th class="px-3 py-2 text-right font-medium">Company price (accepted)</th>
-                                <th class="px-3 py-2 text-right font-medium">Reseller price</th>
-                                <th class="px-3 py-2 text-right font-medium">Reseller margin</th>
+                                <th class="px-3 py-2 text-end font-medium">Company price (accepted)</th>
+                                <th class="px-3 py-2 text-end font-medium">Reseller price</th>
+                                <th class="px-3 py-2 text-end font-medium">Reseller margin</th>
                                 <th class="px-3 py-2 font-medium">Status</th>
                             </tr>
                         </thead>
@@ -56,13 +56,13 @@ onMounted(loadPackages);
                                     {{ row.name }}
                                     <div class="text-xs text-slate-400">{{ row.download_mbps }}/{{ row.upload_mbps }} Mbps · {{ label(row.billing_cycle) }} · {{ row.active_connections }} live</div>
                                 </td>
-                                <td class="px-3 py-2">{{ row.base_package?.name || '—' }}<span v-if="row.base_package?.visibility === 'hidden'" class="ml-1 text-xs text-slate-400">(hidden)</span></td>
-                                <td class="px-3 py-2 text-right">
+                                <td class="px-3 py-2">{{ row.base_package?.name || '—' }}<span v-if="row.base_package?.visibility === 'hidden'" class="ms-1 text-xs text-slate-400">(hidden)</span></td>
+                                <td class="px-3 py-2 text-end">
                                     {{ row.base_price !== null ? money(row.base_price) : '—' }}
                                     <div v-if="row.base_changes?.company_price" class="text-xs text-amber-700">now {{ money(row.base_changes.company_price[1]) }}</div>
                                 </td>
-                                <td class="px-3 py-2 text-right font-medium">{{ money(row.price) }}</td>
-                                <td class="px-3 py-2 text-right text-emerald-700">{{ row.base_price !== null ? money(row.price - row.base_price) : '—' }}</td>
+                                <td class="px-3 py-2 text-end font-medium">{{ money(row.price) }}</td>
+                                <td class="px-3 py-2 text-end text-emerald-700">{{ row.base_price !== null ? money(row.price - row.base_price) : '—' }}</td>
                                 <td class="px-3 py-2">
                                     <span v-if="row.base_changes" class="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-700" :title="Object.keys(row.base_changes).map((f) => FIELD_LABELS[f] || f).join(', ')">
                                         Waiting for reseller ({{ Object.keys(row.base_changes).map((f) => FIELD_LABELS[f] || f).join(', ') }})

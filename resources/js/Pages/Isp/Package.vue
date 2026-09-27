@@ -171,22 +171,22 @@ onMounted(load);
                     </button>
                 </div>
                 <div class="relative">
-                    <i class="bi bi-search absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
-                    <input v-model="search" placeholder="Search name, code, profile..." class="w-64 rounded-md border border-slate-300 py-1.5 pl-8 pr-3 text-sm" />
+                    <i class="bi bi-search absolute start-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
+                    <input v-model="search" placeholder="Search name, code, profile..." class="w-64 rounded-md border border-slate-300 py-1.5 ps-8 pe-3 text-sm" />
                 </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-xs uppercase tracking-wide text-slate-500">
                             <th class="px-3 py-2 font-medium">Package</th>
                             <th class="px-3 py-2 font-medium">Speed</th>
-                            <th class="px-3 py-2 text-right font-medium">Price</th>
-                            <th class="px-3 py-2 text-right font-medium">Install / Activation</th>
+                            <th class="px-3 py-2 text-end font-medium">Price</th>
+                            <th class="px-3 py-2 text-end font-medium">Install / Activation</th>
                             <th class="px-3 py-2 font-medium">Visibility</th>
-                            <th class="px-3 py-2 text-right font-medium">Live</th>
+                            <th class="px-3 py-2 text-end font-medium">Live</th>
                             <th class="px-3 py-2 font-medium">Status</th>
-                            <th class="px-3 py-2 text-right font-medium">Action</th>
+                            <th class="px-3 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -206,17 +206,17 @@ onMounted(load);
                                     <span class="text-xs text-slate-400">Mbps</span>
                                 </span>
                             </td>
-                            <td class="px-3 py-2.5 text-right">
+                            <td class="px-3 py-2.5 text-end">
                                 <div class="font-semibold text-slate-800">{{ money(row.price) }}</div>
-                                <div class="text-xs text-slate-400">{{ label(row.billing_cycle) }} · {{ row.validity_days }}d<span v-if="row.billing_mode === 'postpaid'" class="ml-1 rounded bg-indigo-50 px-1 text-indigo-600">postpaid</span></div>
+                                <div class="text-xs text-slate-400">{{ label(row.billing_cycle) }} · {{ row.validity_days }}d<span v-if="row.billing_mode === 'postpaid'" class="ms-1 rounded bg-indigo-50 px-1 text-indigo-600">postpaid</span></div>
                             </td>
-                            <td class="px-3 py-2.5 text-right text-slate-600">{{ money(row.installation_fee) }} / {{ money(row.activation_fee) }}</td>
+                            <td class="px-3 py-2.5 text-end text-slate-600">{{ money(row.installation_fee) }} / {{ money(row.activation_fee) }}</td>
                             <td class="px-3 py-2.5">
                                 <span v-if="row.visibility === 'hidden'" class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600" title="Resellers customize this package; not for reseller customers as-is">Hidden</span>
                                 <span v-else class="rounded-full bg-sky-50 px-2 py-0.5 text-xs text-sky-700">Universal</span>
-                                <a v-if="row.reseller_copies_count" href="/isp/reseller-packages" class="ml-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700 hover:underline">{{ row.reseller_copies_count }} reseller cop{{ row.reseller_copies_count > 1 ? 'ies' : 'y' }}</a>
+                                <a v-if="row.reseller_copies_count" href="/isp/reseller-packages" class="ms-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700 hover:underline">{{ row.reseller_copies_count }} reseller cop{{ row.reseller_copies_count > 1 ? 'ies' : 'y' }}</a>
                             </td>
-                            <td class="px-3 py-2.5 text-right font-medium text-slate-700">{{ row.active_connections }}</td>
+                            <td class="px-3 py-2.5 text-end font-medium text-slate-700">{{ row.active_connections }}</td>
                             <td class="px-3 py-2.5">
                                 <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs" :class="row.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'">
                                     <span class="h-1.5 w-1.5 rounded-full" :class="row.is_active ? 'bg-emerald-500' : 'bg-slate-400'"></span>
@@ -353,12 +353,12 @@ onMounted(load);
                         <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Availability</h3>
                         <div v-if="!form.reseller_id" class="mb-3 grid grid-cols-2 gap-2">
                             <label class="cursor-pointer rounded-md border p-2.5" :class="form.visibility === 'universal' ? 'border-brand-500 bg-brand-50' : 'border-slate-200'">
-                                <input v-model="form.visibility" type="radio" value="universal" class="mr-1" />
+                                <input v-model="form.visibility" type="radio" value="universal" class="me-1" />
                                 <span class="font-medium text-slate-700">Universal</span>
                                 <span class="mt-0.5 block text-xs text-slate-500">Any customer can take it.</span>
                             </label>
                             <label class="cursor-pointer rounded-md border p-2.5" :class="form.visibility === 'hidden' ? 'border-brand-500 bg-brand-50' : 'border-slate-200'">
-                                <input v-model="form.visibility" type="radio" value="hidden" class="mr-1" />
+                                <input v-model="form.visibility" type="radio" value="hidden" class="me-1" />
                                 <span class="font-medium text-slate-700">Hidden</span>
                                 <span class="mt-0.5 block text-xs text-slate-500">Wholesale base resellers customize.</span>
                             </label>

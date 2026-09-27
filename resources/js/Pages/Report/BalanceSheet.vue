@@ -98,7 +98,7 @@ showBalanceSheet();
             <button
                 type="button"
                 @click="showHelp = true"
-                class="ml-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
+                class="ms-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
                 title="লাইন আইটেমগুলোর অর্থ জানুন"
             >
                 <i class="bi bi-info-circle"></i> লাইন আইটেম বুঝুন
@@ -142,7 +142,7 @@ showBalanceSheet();
             <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th colspan="2" class="px-3 py-2 font-semibold text-emerald-700">Assets</th>
                         </tr>
                     </thead>
@@ -151,33 +151,33 @@ showBalanceSheet();
                             <td class="px-3 py-1.5">
                                 <button type="button" @click="openDetail('cash', 'Cash in Hand')" class="text-brand-600 hover:underline">Cash in Hand</button>
                             </td>
-                            <td class="px-3 py-1.5 text-right">{{ currency(data.assets.cashInHand) }}</td>
+                            <td class="px-3 py-1.5 text-end">{{ currency(data.assets.cashInHand) }}</td>
                         </tr>
                         <tr class="border-b border-slate-100">
                             <td class="px-3 py-1.5 font-semibold">Bank Accounts</td>
-                            <td class="px-3 py-1.5 text-right font-semibold">{{ currency(data.assets.totalBank) }}</td>
+                            <td class="px-3 py-1.5 text-end font-semibold">{{ currency(data.assets.totalBank) }}</td>
                         </tr>
                         <tr v-for="(b, i) in data.assets.bankBalances" :key="'ba' + i" class="border-b border-slate-100 text-slate-500">
-                            <td class="py-1.5 pl-10 pr-3">
+                            <td class="py-1.5 ps-10 pe-3">
                                 <button type="button" @click="openDetail('bank', b.name, b.id)" class="text-brand-600 hover:underline">{{ b.name }}</button>
                             </td>
-                            <td class="px-3 py-1.5 text-right">{{ currency(b.amount) }}</td>
+                            <td class="px-3 py-1.5 text-end">{{ currency(b.amount) }}</td>
                         </tr>
                         <tr v-if="data.assets.bankBalances.length === 0" class="border-b border-slate-100 text-slate-400">
-                            <td class="py-1.5 pl-10 pr-3">No bank accounts</td>
-                            <td class="px-3 py-1.5 text-right">0.00</td>
+                            <td class="py-1.5 ps-10 pe-3">No bank accounts</td>
+                            <td class="px-3 py-1.5 text-end">0.00</td>
                         </tr>
                         <tr class="border-b border-slate-100">
                             <td class="px-3 py-1.5">
                                 <button type="button" @click="openDetail('receivable', 'Accounts Receivable (Customer Due)')" class="text-brand-600 hover:underline">Accounts Receivable (Customer Due)</button>
                             </td>
-                            <td class="px-3 py-1.5 text-right">{{ currency(data.assets.accountsReceivable) }}</td>
+                            <td class="px-3 py-1.5 text-end">{{ currency(data.assets.accountsReceivable) }}</td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr class="border-t-2 border-slate-300 bg-slate-50 font-bold text-slate-800">
                             <td class="px-3 py-2">Total Assets</td>
-                            <td class="px-3 py-2 text-right">{{ currency(data.totalAssets) }}</td>
+                            <td class="px-3 py-2 text-end">{{ currency(data.totalAssets) }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -187,7 +187,7 @@ showBalanceSheet();
             <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th colspan="2" class="px-3 py-2 font-semibold text-red-700">Liabilities</th>
                         </tr>
                     </thead>
@@ -196,20 +196,20 @@ showBalanceSheet();
                             <td class="px-3 py-1.5">
                                 <button type="button" @click="openDetail('customerAdvance', 'Customer Advance')" class="text-brand-600 hover:underline">Customer Advance</button>
                             </td>
-                            <td class="px-3 py-1.5 text-right">{{ currency(data.liabilities.customerAdvance) }}</td>
+                            <td class="px-3 py-1.5 text-end">{{ currency(data.liabilities.customerAdvance) }}</td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr class="border-t border-slate-200 bg-slate-50 font-semibold text-slate-800">
                             <td class="px-3 py-2">Total Liabilities</td>
-                            <td class="px-3 py-2 text-right">{{ currency(data.totalLiabilities) }}</td>
+                            <td class="px-3 py-2 text-end">{{ currency(data.totalLiabilities) }}</td>
                         </tr>
                     </tfoot>
                 </table>
 
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-y border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-y border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th colspan="2" class="px-3 py-2 font-semibold text-brand-700">Equity</th>
                         </tr>
                     </thead>
@@ -222,17 +222,17 @@ showBalanceSheet();
                                     {{ currency(data.totalAssets) }} (Assets) − {{ currency(data.totalLiabilities) }} (Liabilities) = {{ currency(data.equity.retainedEarnings) }}
                                 </div>
                             </td>
-                            <td class="px-3 py-1.5 text-right align-top" :class="data.equity.retainedEarnings < 0 ? 'text-red-600' : ''">{{ currency(data.equity.retainedEarnings) }}</td>
+                            <td class="px-3 py-1.5 text-end align-top" :class="data.equity.retainedEarnings < 0 ? 'text-red-600' : ''">{{ currency(data.equity.retainedEarnings) }}</td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr class="border-t border-slate-200 bg-slate-50 font-semibold text-slate-800">
                             <td class="px-3 py-2">Total Equity</td>
-                            <td class="px-3 py-2 text-right">{{ currency(data.totalEquity) }}</td>
+                            <td class="px-3 py-2 text-end">{{ currency(data.totalEquity) }}</td>
                         </tr>
                         <tr class="border-t-2 border-slate-300 bg-slate-50 font-bold text-slate-800">
                             <td class="px-3 py-2">Total Liabilities + Equity</td>
-                            <td class="px-3 py-2 text-right">{{ currency(data.totalLiabilitiesAndEquity) }}</td>
+                            <td class="px-3 py-2 text-end">{{ currency(data.totalLiabilitiesAndEquity) }}</td>
                         </tr>
                     </tfoot>
                 </table>

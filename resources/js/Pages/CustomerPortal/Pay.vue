@@ -135,7 +135,7 @@ const RESULT = {
                     <div class="grid grid-cols-2 gap-2">
                         <button
                             type="button"
-                            class="rounded-lg border p-3 text-left transition"
+                            class="rounded-lg border p-3 text-start transition"
                             :class="form.purpose === 'bill' ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500' : 'border-slate-200 hover:border-slate-300'"
                             :disabled="summary.due <= 0"
                             @click="form.purpose = 'bill'"
@@ -146,7 +146,7 @@ const RESULT = {
                         </button>
                         <button
                             type="button"
-                            class="rounded-lg border p-3 text-left transition"
+                            class="rounded-lg border p-3 text-start transition"
                             :class="form.purpose === 'wallet' ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500' : 'border-slate-200 hover:border-slate-300'"
                             @click="form.purpose = 'wallet'"
                         >
@@ -273,12 +273,12 @@ const RESULT = {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Date</th>
                             <th class="px-3 py-2 font-medium">Method</th>
                             <th class="px-3 py-2 font-medium">For</th>
                             <th class="px-3 py-2 font-medium">TrxID</th>
-                            <th class="px-3 py-2 text-right font-medium">Amount</th>
+                            <th class="px-3 py-2 text-end font-medium">Amount</th>
                             <th class="px-3 py-2 font-medium">Status</th>
                         </tr>
                     </thead>
@@ -288,7 +288,7 @@ const RESULT = {
                             <td class="px-3 py-2">{{ GATEWAY_STYLES[h.gateway]?.label }}</td>
                             <td class="px-3 py-2">{{ h.purpose === 'wallet' ? 'Wallet' : 'Bill' }}</td>
                             <td class="px-3 py-2 font-mono text-xs">{{ h.trx_id || '—' }}</td>
-                            <td class="px-3 py-2 text-right font-medium">{{ money(h.amount) }}</td>
+                            <td class="px-3 py-2 text-end font-medium">{{ money(h.amount) }}</td>
                             <td class="px-3 py-2">
                                 <StatusBadge :status="h.status" />
                                 <div v-if="['rejected', 'failed'].includes(h.status) && h.failure_reason" class="text-xs text-slate-400">{{ h.failure_reason }}</div>

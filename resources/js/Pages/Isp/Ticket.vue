@@ -119,7 +119,7 @@ onMounted(load);
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                            <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                 <th class="px-3 py-2 font-medium">Ticket</th>
                                 <th class="px-3 py-2 font-medium">From</th>
                                 <th v-if="!selected" class="px-3 py-2 font-medium">Assigned</th>
@@ -130,7 +130,7 @@ onMounted(load);
                         <tbody>
                             <tr v-for="row in rows" :key="row.id" class="cursor-pointer border-b border-slate-100 hover:bg-slate-50" :class="selected === row.id ? 'bg-brand-50' : ''" @click="selected = row.id">
                                 <td class="px-3 py-2">
-                                    <div class="font-medium text-slate-800"><span v-if="awaitingUs(row)" class="mr-1 inline-block h-2 w-2 rounded-full bg-red-500" title="Waiting for company reply"></span>{{ row.subject }}</div>
+                                    <div class="font-medium text-slate-800"><span v-if="awaitingUs(row)" class="me-1 inline-block h-2 w-2 rounded-full bg-red-500" title="Waiting for company reply"></span>{{ row.subject }}</div>
                                     <div class="text-xs text-slate-400">{{ row.ticket_no }} · {{ label(row.category) }} · <span :class="PRIORITY_CLASSES[row.priority]">{{ label(row.priority) }}</span></div>
                                 </td>
                                 <td class="px-3 py-2">

@@ -98,11 +98,11 @@ onMounted(load);
             </div>
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                    <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                         <th class="px-3 py-2 font-medium">Name</th>
                         <th class="px-3 py-2 font-medium">Added By</th>
                         <th class="px-3 py-2 font-medium">Updated By</th>
-                        <th class="px-3 py-2 text-right font-medium">Action</th>
+                        <th class="px-3 py-2 text-end font-medium">Action</th>
                     </tr>
                 </thead>
                 <tbody>

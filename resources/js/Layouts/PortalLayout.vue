@@ -128,17 +128,17 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
             </div>
 
             <div class="relative">
-                <button type="button" class="flex cursor-pointer items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2.5 transition hover:bg-white/10" @click="profileOpen = !profileOpen">
+                <button type="button" class="flex cursor-pointer items-center gap-2 rounded-lg py-1.5 ps-1.5 pe-2.5 transition hover:bg-white/10" @click="profileOpen = !profileOpen">
                     <span class="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-sm font-semibold text-white shadow-sm ring-2 ring-white/30">
                         {{ (displayName || '?').charAt(0).toUpperCase() }}
                     </span>
-                    <span class="hidden text-left sm:block">
+                    <span class="hidden text-start sm:block">
                         <span class="block text-sm font-semibold leading-tight text-white">{{ displayName }}</span>
                         <span class="block text-xs leading-tight text-brand-100">{{ roleLabel }}<span v-if="portalUser?.code"> · {{ portalUser.code }}</span></span>
                     </span>
                     <i class="bi bi-chevron-down text-xs text-brand-100 transition-transform" :class="profileOpen ? 'rotate-180' : ''"></i>
                 </button>
-                <div v-if="profileOpen" class="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl" @click="profileOpen = false">
+                <div v-if="profileOpen" class="absolute end-0 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl" @click="profileOpen = false">
                     <div class="border-b border-slate-100 px-4 py-2.5">
                         <span class="block truncate text-sm font-semibold text-slate-800">{{ displayName }}</span>
                         <span class="block truncate text-xs text-slate-400">{{ portalUser?.email || roleLabel }}</span>
@@ -156,8 +156,8 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
 
         <!-- Sidebar -->
         <aside
-            class="fixed inset-y-0 left-0 z-30 flex w-64 flex-col overflow-hidden bg-brand-600 transition-transform print:hidden"
-            :class="[impersonating ? 'top-[88px]' : 'top-14', sidebarOpen ? 'translate-x-0' : '-translate-x-full']"
+            class="fixed inset-y-0 start-0 z-30 flex w-64 flex-col overflow-hidden bg-brand-600 transition-transform print:hidden"
+            :class="[impersonating ? 'top-[88px]' : 'top-14', sidebarOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full']"
         >
             <nav class="flex-1 overflow-y-auto pb-6 pt-2 sidebar-scroll">
                 <div v-for="group in menu" :key="group.section">
@@ -169,7 +169,7 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
                         v-for="item in group.items"
                         :key="item.uri"
                         :href="item.uri"
-                        class="flex items-center gap-3 border-l-4 px-4 py-3 text-sm font-medium transition"
+                        class="flex items-center gap-3 border-s-4 px-4 py-3 text-sm font-medium transition"
                         :class="isActive(item.uri) ? 'border-amber-400 bg-brand-700 text-white' : 'border-transparent text-brand-100 hover:bg-brand-700/60 hover:text-white'"
                         @click="closeOnMobileNav"
                     >
@@ -202,7 +202,7 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
         <div v-if="sidebarOpen" class="fixed inset-0 z-20 bg-slate-900/40 lg:hidden print:hidden" @click="sidebarOpen = false"></div>
 
         <!-- Content -->
-        <main class="transition-all print:!pl-0 print:!pt-0" :class="[impersonating ? 'pt-[88px]' : 'pt-14', sidebarOpen ? 'lg:pl-64' : '']">
+        <main class="transition-all print:!ps-0 print:!pt-0" :class="[impersonating ? 'pt-[88px]' : 'pt-14', sidebarOpen ? 'lg:ps-64' : '']">
             <div class="p-4 sm:p-6">
                 <slot />
             </div>

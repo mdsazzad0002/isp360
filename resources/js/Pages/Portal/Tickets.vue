@@ -123,7 +123,7 @@ onMounted(load);
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0">
                                 <div class="truncate text-sm font-medium text-slate-800">
-                                    <span v-if="awaitingMe(row)" class="mr-1 inline-block h-2 w-2 rounded-full bg-red-500" title="New reply"></span>{{ row.subject }}
+                                    <span v-if="awaitingMe(row)" class="me-1 inline-block h-2 w-2 rounded-full bg-red-500" title="New reply"></span>{{ row.subject }}
                                 </div>
                                 <div class="text-xs text-slate-400">
                                     {{ row.ticket_no }} · {{ label(row.category) }}
@@ -131,7 +131,7 @@ onMounted(load);
                                     <span v-else-if="isReseller"> · to company</span>
                                 </div>
                             </div>
-                            <div class="shrink-0 text-right">
+                            <div class="shrink-0 text-end">
                                 <StatusBadge :status="row.status" />
                                 <div class="mt-0.5 text-[11px]" :class="PRIORITY_CLASSES[row.priority]">{{ fmtDate(row.last_reply_at || row.created_at) }}</div>
                             </div>

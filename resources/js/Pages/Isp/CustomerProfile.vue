@@ -99,7 +99,7 @@ onMounted(() => {
                         <img :src="data.customer.image ? '/' + data.customer.image : '/noImage.jpg'" class="h-14 w-14 rounded-md border border-slate-200 object-cover" />
                         <div>
                             <h1 class="text-lg font-semibold text-slate-800">{{ data.customer.name }}
-                                <span class="ml-1 rounded-full border px-2 py-0.5 text-[11px] font-medium" :class="data.customer.account_status === 'active' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-300 bg-slate-100 text-slate-600'">{{ label(data.customer.account_status) }}</span>
+                                <span class="ms-1 rounded-full border px-2 py-0.5 text-[11px] font-medium" :class="data.customer.account_status === 'active' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-300 bg-slate-100 text-slate-600'">{{ label(data.customer.account_status) }}</span>
                             </h1>
                             <div class="text-sm text-slate-500">{{ data.customer.code }} · {{ data.customer.phone }}<span v-if="data.customer.email"> · {{ data.customer.email }}</span></div>
                             <div class="text-sm text-slate-500">
@@ -136,7 +136,7 @@ onMounted(() => {
 
                 <div class="overflow-x-auto p-3">
                     <table v-if="tab === 'connections'" class="w-full text-sm">
-                        <thead><tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <thead><tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Code</th><th class="px-2 py-2 font-medium">Package</th><th class="px-2 py-2 font-medium">Type / User</th><th class="px-2 py-2 font-medium">Box</th><th class="px-2 py-2 font-medium">Expire date</th><th class="px-2 py-2 font-medium">Status</th><th class="px-2 py-2 font-medium">Router sync</th><th v-if="can.connection" class="px-2 py-2"></th>
                         </tr></thead>
                         <tbody>
@@ -145,13 +145,13 @@ onMounted(() => {
                                 <td class="px-2 py-2">{{ c.package?.name }} <span class="text-xs text-slate-400">{{ fmtMoney(c.package?.price) }}</span></td>
                                 <td class="px-2 py-2">
                                     {{ label(c.connection_type) }} <span class="font-mono text-xs text-slate-500">{{ c.pppoe_username || c.static_ip }}</span>
-                                    <button v-if="c.pppoe_username || c.static_ip" type="button" class="ml-1 text-slate-400 hover:text-brand-600" title="Copy" @click.stop="copyText(c.pppoe_username || c.static_ip)"><i class="bi bi-copy text-xs"></i></button>
+                                    <button v-if="c.pppoe_username || c.static_ip" type="button" class="ms-1 text-slate-400 hover:text-brand-600" title="Copy" @click.stop="copyText(c.pppoe_username || c.static_ip)"><i class="bi bi-copy text-xs"></i></button>
                                 </td>
                                 <td class="px-2 py-2">{{ c.box?.name || '—' }}</td>
                                 <td class="px-2 py-2" :class="expiryClass(c.expire_at)">{{ fmtDateTime(c.expire_at) || 'Unpaid' }}</td>
                                 <td class="px-2 py-2"><StatusBadge :status="c.status" /> <span v-if="c.suspension_reason" class="text-xs text-amber-700">{{ c.suspension_reason }}</span></td>
                                 <td class="px-2 py-2"><SyncBadge :connection="c" /></td>
-                                <td v-if="can.connection" class="px-2 py-2 text-right">
+                                <td v-if="can.connection" class="px-2 py-2 text-end">
                                     <button type="button" class="rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:border-slate-800 hover:bg-slate-900 hover:text-emerald-400" title="Open terminal for this connection" @click.stop="openTerminal(c)"><i class="bi bi-terminal"></i> Test</button>
                                 </td>
                             </tr>
@@ -160,17 +160,17 @@ onMounted(() => {
                     </table>
 
                     <table v-if="tab === 'invoices'" class="w-full text-sm">
-                        <thead><tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
-                            <th class="px-2 py-2 font-medium">Invoice</th><th class="px-2 py-2 font-medium">Period</th><th class="px-2 py-2 font-medium">Due date</th><th class="px-2 py-2 text-right font-medium">Total</th><th class="px-2 py-2 text-right font-medium">Paid</th><th class="px-2 py-2 text-right font-medium">Due</th><th class="px-2 py-2 font-medium">Status</th>
+                        <thead><tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
+                            <th class="px-2 py-2 font-medium">Invoice</th><th class="px-2 py-2 font-medium">Period</th><th class="px-2 py-2 font-medium">Due date</th><th class="px-2 py-2 text-end font-medium">Total</th><th class="px-2 py-2 text-end font-medium">Paid</th><th class="px-2 py-2 text-end font-medium">Due</th><th class="px-2 py-2 font-medium">Status</th>
                         </tr></thead>
                         <tbody>
                             <tr v-for="i in data.invoices" :key="i.id" class="cursor-pointer border-b border-slate-100 hover:bg-slate-50" @click="Object.assign(invDetail, { show: true, id: i.id })">
                                 <td class="px-2 py-2 font-medium text-brand-600">{{ i.invoice_no }}</td>
                                 <td class="px-2 py-2 text-xs">{{ i.period_start ? `${fmtDateTime(i.period_start)} – ${fmtDateTime(i.period_end)}` : fmtDate(i.invoice_date) }}</td>
                                 <td class="px-2 py-2">{{ fmtDate(i.due_date) }}</td>
-                                <td class="px-2 py-2 text-right">{{ money(i.total) }}</td>
-                                <td class="px-2 py-2 text-right text-emerald-700">{{ money(i.paid) }}</td>
-                                <td class="px-2 py-2 text-right font-medium" :class="Number(i.due) > 0 ? 'text-red-600' : ''">{{ money(i.due) }}</td>
+                                <td class="px-2 py-2 text-end">{{ money(i.total) }}</td>
+                                <td class="px-2 py-2 text-end text-emerald-700">{{ money(i.paid) }}</td>
+                                <td class="px-2 py-2 text-end font-medium" :class="Number(i.due) > 0 ? 'text-red-600' : ''">{{ money(i.due) }}</td>
                                 <td class="px-2 py-2"><StatusBadge :status="i.status" /></td>
                             </tr>
                             <tr v-if="!data.invoices.length"><td colspan="7" class="px-2 py-6 text-center text-slate-400">No invoices yet</td></tr>
@@ -178,16 +178,16 @@ onMounted(() => {
                     </table>
 
                     <table v-if="tab === 'payments'" class="w-full text-sm">
-                        <thead><tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
-                            <th class="px-2 py-2 font-medium">Receipt</th><th class="px-2 py-2 font-medium">Date</th><th class="px-2 py-2 font-medium">Method</th><th class="px-2 py-2 text-right font-medium">Amount</th><th class="px-2 py-2 text-right font-medium">Advance</th><th class="px-2 py-2 font-medium">Status</th>
+                        <thead><tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
+                            <th class="px-2 py-2 font-medium">Receipt</th><th class="px-2 py-2 font-medium">Date</th><th class="px-2 py-2 font-medium">Method</th><th class="px-2 py-2 text-end font-medium">Amount</th><th class="px-2 py-2 text-end font-medium">Advance</th><th class="px-2 py-2 font-medium">Status</th>
                         </tr></thead>
                         <tbody>
                             <tr v-for="p in data.payments" :key="p.id" class="cursor-pointer border-b border-slate-100 hover:bg-slate-50" @click="Object.assign(payDetail, { show: true, id: p.id })">
                                 <td class="px-2 py-2 font-medium text-brand-600">{{ p.receipt_no }}</td>
                                 <td class="px-2 py-2">{{ fmtDate(p.payment_date) }}</td>
                                 <td class="px-2 py-2">{{ label(p.method) }} <span class="text-xs text-slate-400">{{ p.transaction_id }}</span></td>
-                                <td class="px-2 py-2 text-right font-medium">{{ money(p.amount) }}</td>
-                                <td class="px-2 py-2 text-right text-emerald-700">{{ Number(p.unallocated) ? money(p.unallocated) : '' }}</td>
+                                <td class="px-2 py-2 text-end font-medium">{{ money(p.amount) }}</td>
+                                <td class="px-2 py-2 text-end text-emerald-700">{{ Number(p.unallocated) ? money(p.unallocated) : '' }}</td>
                                 <td class="px-2 py-2"><StatusBadge :status="p.status" /></td>
                             </tr>
                             <tr v-if="!data.payments.length"><td colspan="6" class="px-2 py-6 text-center text-slate-400">No payments yet</td></tr>
@@ -212,20 +212,20 @@ onMounted(() => {
                             <button type="submit" class="rounded-md bg-emerald-600 px-3 py-1 text-sm text-white">Receive deposit</button>
                         </form>
                         <table class="w-full text-sm">
-                            <thead><tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
-                                <th class="px-2 py-2 font-medium">Deposit</th><th class="px-2 py-2 font-medium">Date</th><th class="px-2 py-2 font-medium">Connection</th><th class="px-2 py-2 text-right font-medium">Amount</th><th class="px-2 py-2 text-right font-medium">Held</th><th class="px-2 py-2 font-medium">Note</th><th class="px-2 py-2"></th>
+                            <thead><tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
+                                <th class="px-2 py-2 font-medium">Deposit</th><th class="px-2 py-2 font-medium">Date</th><th class="px-2 py-2 font-medium">Connection</th><th class="px-2 py-2 text-end font-medium">Amount</th><th class="px-2 py-2 text-end font-medium">Held</th><th class="px-2 py-2 font-medium">Note</th><th class="px-2 py-2"></th>
                             </tr></thead>
                             <tbody>
                                 <tr v-for="d in data.deposits" :key="d.id" class="border-b border-slate-100">
                                     <td class="px-2 py-2 font-medium">{{ d.deposit_no }}</td>
                                     <td class="px-2 py-2">{{ fmtDate(d.received_date) }}</td>
                                     <td class="px-2 py-2">{{ d.connection?.code || '—' }}</td>
-                                    <td class="px-2 py-2 text-right">{{ money(d.amount) }}</td>
-                                    <td class="px-2 py-2 text-right font-medium" :class="d.held > 0 ? 'text-indigo-700' : 'text-slate-400'">{{ money(d.held) }}</td>
+                                    <td class="px-2 py-2 text-end">{{ money(d.amount) }}</td>
+                                    <td class="px-2 py-2 text-end font-medium" :class="d.held > 0 ? 'text-indigo-700' : 'text-slate-400'">{{ money(d.held) }}</td>
                                     <td class="px-2 py-2 text-xs text-slate-500">{{ d.notes }}</td>
-                                    <td class="px-2 py-2 text-right">
+                                    <td class="px-2 py-2 text-end">
                                         <template v-if="d.held > 0">
-                                            <button v-if="can.payment" type="button" class="mr-1 rounded border border-slate-300 px-2 py-0.5 text-xs" @click="applyDeposit(d)">Apply to dues</button>
+                                            <button v-if="can.payment" type="button" class="me-1 rounded border border-slate-300 px-2 py-0.5 text-xs" @click="applyDeposit(d)">Apply to dues</button>
                                             <button v-if="can.refund" type="button" class="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600" @click="refundDeposit(d)">Refund</button>
                                         </template>
                                     </td>

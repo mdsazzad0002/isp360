@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
 
         <div
             v-show="open"
-            class="absolute right-0 top-full z-[2000] mt-2 max-h-72 w-64 overflow-y-auto rounded-md border border-slate-200 bg-white p-1 shadow-xl"
+            class="absolute end-0 top-full z-[2000] mt-2 max-h-72 w-64 overflow-y-auto rounded-md border border-slate-200 bg-white p-1 shadow-xl"
         >
             <div class="px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">{{ t('topbar.switch_branch') }}</div>
             <div v-if="loading" class="px-3 py-2 text-center text-xs text-slate-500">{{ t('topbar.loading') }}</div>
@@ -94,7 +94,7 @@ onBeforeUnmount(() => {
                     v-for="branch in branches"
                     :key="branch.id"
                     type="button"
-                    class="flex w-full items-center gap-2.5 rounded px-3 py-2 text-left text-sm transition hover:bg-slate-50"
+                    class="flex w-full items-center gap-2.5 rounded px-3 py-2 text-start text-sm transition hover:bg-slate-50"
                     :class="branch.id === currentBranch?.id ? 'bg-brand-50 font-medium text-brand-600' : 'text-slate-700'"
                     :disabled="switching"
                     @click="selectBranch(branch)"

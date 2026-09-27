@@ -69,7 +69,7 @@ onMounted(load);
 
         <div class="space-y-3">
             <div v-for="g in gateways" :key="g.gateway" class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-                <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left" @click="open = open === g.gateway ? '' : g.gateway">
+                <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-start" @click="open = open === g.gateway ? '' : g.gateway">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold text-white" :class="GATEWAY_STYLES[g.gateway].badge">
                         {{ GATEWAY_STYLES[g.gateway].initial }}
                     </span>

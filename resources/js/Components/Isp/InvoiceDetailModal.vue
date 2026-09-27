@@ -76,7 +76,7 @@ function print() {
         <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <h2 class="text-base font-semibold text-slate-800">
                 Invoice {{ invoice?.invoice_no }}
-                <StatusBadge v-if="invoice" :status="invoice.status" class="ml-2" />
+                <StatusBadge v-if="invoice" :status="invoice.status" class="ms-2" />
             </h2>
             <button type="button" class="text-slate-400 hover:text-slate-600" @click="emit('close')"><i class="bi bi-x-lg"></i></button>
         </div>
@@ -88,7 +88,7 @@ function print() {
                     <div class="text-slate-500">{{ invoice.customer?.code }} · {{ invoice.customer?.phone }}</div>
                     <div v-if="invoice.connection" class="text-slate-500">Connection {{ invoice.connection.code }} <span v-if="invoice.connection.pppoe_username">/ {{ invoice.connection.pppoe_username }}</span></div>
                 </div>
-                <div class="text-slate-600 sm:text-right">
+                <div class="text-slate-600 sm:text-end">
                     <div>Invoice date: {{ fmtDate(invoice.invoice_date) }}</div>
                     <div>Due date: <strong>{{ fmtDate(invoice.due_date) }}</strong></div>
                     <div v-if="invoice.period_start">Period: {{ fmtDateTime(invoice.period_start) }} – {{ fmtDateTime(invoice.period_end) }}</div>
@@ -99,36 +99,36 @@ function print() {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-1.5 font-medium">Description</th>
-                            <th class="px-2 py-1.5 text-right font-medium">Price</th>
-                            <th class="px-2 py-1.5 text-right font-medium">Qty</th>
-                            <th class="px-2 py-1.5 text-right font-medium">Disc.</th>
-                            <th class="px-2 py-1.5 text-right font-medium">Total</th>
+                            <th class="px-2 py-1.5 text-end font-medium">Price</th>
+                            <th class="px-2 py-1.5 text-end font-medium">Qty</th>
+                            <th class="px-2 py-1.5 text-end font-medium">Disc.</th>
+                            <th class="px-2 py-1.5 text-end font-medium">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="item in invoice.items" :key="item.id" class="border-b border-slate-100">
                             <td class="px-2 py-1.5">{{ item.description }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ money(item.unit_price) }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ Number(item.quantity) }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ money(item.discount) }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ money(item.total) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ money(item.unit_price) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ Number(item.quantity) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ money(item.discount) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ money(item.total) }}</td>
                         </tr>
                     </tbody>
                     <tfoot class="text-slate-700">
-                        <tr><td colspan="4" class="px-2 py-1 text-right">Subtotal</td><td class="px-2 py-1 text-right">{{ money(invoice.subtotal) }}</td></tr>
-                        <tr v-if="Number(invoice.discount)"><td colspan="4" class="px-2 py-1 text-right">Discount</td><td class="px-2 py-1 text-right">- {{ money(invoice.discount) }}</td></tr>
+                        <tr><td colspan="4" class="px-2 py-1 text-end">Subtotal</td><td class="px-2 py-1 text-end">{{ money(invoice.subtotal) }}</td></tr>
+                        <tr v-if="Number(invoice.discount)"><td colspan="4" class="px-2 py-1 text-end">Discount</td><td class="px-2 py-1 text-end">- {{ money(invoice.discount) }}</td></tr>
                         <template v-if="!invoice.tax_inclusive">
-                            <tr v-for="t in invoiceTaxes(invoice)" :key="t.label"><td colspan="4" class="px-2 py-1 text-right">{{ t.label }}</td><td class="px-2 py-1 text-right">{{ money(t.amount) }}</td></tr>
+                            <tr v-for="t in invoiceTaxes(invoice)" :key="t.label"><td colspan="4" class="px-2 py-1 text-end">{{ t.label }}</td><td class="px-2 py-1 text-end">{{ money(t.amount) }}</td></tr>
                         </template>
-                        <tr v-if="Number(invoice.adjustment)"><td colspan="4" class="px-2 py-1 text-right">Credit / debit notes</td><td class="px-2 py-1 text-right">{{ money(invoice.adjustment) }}</td></tr>
-                        <tr class="font-semibold"><td colspan="4" class="px-2 py-1 text-right">Total</td><td class="px-2 py-1 text-right">{{ money(invoice.total) }}</td></tr>
+                        <tr v-if="Number(invoice.adjustment)"><td colspan="4" class="px-2 py-1 text-end">Credit / debit notes</td><td class="px-2 py-1 text-end">{{ money(invoice.adjustment) }}</td></tr>
+                        <tr class="font-semibold"><td colspan="4" class="px-2 py-1 text-end">Total</td><td class="px-2 py-1 text-end">{{ money(invoice.total) }}</td></tr>
                         <template v-if="invoice.tax_inclusive">
-                            <tr v-for="t in invoiceTaxes(invoice)" :key="t.label" class="text-slate-500"><td colspan="4" class="px-2 py-1 text-right">Includes {{ t.label }}</td><td class="px-2 py-1 text-right">{{ money(t.amount) }}</td></tr>
+                            <tr v-for="t in invoiceTaxes(invoice)" :key="t.label" class="text-slate-500"><td colspan="4" class="px-2 py-1 text-end">Includes {{ t.label }}</td><td class="px-2 py-1 text-end">{{ money(t.amount) }}</td></tr>
                         </template>
-                        <tr><td colspan="4" class="px-2 py-1 text-right">Paid</td><td class="px-2 py-1 text-right text-emerald-700">{{ money(invoice.paid) }}</td></tr>
-                        <tr class="font-semibold"><td colspan="4" class="px-2 py-1 text-right">Due</td><td class="px-2 py-1 text-right text-red-600">{{ money(invoice.due) }}</td></tr>
+                        <tr><td colspan="4" class="px-2 py-1 text-end">Paid</td><td class="px-2 py-1 text-end text-emerald-700">{{ money(invoice.paid) }}</td></tr>
+                        <tr class="font-semibold"><td colspan="4" class="px-2 py-1 text-end">Due</td><td class="px-2 py-1 text-end text-red-600">{{ money(invoice.due) }}</td></tr>
                     </tfoot>
                 </table>
             </div>

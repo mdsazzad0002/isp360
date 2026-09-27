@@ -371,7 +371,7 @@ onMounted(() => {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Sl</th>
                             <th class="px-2 py-2 font-medium">Code</th>
                             <th class="px-2 py-2 font-medium">Name</th>
@@ -379,7 +379,7 @@ onMounted(() => {
                             <th class="px-2 py-2 font-medium">Mobile</th>
                             <th class="px-2 py-2 font-medium">Area</th>
                             <th class="px-2 py-2 font-medium">Status</th>
-                            <th class="px-2 py-2 text-right font-medium">Action</th>
+                            <th class="px-2 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -387,7 +387,7 @@ onMounted(() => {
                             <td class="px-2 py-1.5">{{ row.sl }}</td>
                             <td class="px-2 py-1.5">{{ row.code }}</td>
                             <td class="px-2 py-1.5">
-                                <button type="button" class="text-left font-medium text-brand-600 hover:underline" title="Open ledger" @click="openLedger(row)">{{ row.name }}</button>
+                                <button type="button" class="text-start font-medium text-brand-600 hover:underline" title="Open ledger" @click="openLedger(row)">{{ row.name }}</button>
                             </td>
                             <td class="px-2 py-1.5">{{ row.username }}</td>
                             <td class="px-2 py-1.5">{{ row.phone }}</td>
@@ -501,8 +501,8 @@ onMounted(() => {
                                     <table class="w-full text-xs">
                                         <thead class="sticky top-0 bg-slate-50">
                                             <tr>
-                                                <th class="px-2 py-1.5 text-left font-medium text-slate-600">#</th>
-                                                <th v-for="col in previewColumns" :key="col" class="px-2 py-1.5 text-left font-medium text-slate-600">{{ col }}</th>
+                                                <th class="px-2 py-1.5 text-start font-medium text-slate-600">#</th>
+                                                <th v-for="col in previewColumns" :key="col" class="px-2 py-1.5 text-start font-medium text-slate-600">{{ col }}</th>
                                             </tr>
                                         </thead>
                                         <tbody>

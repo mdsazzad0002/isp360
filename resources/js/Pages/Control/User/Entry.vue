@@ -216,8 +216,8 @@ onMounted(() => {
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Password</label>
                         <div class="relative">
-                            <input :type="showPassword ? 'text' : 'password'" autocomplete="off" v-model="form.password" class="w-full rounded-md border border-slate-300 px-3 py-1.5 pr-9 text-sm" />
-                            <i class="bi absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400" :class="showPassword ? 'bi-eye-slash' : 'bi-eye'" @click="showPassword = !showPassword"></i>
+                            <input :type="showPassword ? 'text' : 'password'" autocomplete="off" v-model="form.password" class="w-full rounded-md border border-slate-300 px-3 py-1.5 pe-9 text-sm" />
+                            <i class="bi absolute end-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400" :class="showPassword ? 'bi-eye-slash' : 'bi-eye'" @click="showPassword = !showPassword"></i>
                         </div>
                     </div>
                     <div class="flex items-center justify-between pt-1">
@@ -278,7 +278,7 @@ onMounted(() => {
                     </select>
                 </div>
                 <button type="button" @click="resetSearch" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100">Clear</button>
-                <div class="ml-auto flex items-center gap-3">
+                <div class="ms-auto flex items-center gap-3">
                     <span class="text-sm text-slate-500">{{ filteredRows.length }} record{{ filteredRows.length === 1 ? '' : 's' }} found</span>
                     <button type="button" @click="exportExcel" title="Export Excel" class="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-50 hover:text-emerald-600">
                         <i class="bi bi-file-earmark-excel text-base"></i> Excel
@@ -288,7 +288,7 @@ onMounted(() => {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Code</th>
                             <th class="px-2 py-2 font-medium">Name</th>
                             <th class="px-2 py-2 font-medium">Username</th>
@@ -298,7 +298,7 @@ onMounted(() => {
                             <th class="px-2 py-2 font-medium">Branch</th>
                             <th class="px-2 py-2 font-medium">Employee</th>
                             <th class="px-2 py-2 font-medium">Status</th>
-                            <th class="px-2 py-2 text-right font-medium">Action</th>
+                            <th class="px-2 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>

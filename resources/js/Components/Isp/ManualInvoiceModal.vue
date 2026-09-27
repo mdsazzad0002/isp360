@@ -99,12 +99,12 @@ async function save(asDraft) {
 
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                    <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                         <th class="px-2 py-1.5 font-medium">Description</th>
                         <th class="w-28 px-2 py-1.5 font-medium">Price</th>
                         <th class="w-20 px-2 py-1.5 font-medium">Qty</th>
                         <th class="w-24 px-2 py-1.5 font-medium">Discount</th>
-                        <th class="w-24 px-2 py-1.5 text-right font-medium">Total</th>
+                        <th class="w-24 px-2 py-1.5 text-end font-medium">Total</th>
                         <th class="w-8"></th>
                     </tr>
                 </thead>
@@ -114,7 +114,7 @@ async function save(asDraft) {
                         <td class="px-1 py-1"><input v-model="item.unit_price" type="number" min="0" :step="moneyStep()" class="w-full rounded border border-slate-300 px-2 py-1" /></td>
                         <td class="px-1 py-1"><input v-model="item.quantity" type="number" min="0.01" step="0.01" class="w-full rounded border border-slate-300 px-2 py-1" /></td>
                         <td class="px-1 py-1"><input v-model="item.discount" type="number" min="0" :step="moneyStep()" class="w-full rounded border border-slate-300 px-2 py-1" /></td>
-                        <td class="px-2 py-1 text-right">{{ money(Number(item.unit_price || 0) * Number(item.quantity || 0) - Number(item.discount || 0)) }}</td>
+                        <td class="px-2 py-1 text-end">{{ money(Number(item.unit_price || 0) * Number(item.quantity || 0) - Number(item.discount || 0)) }}</td>
                         <td class="px-1 py-1 text-center"><i v-if="items.length > 1" class="bi bi-trash cursor-pointer text-red-500" @click="items.splice(i, 1)"></i></td>
                     </tr>
                 </tbody>
@@ -126,9 +126,9 @@ async function save(asDraft) {
                     <label class="mb-1 block text-xs font-medium text-slate-600">Note</label>
                     <textarea v-model="form.notes" rows="2" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"></textarea>
                 </div>
-                <div class="space-y-1 text-right">
+                <div class="space-y-1 text-end">
                     <div>Subtotal: <strong>{{ money(subtotal) }}</strong></div>
-                    <div class="flex items-center justify-end gap-2">Invoice discount <input v-model="form.discount" type="number" min="0" :step="moneyStep()" class="w-28 rounded border border-slate-300 px-2 py-1 text-right" /></div>
+                    <div class="flex items-center justify-end gap-2">Invoice discount <input v-model="form.discount" type="number" min="0" :step="moneyStep()" class="w-28 rounded border border-slate-300 px-2 py-1 text-end" /></div>
                     <label class="flex items-center justify-end gap-2 text-xs text-slate-500"><input v-model="form.no_tax" type="checkbox" /> No tax on this invoice</label>
                     <div class="text-base">Total: <strong>{{ money(subtotal - Number(form.discount || 0)) }}</strong><span v-if="!form.no_tax" class="text-xs text-slate-400"> · tax at the default rates is worked out on save</span></div>
                 </div>

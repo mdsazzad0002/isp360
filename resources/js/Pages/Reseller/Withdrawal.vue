@@ -129,12 +129,12 @@ onMounted(load);
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Ref</th>
                             <th class="px-3 py-2 font-medium">Date</th>
                             <th class="px-3 py-2 font-medium">Type</th>
                             <th class="px-3 py-2 font-medium">Method</th>
-                            <th class="px-3 py-2 text-right font-medium">Amount</th>
+                            <th class="px-3 py-2 text-end font-medium">Amount</th>
                             <th class="px-3 py-2 font-medium">Status</th>
                             <th class="px-3 py-2 font-medium">Note</th>
                             <th class="px-3 py-2"></th>
@@ -146,13 +146,13 @@ onMounted(load);
                             <td class="px-3 py-2">{{ fmtDate(row.created_at) }}<div v-if="row.processed_at" class="text-xs text-slate-400">done {{ fmtDate(row.processed_at) }}</div></td>
                             <td class="px-3 py-2">{{ row.type === 'deposit' ? 'Deposit to company' : 'Withdrawal' }}</td>
                             <td class="px-3 py-2">{{ label(row.method) }}<div class="text-xs text-slate-400">{{ row.account_details }}<span v-if="row.transaction_id"> · {{ row.transaction_id }}</span></div></td>
-                            <td class="px-3 py-2 text-right font-medium" :class="row.type === 'deposit' ? 'text-emerald-700' : ''">{{ money(row.amount) }}</td>
+                            <td class="px-3 py-2 text-end font-medium" :class="row.type === 'deposit' ? 'text-emerald-700' : ''">{{ money(row.amount) }}</td>
                             <td class="px-3 py-2"><StatusBadge :status="row.status" /></td>
                             <td class="px-3 py-2 text-xs text-slate-500">
                                 <div v-if="row.reseller_note">Me: {{ row.reseller_note }}</div>
                                 <div v-if="row.admin_note">Company: {{ row.admin_note }}</div>
                             </td>
-                            <td class="px-3 py-2 text-right">
+                            <td class="px-3 py-2 text-end">
                                 <button v-if="row.type === 'withdrawal' && row.status === 'pending'" type="button" class="text-xs text-red-600 hover:underline" @click="cancel(row)">Cancel</button>
                             </td>
                         </tr>

@@ -88,10 +88,10 @@ watch(
                         <div v-if="result.type === 'breakdown'" class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                             <table class="w-full text-sm">
                                 <thead>
-                                    <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                                    <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                         <th class="px-2 py-2 font-medium">Component</th>
                                         <th class="px-2 py-2 font-medium">Type</th>
-                                        <th class="px-2 py-2 text-right font-medium">Amount</th>
+                                        <th class="px-2 py-2 text-end font-medium">Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -100,14 +100,14 @@ watch(
                                         <td class="px-2 py-1.5">
                                             <span :class="row.direction === 'in' ? 'text-emerald-600' : 'text-red-600'">{{ row.direction === 'in' ? '+ In' : '− Out' }}</span>
                                         </td>
-                                        <td class="px-2 py-1.5 text-right">{{ parseFloat(row.amount).toFixed(2) }}</td>
+                                        <td class="px-2 py-1.5 text-end">{{ parseFloat(row.amount).toFixed(2) }}</td>
                                     </tr>
                                     <tr v-if="result.rows.length === 0">
                                         <td colspan="3" class="px-2 py-6 text-center text-slate-400">No contributing entries found</td>
                                     </tr>
                                     <tr class="bg-slate-50 font-semibold">
-                                        <td colspan="2" class="px-2 py-2 text-right">Total</td>
-                                        <td class="px-2 py-2 text-right">{{ total() }}</td>
+                                        <td colspan="2" class="px-2 py-2 text-end">Total</td>
+                                        <td class="px-2 py-2 text-end">{{ total() }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -122,24 +122,24 @@ watch(
                             <div class="max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
                                 <table class="w-full text-sm">
                                     <thead class="sticky top-0 z-10">
-                                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                             <th class="px-2 py-2 font-medium">Name</th>
                                             <th class="px-2 py-2 font-medium">Reference</th>
-                                            <th class="px-2 py-2 text-right font-medium">Amount</th>
+                                            <th class="px-2 py-2 text-end font-medium">Amount</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr v-for="(row, index) in filteredRows" :key="index" class="border-b border-slate-100">
                                             <td class="px-2 py-1.5">{{ row.label }}</td>
                                             <td class="px-2 py-1.5 text-slate-500">{{ row.sublabel }}</td>
-                                            <td class="px-2 py-1.5 text-right">{{ parseFloat(row.amount).toFixed(2) }}</td>
+                                            <td class="px-2 py-1.5 text-end">{{ parseFloat(row.amount).toFixed(2) }}</td>
                                         </tr>
                                         <tr v-if="filteredRows.length === 0">
                                             <td colspan="3" class="px-2 py-6 text-center text-slate-400">No records found</td>
                                         </tr>
                                         <tr v-if="filteredRows.length > 0" class="sticky bottom-0 bg-slate-50 font-semibold">
-                                            <td colspan="2" class="px-2 py-2 text-right">Total</td>
-                                            <td class="px-2 py-2 text-right">{{ total() }}</td>
+                                            <td colspan="2" class="px-2 py-2 text-end">Total</td>
+                                            <td class="px-2 py-2 text-end">{{ total() }}</td>
                                         </tr>
                                     </tbody>
                                 </table>

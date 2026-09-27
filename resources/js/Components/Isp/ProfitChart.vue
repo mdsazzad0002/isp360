@@ -64,8 +64,8 @@ function barPath(x, v, w) {
         <div class="mb-2 flex flex-wrap items-center gap-4 text-xs text-slate-600">
             <span class="flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--series-1)"></span>Revenue</span>
             <span class="flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--series-2)"></span>Bandwidth cost</span>
-            <span class="flex items-center gap-1.5"><span class="inline-block h-0.5 w-4" style="background: var(--series-3)"></span><span class="-ml-3 inline-block h-2 w-2 rounded-full" style="background: var(--series-3)"></span>Profit</span>
-            <button type="button" class="ml-auto text-slate-400 hover:text-slate-600" @click="showTable = !showTable">{{ showTable ? 'Chart' : 'Table' }}</button>
+            <span class="flex items-center gap-1.5"><span class="inline-block h-0.5 w-4" style="background: var(--series-3)"></span><span class="-ms-3 inline-block h-2 w-2 rounded-full" style="background: var(--series-3)"></span>Profit</span>
+            <button type="button" class="ms-auto text-slate-400 hover:text-slate-600" @click="showTable = !showTable">{{ showTable ? 'Chart' : 'Table' }}</button>
         </div>
         <div v-if="!showTable" class="relative">
             <svg :viewBox="`0 0 ${W} ${height}`" class="h-auto w-full" role="img" aria-label="Revenue, bandwidth cost and profit by month" @mouseleave="hover = null">
@@ -97,15 +97,15 @@ function barPath(x, v, w) {
         </div>
         <table v-else class="w-full text-xs">
             <thead>
-                <tr class="border-b border-slate-200 text-left text-slate-500"><th class="py-1">Month</th><th class="py-1 text-right">Revenue</th><th class="py-1 text-right">Cost</th><th class="py-1 text-right">Profit</th><th class="py-1 text-right">Margin</th></tr>
+                <tr class="border-b border-slate-200 text-start text-slate-500"><th class="py-1">Month</th><th class="py-1 text-end">Revenue</th><th class="py-1 text-end">Cost</th><th class="py-1 text-end">Profit</th><th class="py-1 text-end">Margin</th></tr>
             </thead>
             <tbody>
                 <tr v-for="r in rows" :key="r.label" class="border-b border-slate-100">
                     <td class="py-1">{{ r.label }}</td>
-                    <td class="py-1 text-right">{{ money(r.revenue) }}</td>
-                    <td class="py-1 text-right">{{ money(r.cost) }}</td>
-                    <td class="py-1 text-right" :class="r.profit < 0 ? 'text-red-600' : ''">{{ money(r.profit) }}</td>
-                    <td class="py-1 text-right">{{ r.margin !== null ? `${r.margin}%` : '—' }}</td>
+                    <td class="py-1 text-end">{{ money(r.revenue) }}</td>
+                    <td class="py-1 text-end">{{ money(r.cost) }}</td>
+                    <td class="py-1 text-end" :class="r.profit < 0 ? 'text-red-600' : ''">{{ money(r.profit) }}</td>
+                    <td class="py-1 text-end">{{ r.margin !== null ? `${r.margin}%` : '—' }}</td>
                 </tr>
             </tbody>
         </table>

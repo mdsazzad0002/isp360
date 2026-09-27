@@ -532,14 +532,14 @@ onMounted(async () => {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Invoice</th>
                             <th class="px-3 py-2 font-medium">Date</th>
                             <th class="px-3 py-2 font-medium">Status</th>
                             <th class="px-3 py-2 font-medium">Total</th>
                             <th class="px-3 py-2 font-medium">Due</th>
                             <th class="px-3 py-2 font-medium">Amount</th>
-                            <th class="px-3 py-2 text-right font-medium">Action</th>
+                            <th class="px-3 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -552,7 +552,7 @@ onMounted(async () => {
                             <td class="px-3 py-2">
                                 <input type="number" min="0" step="any" v-model="careflowPayAmount[o.id]" class="w-28 rounded-md border border-slate-300 px-2 py-1 text-sm" />
                             </td>
-                            <td class="px-3 py-2 text-right">
+                            <td class="px-3 py-2 text-end">
                                 <button type="button" :disabled="careflowPaying === o.id" @click="payCareflowOrder(o)" class="rounded-md bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
                                     Receive &amp; Process
                                 </button>
@@ -608,14 +608,14 @@ onMounted(async () => {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Invoice</th>
                             <th class="px-3 py-2 font-medium">Date</th>
                             <th class="px-3 py-2 font-medium">{{ partyTypeLabel }}</th>
                             <th class="px-3 py-2 font-medium">Method</th>
                             <th class="px-3 py-2 font-medium">Amount</th>
                             <th class="px-3 py-2 font-medium">Note</th>
-                            <th class="px-3 py-2 text-right font-medium">Action</th>
+                            <th class="px-3 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -638,7 +638,7 @@ onMounted(async () => {
                             <td colspan="7" class="px-3 py-6 text-center text-slate-400">No records found</td>
                         </tr>
                         <tr v-else class="bg-slate-50 font-semibold">
-                            <td colspan="4" class="px-3 py-2 text-right">Total</td>
+                            <td colspan="4" class="px-3 py-2 text-end">Total</td>
                             <td class="px-3 py-2">{{ totalAmount }}</td>
                             <td colspan="2"></td>
                         </tr>

@@ -34,7 +34,7 @@ defineExpose({ print });
                     <p class="text-sm"><strong>Date:</strong> {{ transaction.date }}</p>
                     <p class="text-sm"><strong>Added By:</strong> {{ username }}</p>
                 </div>
-                <div class="text-right">
+                <div class="text-end">
                     <p class="text-sm"><strong>Account:</strong> {{ transaction.account?.name }}</p>
                     <p class="text-sm"><strong>Type:</strong> {{ label }}</p>
                 </div>
@@ -49,7 +49,7 @@ defineExpose({ print });
                         </tr>
                         <tr>
                             <td class="border border-slate-300 px-2 py-1.5 font-bold">Amount</td>
-                            <td class="border border-slate-300 px-2 py-1.5 text-right font-bold">{{ transaction.amount }}</td>
+                            <td class="border border-slate-300 px-2 py-1.5 text-end font-bold">{{ transaction.amount }}</td>
                         </tr>
                     </tbody>
                 </table>

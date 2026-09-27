@@ -169,7 +169,7 @@ onMounted(load);
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Account Name</th>
                             <th class="px-3 py-2 font-medium">Account Number</th>
                             <th class="px-3 py-2 font-medium">Account Type</th>
@@ -177,7 +177,7 @@ onMounted(load);
                             <th class="px-3 py-2 font-medium">Branch Name</th>
                             <th class="px-3 py-2 font-medium">Balance</th>
                             <th class="px-3 py-2 font-medium">Status</th>
-                            <th class="px-3 py-2 text-right font-medium">Action</th>
+                            <th class="px-3 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>

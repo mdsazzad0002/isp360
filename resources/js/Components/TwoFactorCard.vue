@@ -112,7 +112,7 @@ const button = 'rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50';
         </template>
 
         <form v-else-if="status" class="flex flex-wrap items-center gap-2" @submit.prevent>
-            <span class="mr-2 text-xs text-slate-500">{{ status.recovery_codes_left }} recovery codes left.</span>
+            <span class="me-2 text-xs text-slate-500">{{ status.recovery_codes_left }} recovery codes left.</span>
             <input v-model="password" type="password" autocomplete="current-password" placeholder="Your password" :class="input" class="max-w-60" />
             <button type="button" :disabled="busy || !password" :class="button" class="border border-slate-300 hover:bg-slate-50" @click="newCodes">New recovery codes</button>
             <button v-if="!status.required" type="button" :disabled="busy || !password" :class="button" class="border border-red-300 text-red-600 hover:bg-red-50" @click="disable">Turn off</button>

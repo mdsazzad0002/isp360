@@ -49,7 +49,7 @@ function toggle(c) {
                                 {{ customer.name }}
                                 <span
                                     v-if="customer.account_status"
-                                    class="ml-1 rounded-full border px-2 py-0.5 text-[11px] font-medium"
+                                    class="ms-1 rounded-full border px-2 py-0.5 text-[11px] font-medium"
                                     :class="customer.account_status === 'active' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-300 bg-slate-100 text-slate-600'"
                                 >{{ label(customer.account_status) }}</span>
                             </h1>
@@ -84,8 +84,8 @@ function toggle(c) {
                         :class="tab === t[0] ? 'border-brand-500 font-medium text-brand-600' : 'border-transparent text-slate-500 hover:text-slate-700'"
                         @click="tab = t[0]; expanded = null"
                     >
-                        <i v-if="t[0] === 'active'" class="bi bi-circle-fill mr-1 text-[8px] text-emerald-500"></i>
-                        <i v-else-if="t[0] === 'inactive'" class="bi bi-circle-fill mr-1 text-[8px] text-slate-400"></i>
+                        <i v-if="t[0] === 'active'" class="bi bi-circle-fill me-1 text-[8px] text-emerald-500"></i>
+                        <i v-else-if="t[0] === 'inactive'" class="bi bi-circle-fill me-1 text-[8px] text-slate-400"></i>
                         {{ t[1] }} <span class="text-xs text-slate-400">({{ t[2] }})</span>
                     </button>
                 </div>
@@ -94,15 +94,15 @@ function toggle(c) {
                     <!-- Active / inactive connections with their collection -->
                     <table v-if="tab !== 'collection'" class="w-full text-sm">
                         <thead>
-                            <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                            <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                 <th class="w-6 px-2 py-2"></th>
                                 <th class="px-2 py-2 font-medium">Code</th>
                                 <th class="px-2 py-2 font-medium">Package</th>
                                 <th class="px-2 py-2 font-medium">Type / User</th>
                                 <th class="px-2 py-2 font-medium">{{ tab === 'active' ? 'Expire date' : 'Since' }}</th>
-                                <th class="px-2 py-2 text-right font-medium">Billed</th>
-                                <th class="px-2 py-2 text-right font-medium">Collected</th>
-                                <th class="px-2 py-2 text-right font-medium">Due</th>
+                                <th class="px-2 py-2 text-end font-medium">Billed</th>
+                                <th class="px-2 py-2 text-end font-medium">Collected</th>
+                                <th class="px-2 py-2 text-end font-medium">Due</th>
                                 <th class="px-2 py-2 font-medium">Status</th>
                             </tr>
                         </thead>
@@ -120,9 +120,9 @@ function toggle(c) {
                                         <template v-if="tab === 'active'"><span :class="expiryClass(c.expire_at)">{{ fmtDateTime(c.expire_at) || 'Unpaid' }}</span></template>
                                         <template v-else>{{ fmtDate(c.terminated_at || c.suspended_at) || '—' }}</template>
                                     </td>
-                                    <td class="px-2 py-2 text-right">{{ money(c.billed) }}</td>
-                                    <td class="px-2 py-2 text-right text-emerald-700">{{ money(c.collected) }}</td>
-                                    <td class="px-2 py-2 text-right font-medium" :class="c.due > 0 ? 'text-red-600' : ''">{{ money(c.due) }}</td>
+                                    <td class="px-2 py-2 text-end">{{ money(c.billed) }}</td>
+                                    <td class="px-2 py-2 text-end text-emerald-700">{{ money(c.collected) }}</td>
+                                    <td class="px-2 py-2 text-end font-medium" :class="c.due > 0 ? 'text-red-600' : ''">{{ money(c.due) }}</td>
                                     <td class="px-2 py-2">
                                         <StatusBadge :status="c.status" />
                                         <div v-if="c.status === 'suspended'" class="text-xs text-amber-700">{{ c.suspension_reason }}<template v-if="c.due > 0"> · pay the due to restore</template></div>
@@ -134,13 +134,13 @@ function toggle(c) {
                                     <td colspan="8" class="px-2 pb-3 pt-1">
                                         <table class="w-full text-xs">
                                             <thead>
-                                                <tr class="text-left text-slate-500">
+                                                <tr class="text-start text-slate-500">
                                                     <th class="py-1.5 font-medium">Bill</th>
                                                     <th class="py-1.5 font-medium">Period</th>
                                                     <th class="py-1.5 font-medium">Due date</th>
-                                                    <th class="py-1.5 text-right font-medium">Amount</th>
-                                                    <th class="py-1.5 text-right font-medium">Collected</th>
-                                                    <th class="py-1.5 text-right font-medium">Due</th>
+                                                    <th class="py-1.5 text-end font-medium">Amount</th>
+                                                    <th class="py-1.5 text-end font-medium">Collected</th>
+                                                    <th class="py-1.5 text-end font-medium">Due</th>
                                                     <th class="py-1.5 font-medium">Status</th>
                                                     <th></th>
                                                 </tr>
@@ -150,11 +150,11 @@ function toggle(c) {
                                                     <td class="py-1.5">{{ i.invoice_no }}</td>
                                                     <td class="py-1.5">{{ i.period_start ? `${fmtDateTime(i.period_start)} – ${fmtDateTime(i.period_end)}` : fmtDate(i.invoice_date) }}</td>
                                                     <td class="py-1.5">{{ fmtDate(i.due_date) }}</td>
-                                                    <td class="py-1.5 text-right">{{ money(i.total) }}</td>
-                                                    <td class="py-1.5 text-right text-emerald-700">{{ money(i.paid) }}</td>
-                                                    <td class="py-1.5 text-right font-medium" :class="Number(i.due) > 0 ? 'text-red-600' : ''">{{ money(i.due) }}</td>
+                                                    <td class="py-1.5 text-end">{{ money(i.total) }}</td>
+                                                    <td class="py-1.5 text-end text-emerald-700">{{ money(i.paid) }}</td>
+                                                    <td class="py-1.5 text-end font-medium" :class="Number(i.due) > 0 ? 'text-red-600' : ''">{{ money(i.due) }}</td>
                                                     <td class="py-1.5"><StatusBadge :status="i.status" /></td>
-                                                    <td class="py-1.5 text-right">
+                                                    <td class="py-1.5 text-end">
                                                         <button type="button" class="text-slate-500 hover:text-brand-600" title="Print / PDF" @click.stop="printInv(i)"><i class="bi bi-printer"></i></button>
                                                     </td>
                                                 </tr>
@@ -174,11 +174,11 @@ function toggle(c) {
                     <template v-else>
                         <table class="w-full text-sm">
                             <thead>
-                                <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                                <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                     <th class="px-2 py-2 font-medium">Receipt</th>
                                     <th class="px-2 py-2 font-medium">Date</th>
                                     <th class="px-2 py-2 font-medium">Method</th>
-                                    <th class="px-2 py-2 text-right font-medium">Amount</th>
+                                    <th class="px-2 py-2 text-end font-medium">Amount</th>
                                     <th class="px-2 py-2 font-medium">Status</th>
                                 </tr>
                             </thead>
@@ -187,7 +187,7 @@ function toggle(c) {
                                     <td class="px-2 py-2">{{ p.receipt_no }}</td>
                                     <td class="px-2 py-2">{{ fmtDate(p.payment_date) }}</td>
                                     <td class="px-2 py-2">{{ label(p.method) }} <span class="text-xs text-slate-400">{{ p.transaction_id }}</span></td>
-                                    <td class="px-2 py-2 text-right font-medium">{{ money(p.amount) }}</td>
+                                    <td class="px-2 py-2 text-end font-medium">{{ money(p.amount) }}</td>
                                     <td class="px-2 py-2"><StatusBadge :status="p.status" /></td>
                                 </tr>
                                 <tr v-if="!payments.length"><td colspan="5" class="px-2 py-6 text-center text-slate-400">No payments yet</td></tr>

@@ -108,15 +108,15 @@ async function saveSaleRate() {
                         <div v-else-if="batches.length === 0" class="py-10 text-center text-sm text-slate-500">No purchase batches found for this product.</div>
 
                         <div v-else class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-                            <table class="w-full text-left text-sm">
+                            <table class="w-full text-start text-sm">
                                 <thead class="bg-slate-100 text-xs uppercase text-slate-500">
                                     <tr>
                                         <th class="px-3 py-2">Batch Code</th>
                                         <th class="px-3 py-2">Exp Date</th>
-                                        <th class="px-3 py-2 text-right">Purchased Qty</th>
-                                        <th class="px-3 py-2 text-right">Remaining Stock</th>
-                                        <th class="px-3 py-2 text-right">Purchase Price</th>
-                                        <th class="px-3 py-2 text-right">Sale Price</th>
+                                        <th class="px-3 py-2 text-end">Purchased Qty</th>
+                                        <th class="px-3 py-2 text-end">Remaining Stock</th>
+                                        <th class="px-3 py-2 text-end">Purchase Price</th>
+                                        <th class="px-3 py-2 text-end">Sale Price</th>
                                         <th class="px-3 py-2"></th>
                                     </tr>
                                 </thead>
@@ -124,19 +124,19 @@ async function saveSaleRate() {
                                     <tr v-for="row in batches" :key="row.id" class="border-t border-slate-100">
                                         <td class="px-3 py-2 font-mono text-xs text-slate-500">{{ product.code }}P{{ row.purchase_id }}</td>
                                         <td class="px-3 py-2">{{ row.exp_date || '-' }}</td>
-                                        <td class="px-3 py-2 text-right">{{ row.quantity }}</td>
-                                        <td class="px-3 py-2 text-right">{{ row.remaining_stock }}</td>
-                                        <td class="px-3 py-2 text-right text-slate-500">{{ row.purchase_rate }}</td>
-                                        <td class="px-3 py-2 text-right">
+                                        <td class="px-3 py-2 text-end">{{ row.quantity }}</td>
+                                        <td class="px-3 py-2 text-end">{{ row.remaining_stock }}</td>
+                                        <td class="px-3 py-2 text-end text-slate-500">{{ row.purchase_rate }}</td>
+                                        <td class="px-3 py-2 text-end">
                                             <input
                                                 type="number"
                                                 step="0.01"
                                                 min="0"
                                                 v-model="row.editing_sale_rate"
-                                                class="w-24 rounded-md border border-slate-300 px-2 py-1 text-right text-sm"
+                                                class="w-24 rounded-md border border-slate-300 px-2 py-1 text-end text-sm"
                                             />
                                         </td>
-                                        <td class="px-3 py-2 text-right">
+                                        <td class="px-3 py-2 text-end">
                                             <button
                                                 type="button"
                                                 @click="saveBatch(row)"

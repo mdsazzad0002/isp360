@@ -120,7 +120,7 @@ onMounted(showDayBook);
             <button
                 type="button"
                 @click="showHelp = true"
-                class="ml-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
+                class="ms-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
                 title="ব্যালেন্স গুলোর অর্থ জানুন"
             >
                 <i class="bi bi-info-circle"></i> Balance বুঝুন
@@ -168,9 +168,9 @@ onMounted(showDayBook);
             <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Description</th>
-                            <th class="px-3 py-2 text-right font-medium">Amount</th>
+                            <th class="px-3 py-2 text-end font-medium">Amount</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -178,36 +178,36 @@ onMounted(showDayBook);
                             <td colspan="2" class="px-3 py-1.5 font-semibold text-slate-700">Opening Balance</td>
                         </tr>
                         <tr class="border-b border-slate-100">
-                            <td class="py-1.5 pl-6 pr-3 font-semibold">
+                            <td class="py-1.5 ps-6 pe-3 font-semibold">
                                 <button type="button" @click="openCashDetail('opening')" class="text-brand-600 hover:underline">Cash in Hand</button>
                             </td>
-                            <td class="px-3 py-1.5 text-right font-semibold">{{ currency(data.openingCash) }}</td>
+                            <td class="px-3 py-1.5 text-end font-semibold">{{ currency(data.openingCash) }}</td>
                         </tr>
                         <tr class="border-b border-slate-100">
-                            <td class="py-1.5 pl-6 pr-3 font-semibold">Bank Accounts</td>
-                            <td class="px-3 py-1.5 text-right font-semibold">{{ currency(data.totalOpeningBank) }}</td>
+                            <td class="py-1.5 ps-6 pe-3 font-semibold">Bank Accounts</td>
+                            <td class="px-3 py-1.5 text-end font-semibold">{{ currency(data.totalOpeningBank) }}</td>
                         </tr>
                         <tr v-for="(b, i) in data.openingBanks" :key="'ob' + i" class="border-b border-slate-100 text-slate-500">
-                            <td class="py-1.5 pl-10 pr-3">
+                            <td class="py-1.5 ps-10 pe-3">
                                 <button type="button" @click="openBankDetail(b, 'opening')" class="text-brand-600 hover:underline">{{ b.name }}</button>
                             </td>
-                            <td class="px-3 py-1.5 text-right">{{ currency(b.amount) }}</td>
+                            <td class="px-3 py-1.5 text-end">{{ currency(b.amount) }}</td>
                         </tr>
 
                         <tr class="border-b border-slate-100 bg-slate-50/60">
                             <td colspan="2" class="px-3 py-1.5 font-semibold text-emerald-700">Receipt</td>
                         </tr>
                         <tr v-if="data.receiptCash > 0" class="border-b border-slate-100">
-                            <td class="py-1.5 pl-6 pr-3">
+                            <td class="py-1.5 ps-6 pe-3">
                                 <button type="button" @click="openCashDetail('receipt')" class="text-brand-600 hover:underline">Cash</button>
                             </td>
-                            <td class="px-3 py-1.5 text-right">{{ currency(data.receiptCash) }}</td>
+                            <td class="px-3 py-1.5 text-end">{{ currency(data.receiptCash) }}</td>
                         </tr>
                         <tr v-for="(b, i) in data.receiptBanks" :key="'rb' + i" class="border-b border-slate-100">
-                            <td class="py-1.5 pl-6 pr-3">
+                            <td class="py-1.5 ps-6 pe-3">
                                 <button type="button" @click="openBankDetail(b, 'receipt')" class="text-brand-600 hover:underline">{{ b.name }}</button>
                             </td>
-                            <td class="px-3 py-1.5 text-right">{{ currency(b.amount) }}</td>
+                            <td class="px-3 py-1.5 text-end">{{ currency(b.amount) }}</td>
                         </tr>
                         <tr v-if="data.receiptCash === 0 && data.receiptBanks.length === 0">
                             <td colspan="2" class="px-3 py-3 text-center text-slate-400">No receipts</td>
@@ -216,7 +216,7 @@ onMounted(showDayBook);
                     <tfoot>
                         <tr class="border-t-2 border-slate-300 bg-slate-50 font-bold text-slate-800">
                             <td class="px-3 py-2">Total</td>
-                            <td class="px-3 py-2 text-right">{{ currency(data.leftTotal) }}</td>
+                            <td class="px-3 py-2 text-end">{{ currency(data.leftTotal) }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -226,9 +226,9 @@ onMounted(showDayBook);
             <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-3 py-2 font-medium">Description</th>
-                            <th class="px-3 py-2 text-right font-medium">Amount</th>
+                            <th class="px-3 py-2 text-end font-medium">Amount</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -236,16 +236,16 @@ onMounted(showDayBook);
                             <td colspan="2" class="px-3 py-1.5 font-semibold text-red-700">Payment</td>
                         </tr>
                         <tr v-if="data.paymentCash > 0" class="border-b border-slate-100">
-                            <td class="py-1.5 pl-6 pr-3">
+                            <td class="py-1.5 ps-6 pe-3">
                                 <button type="button" @click="openCashDetail('payment')" class="text-brand-600 hover:underline">Cash</button>
                             </td>
-                            <td class="px-3 py-1.5 text-right">{{ currency(data.paymentCash) }}</td>
+                            <td class="px-3 py-1.5 text-end">{{ currency(data.paymentCash) }}</td>
                         </tr>
                         <tr v-for="(b, i) in data.paymentBanks" :key="'pb' + i" class="border-b border-slate-100">
-                            <td class="py-1.5 pl-6 pr-3">
+                            <td class="py-1.5 ps-6 pe-3">
                                 <button type="button" @click="openBankDetail(b, 'payment')" class="text-brand-600 hover:underline">{{ b.name }}</button>
                             </td>
-                            <td class="px-3 py-1.5 text-right">{{ currency(b.amount) }}</td>
+                            <td class="px-3 py-1.5 text-end">{{ currency(b.amount) }}</td>
                         </tr>
                         <tr v-if="data.paymentCash === 0 && data.paymentBanks.length === 0">
                             <td colspan="2" class="px-3 py-3 text-center text-slate-400">No payments</td>
@@ -255,26 +255,26 @@ onMounted(showDayBook);
                             <td colspan="2" class="px-3 py-1.5 font-semibold text-slate-700">Closing Balance</td>
                         </tr>
                         <tr class="border-b border-slate-100">
-                            <td class="py-1.5 pl-6 pr-3 font-semibold">Bank Accounts</td>
-                            <td class="px-3 py-1.5 text-right font-semibold">{{ currency(data.totalClosingBank) }}</td>
+                            <td class="py-1.5 ps-6 pe-3 font-semibold">Bank Accounts</td>
+                            <td class="px-3 py-1.5 text-end font-semibold">{{ currency(data.totalClosingBank) }}</td>
                         </tr>
                         <tr v-for="(b, i) in data.closingBanks" :key="'cb' + i" class="border-b border-slate-100 text-slate-500">
-                            <td class="py-1.5 pl-10 pr-3">
+                            <td class="py-1.5 ps-10 pe-3">
                                 <button type="button" @click="openBankDetail(b, 'closing')" class="text-brand-600 hover:underline">{{ b.name }}</button>
                             </td>
-                            <td class="px-3 py-1.5 text-right">{{ currency(b.amount) }}</td>
+                            <td class="px-3 py-1.5 text-end">{{ currency(b.amount) }}</td>
                         </tr>
                         <tr class="border-b border-slate-100">
-                            <td class="py-1.5 pl-6 pr-3 font-semibold">
+                            <td class="py-1.5 ps-6 pe-3 font-semibold">
                                 <button type="button" @click="openCashDetail('closing')" class="text-brand-600 hover:underline">Cash in Hand</button>
                             </td>
-                            <td class="px-3 py-1.5 text-right font-semibold">{{ currency(data.closingCash) }}</td>
+                            <td class="px-3 py-1.5 text-end font-semibold">{{ currency(data.closingCash) }}</td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr class="border-t-2 border-slate-300 bg-slate-50 font-bold text-slate-800">
                             <td class="px-3 py-2">Total</td>
-                            <td class="px-3 py-2 text-right">{{ currency(data.rightTotal) }}</td>
+                            <td class="px-3 py-2 text-end">{{ currency(data.rightTotal) }}</td>
                         </tr>
                     </tfoot>
                 </table>

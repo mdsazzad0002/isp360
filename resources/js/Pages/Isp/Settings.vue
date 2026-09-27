@@ -134,7 +134,7 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                     <div class="mt-3 flex flex-wrap items-center gap-4 text-sm">
                         <label class="flex items-center gap-2"><input v-model="packOptions.tax" type="checkbox" /> Also set tax name, pricing and suggested rates</label>
                         <label v-if="Object.keys(pack.billing).length" class="flex items-center gap-2"><input v-model="packOptions.billing" type="checkbox" /> Also set billing defaults on every branch</label>
-                        <button type="button" :disabled="applying" class="ml-auto rounded-md border border-brand-500 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-50" @click="applyPack">Apply country pack</button>
+                        <button type="button" :disabled="applying" class="ms-auto rounded-md border border-brand-500 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-50" @click="applyPack">Apply country pack</button>
                     </div>
                     <p class="mt-2 text-xs text-slate-500">Nothing recorded changes: the currency and timezone stay once money exists, and tax rates are added only when the company has none. Check suggested tax rates with your accountant.</p>
                 </div>
@@ -160,28 +160,28 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
 
                 <table class="mt-3 w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 text-left text-xs text-slate-500">
-                            <th class="py-1.5 pr-2 font-medium">Rate name</th>
-                            <th class="w-28 py-1.5 pr-2 font-medium">Rate %</th>
-                            <th class="w-24 py-1.5 pr-2 text-center font-medium" title="Used by packages set to the default taxes and by manual invoice lines">Default</th>
-                            <th class="w-20 py-1.5 pr-2 text-center font-medium">Active</th>
+                        <tr class="border-b border-slate-200 text-start text-xs text-slate-500">
+                            <th class="py-1.5 pe-2 font-medium">Rate name</th>
+                            <th class="w-28 py-1.5 pe-2 font-medium">Rate %</th>
+                            <th class="w-24 py-1.5 pe-2 text-center font-medium" title="Used by packages set to the default taxes and by manual invoice lines">Default</th>
+                            <th class="w-20 py-1.5 pe-2 text-center font-medium">Active</th>
                             <th class="w-20 py-1.5"></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="r in s.tax_rates" :key="r.id" class="border-b border-slate-100">
-                            <td class="py-1 pr-2"><input v-model="r.name" maxlength="60" :class="input" /></td>
-                            <td class="py-1 pr-2"><input v-model="r.rate" type="number" min="0" max="100" step="0.0001" :class="input" /></td>
-                            <td class="py-1 pr-2 text-center"><input v-model="r.is_default" type="checkbox" /></td>
-                            <td class="py-1 pr-2 text-center"><input v-model="r.is_active" type="checkbox" /></td>
-                            <td class="py-1 text-right"><button type="button" class="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50" @click="saveRate(r)">Save</button></td>
+                            <td class="py-1 pe-2"><input v-model="r.name" maxlength="60" :class="input" /></td>
+                            <td class="py-1 pe-2"><input v-model="r.rate" type="number" min="0" max="100" step="0.0001" :class="input" /></td>
+                            <td class="py-1 pe-2 text-center"><input v-model="r.is_default" type="checkbox" /></td>
+                            <td class="py-1 pe-2 text-center"><input v-model="r.is_active" type="checkbox" /></td>
+                            <td class="py-1 text-end"><button type="button" class="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50" @click="saveRate(r)">Save</button></td>
                         </tr>
                         <tr>
-                            <td class="py-1 pr-2"><input v-model="rateForm.name" maxlength="60" placeholder="e.g. VAT 15%" :class="input" /></td>
-                            <td class="py-1 pr-2"><input v-model="rateForm.rate" type="number" min="0" max="100" step="0.0001" placeholder="15" :class="input" /></td>
-                            <td class="py-1 pr-2 text-center"><input v-model="rateForm.is_default" type="checkbox" /></td>
-                            <td class="py-1 pr-2 text-center"><input v-model="rateForm.is_active" type="checkbox" /></td>
-                            <td class="py-1 text-right"><button type="button" class="rounded bg-brand-500 px-2 py-1 text-xs text-white hover:bg-brand-600" @click="saveRate(rateForm)">Add</button></td>
+                            <td class="py-1 pe-2"><input v-model="rateForm.name" maxlength="60" placeholder="e.g. VAT 15%" :class="input" /></td>
+                            <td class="py-1 pe-2"><input v-model="rateForm.rate" type="number" min="0" max="100" step="0.0001" placeholder="15" :class="input" /></td>
+                            <td class="py-1 pe-2 text-center"><input v-model="rateForm.is_default" type="checkbox" /></td>
+                            <td class="py-1 pe-2 text-center"><input v-model="rateForm.is_active" type="checkbox" /></td>
+                            <td class="py-1 text-end"><button type="button" class="rounded bg-brand-500 px-2 py-1 text-xs text-white hover:bg-brand-600" @click="saveRate(rateForm)">Add</button></td>
                         </tr>
                     </tbody>
                 </table>

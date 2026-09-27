@@ -236,7 +236,7 @@ function exportExcel() {
                         <option v-for="opt in perPageOptions" :key="opt" :value="opt">{{ opt }}</option>
                     </select>
                 </div>
-                <div class="ml-auto flex items-center gap-3">
+                <div class="ms-auto flex items-center gap-3">
                     <button type="button" @click="exportExcel" title="Export Excel" class="text-slate-500 hover:text-emerald-600">
                         <i class="bi bi-file-earmark-excel text-lg"></i>
                     </button>
@@ -256,21 +256,21 @@ function exportExcel() {
             <div class="overflow-x-auto">
                 <table class="w-full border border-slate-200 text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
-                            <th class="border-r border-slate-200 px-3 py-2 font-medium">Sl</th>
-                            <th class="border-r border-slate-200 px-3 py-2 font-medium cursor-pointer select-none hover:text-brand-600" @click="sortColumn('code')">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
+                            <th class="border-e border-slate-200 px-3 py-2 font-medium">Sl</th>
+                            <th class="border-e border-slate-200 px-3 py-2 font-medium cursor-pointer select-none hover:text-brand-600" @click="sortColumn('code')">
                                 Code <i :class="sortBy === 'code' ? (sortDir === 'asc' ? 'bi bi-caret-up-fill' : 'bi bi-caret-down-fill') : 'bi bi-arrow-down-up text-slate-300'"></i>
                             </th>
-                            <th class="border-r border-slate-200 px-3 py-2 font-medium cursor-pointer select-none hover:text-brand-600" @click="sortColumn('name')">
+                            <th class="border-e border-slate-200 px-3 py-2 font-medium cursor-pointer select-none hover:text-brand-600" @click="sortColumn('name')">
                                 Name <i :class="sortBy === 'name' ? (sortDir === 'asc' ? 'bi bi-caret-up-fill' : 'bi bi-caret-down-fill') : 'bi bi-arrow-down-up text-slate-300'"></i>
                             </th>
-                            <th class="border-r border-slate-200 px-3 py-2 font-medium cursor-pointer select-none hover:text-brand-600" @click="sortColumn('phone')">
+                            <th class="border-e border-slate-200 px-3 py-2 font-medium cursor-pointer select-none hover:text-brand-600" @click="sortColumn('phone')">
                                 Mobile <i :class="sortBy === 'phone' ? (sortDir === 'asc' ? 'bi bi-caret-up-fill' : 'bi bi-caret-down-fill') : 'bi bi-arrow-down-up text-slate-300'"></i>
                             </th>
-                            <th class="border-r border-slate-200 px-3 py-2 font-medium cursor-pointer select-none hover:text-brand-600" @click="sortColumn('address')">
+                            <th class="border-e border-slate-200 px-3 py-2 font-medium cursor-pointer select-none hover:text-brand-600" @click="sortColumn('address')">
                                 Address <i :class="sortBy === 'address' ? (sortDir === 'asc' ? 'bi bi-caret-up-fill' : 'bi bi-caret-down-fill') : 'bi bi-arrow-down-up text-slate-300'"></i>
                             </th>
-                            <th class="border-r border-slate-200 px-3 py-2 text-right font-medium cursor-pointer select-none hover:text-brand-600" @click="sortColumn('due')">
+                            <th class="border-e border-slate-200 px-3 py-2 text-end font-medium cursor-pointer select-none hover:text-brand-600" @click="sortColumn('due')">
                                 Due <i :class="sortBy === 'due' ? (sortDir === 'asc' ? 'bi bi-caret-up-fill' : 'bi bi-caret-down-fill') : 'bi bi-arrow-down-up text-slate-300'"></i>
                             </th>
                             <th class="px-3 py-2 font-medium">Action</th>
@@ -278,14 +278,14 @@ function exportExcel() {
                     </thead>
                     <tbody>
                         <tr v-for="item in rows" :key="item.id" class="border-b border-slate-100">
-                            <td class="border-r border-slate-200 px-3 py-2">{{ item.sl }}</td>
-                            <td class="border-r border-slate-200 px-3 py-2">{{ item.code }}</td>
-                            <td class="border-r border-slate-200 px-3 py-2">
+                            <td class="border-e border-slate-200 px-3 py-2">{{ item.sl }}</td>
+                            <td class="border-e border-slate-200 px-3 py-2">{{ item.code }}</td>
+                            <td class="border-e border-slate-200 px-3 py-2">
                                 <button type="button" @click="openLedger(item)" class="text-brand-600 hover:underline">{{ item.name }}</button>
                             </td>
-                            <td class="border-r border-slate-200 px-3 py-2">{{ item.phone }}</td>
-                            <td class="border-r border-slate-200 px-3 py-2">{{ item.address }}</td>
-                            <td class="border-r border-slate-200 px-3 py-2 text-right" :class="{ 'text-rose-600': parseFloat(item.due) < 0 }">{{ parseFloat(item.due).toFixed(2) }}</td>
+                            <td class="border-e border-slate-200 px-3 py-2">{{ item.phone }}</td>
+                            <td class="border-e border-slate-200 px-3 py-2">{{ item.address }}</td>
+                            <td class="border-e border-slate-200 px-3 py-2 text-end" :class="{ 'text-rose-600': parseFloat(item.due) < 0 }">{{ parseFloat(item.due).toFixed(2) }}</td>
                             <td class="px-3 py-2">
                                 <button type="button" @click="openPayment(item)" class="inline-flex items-center gap-1 rounded-md bg-brand-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-600">
                                     <i class="bi bi-cash-coin"></i> {{ actionLabel(item) }}
@@ -293,8 +293,8 @@ function exportExcel() {
                             </td>
                         </tr>
                         <tr v-if="rows.length > 0" class="bg-slate-50 font-semibold">
-                            <td colspan="5" class="border-r border-slate-200 px-3 py-2 text-right">Total (this page)</td>
-                            <td class="border-r border-slate-200 px-3 py-2 text-right">{{ grandTotal() }}</td>
+                            <td colspan="5" class="border-e border-slate-200 px-3 py-2 text-end">Total (this page)</td>
+                            <td class="border-e border-slate-200 px-3 py-2 text-end">{{ grandTotal() }}</td>
                             <td class="px-3 py-2"></td>
                         </tr>
                         <tr v-if="rows.length === 0">

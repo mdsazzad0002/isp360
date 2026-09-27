@@ -498,3 +498,29 @@
 .swal2-container {
     z-index: 2160 !important;
 }
+
+/* Right-to-left (Arabic): side panels slide in from the left. Many panels define their own
+   scoped "slide-in" keyframes, so the direction is swapped here for all of them. */
+@keyframes slide-in-rtl {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+[dir='rtl'] .animate-slide-in {
+    animation-name: slide-in-rtl !important;
+}
+
+/* Table headers follow text-start / text-end set on their row or table. Browsers keep <th>
+   centered when the inherited alignment is the default "start", so it is set explicitly (base
+   layer: a th's own text-* utility still wins). */
+@layer base {
+    :where(.text-start) th {
+        text-align: start;
+    }
+    :where(.text-end) th {
+        text-align: end;
+    }
+}

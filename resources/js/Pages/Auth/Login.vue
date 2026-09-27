@@ -189,9 +189,9 @@ onMounted(() => {
     <div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-10">
         <!-- Ambient background: blobs tint to the selected portal -->
         <div class="pointer-events-none absolute inset-0">
-            <div class="absolute -left-32 -top-32 h-96 w-96 rounded-full blur-3xl transition-colors duration-700 animate-blob" :class="portal.glow"></div>
-            <div class="absolute -bottom-32 -right-24 h-96 w-96 rounded-full bg-amber-500/15 blur-3xl animate-blob animation-delay-2000"></div>
-            <div class="absolute left-1/3 top-1/4 h-72 w-72 rounded-full blur-3xl opacity-40 transition-colors duration-700 animate-blob animation-delay-4000" :class="portal.glow"></div>
+            <div class="absolute -start-32 -top-32 h-96 w-96 rounded-full blur-3xl transition-colors duration-700 animate-blob" :class="portal.glow"></div>
+            <div class="absolute -bottom-32 -end-24 h-96 w-96 rounded-full bg-amber-500/15 blur-3xl animate-blob animation-delay-2000"></div>
+            <div class="absolute start-1/3 top-1/4 h-72 w-72 rounded-full blur-3xl opacity-40 transition-colors duration-700 animate-blob animation-delay-4000" :class="portal.glow"></div>
             <div class="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:36px_36px]"></div>
             <span v-for="n in 14" :key="n" class="particle" :style="{ left: `${(n * 53) % 100}%`, animationDelay: `${(n * 0.9) % 8}s`, animationDuration: `${9 + (n % 5) * 2}s` }"></span>
         </div>
@@ -210,7 +210,7 @@ onMounted(() => {
                 ></div>
 
                 <!-- Orbit rings -->
-                <div class="pointer-events-none absolute -right-24 top-1/2 h-[420px] w-[420px] -translate-y-1/2">
+                <div class="pointer-events-none absolute -end-24 top-1/2 h-[420px] w-[420px] -translate-y-1/2">
                     <div class="absolute inset-0 rounded-full border border-white/15 animate-spin-slow">
                         <span class="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-white/70 shadow-[0_0_12px_rgba(255,255,255,0.8)]"></span>
                     </div>
@@ -274,7 +274,7 @@ onMounted(() => {
                 <!-- Portal switcher -->
                 <div role="tablist" aria-label="Login as" class="relative mb-8 grid grid-cols-3 rounded-2xl border border-white/10 bg-slate-950/60 p-1" @keydown="onTabKey">
                     <span
-                        class="absolute bottom-1 left-1 top-1 rounded-xl shadow-lg transition-all duration-500 ease-[cubic-bezier(.65,0,.35,1)]"
+                        class="absolute bottom-1 start-1 top-1 rounded-xl shadow-lg transition-all duration-500 ease-[cubic-bezier(.65,0,.35,1)]"
                         :class="portal.pill"
                         :style="{ width: 'calc((100% - 0.5rem) / 3)', transform: `translateX(${activeIndex * 100}%)` }"
                     ></span>

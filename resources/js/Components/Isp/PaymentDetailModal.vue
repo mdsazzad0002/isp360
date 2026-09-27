@@ -92,7 +92,7 @@ function print() {
 <template>
     <Modal :show="show" max-width="max-w-2xl" @close="emit('close')">
         <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-            <h2 class="text-base font-semibold text-slate-800">Payment {{ payment?.receipt_no }} <StatusBadge v-if="payment" :status="payment.status" class="ml-2" /></h2>
+            <h2 class="text-base font-semibold text-slate-800">Payment {{ payment?.receipt_no }} <StatusBadge v-if="payment" :status="payment.status" class="ms-2" /></h2>
             <button type="button" class="text-slate-400 hover:text-slate-600" @click="emit('close')"><i class="bi bi-x-lg"></i></button>
         </div>
         <div v-if="!payment" class="p-8 text-center text-sm text-slate-400">Loading...</div>
@@ -102,7 +102,7 @@ function print() {
                     <div class="font-medium text-slate-800">{{ payment.customer?.name }}</div>
                     <div class="text-slate-500">{{ payment.customer?.code }} · {{ payment.customer?.phone }}</div>
                 </div>
-                <div class="text-right">
+                <div class="text-end">
                     <div class="text-lg font-semibold text-slate-800">{{ fmtMoney(payment.amount) }}</div>
                     <div class="text-slate-500">{{ fmtDate(payment.payment_date) }} · {{ label(payment.method) }}<span v-if="payment.bank"> ({{ payment.bank.name }})</span></div>
                     <div v-if="payment.transaction_id" class="text-slate-500">TrxID {{ payment.transaction_id }}</div>

@@ -166,7 +166,7 @@ A country pack holds: currency, timezone(s), language, date/number format, phone
 
 ### 2.9 Internationalisation of the UI — P0, M
 - [ ] Move every visible string to the lang files (check pages and PHP validation/flash messages; `resources/lang` has only `en`).
-- [ ] RTL layout for Arabic (`dir="rtl"`, logical CSS properties) — `ar.json` exists but the layout is LTR.
+- [x] RTL layout for Arabic: every physical left/right Tailwind utility in the UI converted to its logical form (ms/me, ps/pe, start/end, text-start/end, border-s/e, rounded-s/e; 737 class tokens), `lang`/`dir` set at load for the language in use, sidebars and slide-in panels mirrored, centered badges kept physical. Checked with screenshots in both directions.
 - [ ] Per-user language and per-customer language (SMS/email templates in the customer's language).
 - [ ] Locale-aware dates and numbers (`Intl.NumberFormat`, `Intl.DateTimeFormat`).
 - [x] Phone numbers (`App\Support\Phone`, libphonenumber-lite): customer / reseller forms, portal profiles and imports accept any valid number of the company's country (any format) or any international `+` number; stored as national digits for the home country (BD unchanged: `01712345678`) and E.164 for others, so one number can't be entered twice in two spellings; `Phone::e164()` for providers that need it.

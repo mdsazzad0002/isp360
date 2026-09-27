@@ -69,33 +69,33 @@ onMounted(() => axios.post('/isp/get-bandwidth-usage').then((r) => (data.value =
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
-                                <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                                <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                     <th class="px-3 py-2 font-medium">Package</th>
-                                    <th class="px-3 py-2 text-right font-medium">Speed</th>
-                                    <th class="px-3 py-2 text-right font-medium">Connections</th>
-                                    <th class="px-3 py-2 text-right font-medium">Sold Mbps</th>
-                                    <th class="px-3 py-2 text-right font-medium">Share</th>
-                                    <th class="px-3 py-2 text-right font-medium">Revenue / month</th>
+                                    <th class="px-3 py-2 text-end font-medium">Speed</th>
+                                    <th class="px-3 py-2 text-end font-medium">Connections</th>
+                                    <th class="px-3 py-2 text-end font-medium">Sold Mbps</th>
+                                    <th class="px-3 py-2 text-end font-medium">Share</th>
+                                    <th class="px-3 py-2 text-end font-medium">Revenue / month</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="p in data.packages" :key="p.id" class="border-b border-slate-100">
                                     <td class="px-3 py-2 font-medium text-slate-800">{{ p.name }}</td>
-                                    <td class="px-3 py-2 text-right">{{ p.download_mbps }}/{{ p.upload_mbps }}</td>
-                                    <td class="px-3 py-2 text-right">{{ p.connections }}</td>
-                                    <td class="px-3 py-2 text-right">{{ money(p.sold_mbps) }}</td>
-                                    <td class="px-3 py-2 text-right text-slate-500">{{ data.sold_mbps ? ((p.sold_mbps / data.sold_mbps) * 100).toFixed(1) : 0 }}%</td>
-                                    <td class="px-3 py-2 text-right">{{ money(p.monthly_revenue) }}</td>
+                                    <td class="px-3 py-2 text-end">{{ p.download_mbps }}/{{ p.upload_mbps }}</td>
+                                    <td class="px-3 py-2 text-end">{{ p.connections }}</td>
+                                    <td class="px-3 py-2 text-end">{{ money(p.sold_mbps) }}</td>
+                                    <td class="px-3 py-2 text-end text-slate-500">{{ data.sold_mbps ? ((p.sold_mbps / data.sold_mbps) * 100).toFixed(1) : 0 }}%</td>
+                                    <td class="px-3 py-2 text-end">{{ money(p.monthly_revenue) }}</td>
                                 </tr>
                                 <tr v-if="!data.packages.length"><td colspan="6" class="px-3 py-6 text-center text-slate-400">No active connections</td></tr>
                             </tbody>
                             <tfoot v-if="data.packages.length">
                                 <tr class="font-semibold text-slate-800">
                                     <td class="px-3 py-2" colspan="2">Total</td>
-                                    <td class="px-3 py-2 text-right">{{ data.active_connections }}</td>
-                                    <td class="px-3 py-2 text-right">{{ money(data.sold_mbps) }}</td>
+                                    <td class="px-3 py-2 text-end">{{ data.active_connections }}</td>
+                                    <td class="px-3 py-2 text-end">{{ money(data.sold_mbps) }}</td>
                                     <td></td>
-                                    <td class="px-3 py-2 text-right">{{ money(data.monthly_revenue) }}</td>
+                                    <td class="px-3 py-2 text-end">{{ money(data.monthly_revenue) }}</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -105,17 +105,17 @@ onMounted(() => axios.post('/isp/get-bandwidth-usage').then((r) => (data.value =
                     <div class="border-b border-slate-200 p-3 text-sm font-semibold text-slate-700">Bought (running now)</div>
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                            <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                 <th class="px-3 py-2 font-medium">Provider</th>
-                                <th class="px-3 py-2 text-right font-medium">Mbps</th>
-                                <th class="px-3 py-2 text-right font-medium">Cost / month</th>
+                                <th class="px-3 py-2 text-end font-medium">Mbps</th>
+                                <th class="px-3 py-2 text-end font-medium">Cost / month</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="p in data.purchases" :key="p.id" class="border-b border-slate-100">
                                 <td class="px-3 py-2">{{ p.provider }} <span class="text-xs uppercase text-slate-400">{{ p.type }}</span></td>
-                                <td class="px-3 py-2 text-right">{{ money(p.bandwidth_mbps) }}</td>
-                                <td class="px-3 py-2 text-right">{{ money(p.monthly_cost) }}</td>
+                                <td class="px-3 py-2 text-end">{{ money(p.bandwidth_mbps) }}</td>
+                                <td class="px-3 py-2 text-end">{{ money(p.monthly_cost) }}</td>
                             </tr>
                             <tr v-if="!data.purchases.length"><td colspan="3" class="px-3 py-6 text-center text-slate-400"><Link href="/isp/bandwidth" class="text-brand-600 hover:underline">Record a bandwidth purchase</Link></td></tr>
                         </tbody>

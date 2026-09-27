@@ -156,15 +156,15 @@ const showTable = ref(false);
 
         <table v-if="showTable" class="w-full text-xs">
             <thead>
-                <tr class="border-b border-slate-800 text-left text-slate-500">
+                <tr class="border-b border-slate-800 text-start text-slate-500">
                     <th class="py-1 font-medium">Second</th>
-                    <th v-for="p in paths" :key="p.key" class="py-1 text-right font-medium">{{ p.name }}</th>
+                    <th v-for="p in paths" :key="p.key" class="py-1 text-end font-medium">{{ p.name }}</th>
                 </tr>
             </thead>
             <tbody>
                 <tr v-for="pt in points" :key="pt.t" class="border-b border-slate-900">
                     <td class="py-0.5 text-slate-400">{{ pt.t }}s</td>
-                    <td v-for="p in paths" :key="p.key" class="py-0.5 text-right text-slate-200">{{ fmt(toMbps(pt[p.key])) }}</td>
+                    <td v-for="p in paths" :key="p.key" class="py-0.5 text-end text-slate-200">{{ fmt(toMbps(pt[p.key])) }}</td>
                 </tr>
             </tbody>
         </table>

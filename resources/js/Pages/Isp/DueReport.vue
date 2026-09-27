@@ -104,19 +104,19 @@ onMounted(() => {
                     <div class="w-40"><label class="mb-1 block text-xs font-medium text-slate-600">Zone</label><SearchSelect :options="zones" v-model="filter.zone" label="name" placeholder="All" @update:model-value="reload" /></div>
                     <div class="w-40"><label class="mb-1 block text-xs font-medium text-slate-600">Area</label><SearchSelect :options="areas" v-model="filter.area" label="name" placeholder="All" @update:model-value="reload" /></div>
                     <div class="w-40"><label class="mb-1 block text-xs font-medium text-slate-600">Box</label><SearchSelect :options="boxes" v-model="filter.box" label="name" placeholder="All" @update:model-value="reload" /></div>
-                    <button type="button" class="ml-auto text-slate-500 hover:text-brand-500" title="Print" @click="print"><i class="bi bi-printer text-lg"></i></button>
+                    <button type="button" class="ms-auto text-slate-500 hover:text-brand-500" title="Print" @click="print"><i class="bi bi-printer text-lg"></i></button>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                            <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                                 <th class="cursor-pointer px-2 py-2 font-medium" @click="sort('code')">Code</th>
                                 <th class="cursor-pointer px-2 py-2 font-medium" @click="sort('name')">Customer</th>
                                 <th class="cursor-pointer px-2 py-2 font-medium" @click="sort('area')">Zone / Area / Box</th>
                                 <th class="px-2 py-2 font-medium">Connection</th>
                                 <th class="cursor-pointer px-2 py-2 font-medium" @click="sort('oldest')">Oldest overdue</th>
-                                <th class="cursor-pointer px-2 py-2 text-right font-medium" @click="sort('overdue')">Overdue</th>
-                                <th class="cursor-pointer px-2 py-2 text-right font-medium" @click="sort('balance')">Balance <i v-if="filter.sortBy === 'balance'" :class="filter.sortDir === 'desc' ? 'bi bi-arrow-down' : 'bi bi-arrow-up'"></i></th>
+                                <th class="cursor-pointer px-2 py-2 text-end font-medium" @click="sort('overdue')">Overdue</th>
+                                <th class="cursor-pointer px-2 py-2 text-end font-medium" @click="sort('balance')">Balance <i v-if="filter.sortBy === 'balance'" :class="filter.sortDir === 'desc' ? 'bi bi-arrow-down' : 'bi bi-arrow-up'"></i></th>
                                 <th class="px-2 py-2"></th>
                             </tr>
                         </thead>
@@ -125,11 +125,11 @@ onMounted(() => {
                                 <td class="px-2 py-2">{{ r.code }}</td>
                                 <td class="px-2 py-2"><Link :href="`/isp/customer/${r.id}`" class="font-medium text-brand-600 hover:underline">{{ r.name }}</Link><div class="text-xs text-slate-400">{{ r.phone }}</div></td>
                                 <td class="px-2 py-2 text-xs">{{ [r.zone_name, r.area_name, r.box_name].filter(Boolean).join(' → ') || '—' }}</td>
-                                <td class="px-2 py-2"><StatusBadge v-for="s in (r.connection_status || '').split(',').filter(Boolean)" :key="s" :status="s" class="mr-1" /></td>
+                                <td class="px-2 py-2"><StatusBadge v-for="s in (r.connection_status || '').split(',').filter(Boolean)" :key="s" :status="s" class="me-1" /></td>
                                 <td class="px-2 py-2">{{ fmtDate(r.oldest_due_date) || '—' }}</td>
-                                <td class="px-2 py-2 text-right text-red-600">{{ Number(r.overdue) ? money(r.overdue) : '' }}</td>
-                                <td class="px-2 py-2 text-right font-semibold" :class="Number(r.balance) > 0 ? 'text-red-600' : 'text-emerald-700'">{{ money(r.balance) }}</td>
-                                <td class="px-2 py-2 text-right"><Link v-if="Number(r.balance) > 0" :href="`/isp/payments?customerId=${r.id}`" class="text-xs text-brand-600 hover:underline">Collect</Link></td>
+                                <td class="px-2 py-2 text-end text-red-600">{{ Number(r.overdue) ? money(r.overdue) : '' }}</td>
+                                <td class="px-2 py-2 text-end font-semibold" :class="Number(r.balance) > 0 ? 'text-red-600' : 'text-emerald-700'">{{ money(r.balance) }}</td>
+                                <td class="px-2 py-2 text-end"><Link v-if="Number(r.balance) > 0" :href="`/isp/payments?customerId=${r.id}`" class="text-xs text-brand-600 hover:underline">Collect</Link></td>
                             </tr>
                             <tr v-if="!rows.length"><td colspan="8" class="px-2 py-6 text-center text-slate-400">Nothing to show</td></tr>
                         </tbody>
@@ -144,21 +144,21 @@ onMounted(() => {
                 </div>
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">{{ label(summaryGroup) }}</th>
-                            <th class="px-2 py-2 text-right font-medium">Customers</th>
-                            <th class="px-2 py-2 text-right font-medium">With due</th>
-                            <th class="px-2 py-2 text-right font-medium">Due</th>
-                            <th class="px-2 py-2 text-right font-medium">Overdue</th>
+                            <th class="px-2 py-2 text-end font-medium">Customers</th>
+                            <th class="px-2 py-2 text-end font-medium">With due</th>
+                            <th class="px-2 py-2 text-end font-medium">Due</th>
+                            <th class="px-2 py-2 text-end font-medium">Overdue</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="s in summary" :key="s.name" class="border-b border-slate-100">
                             <td class="px-2 py-2">{{ s.name }}</td>
-                            <td class="px-2 py-2 text-right">{{ s.customers }}</td>
-                            <td class="px-2 py-2 text-right">{{ s.due_customers }}</td>
-                            <td class="px-2 py-2 text-right font-medium text-red-600">{{ money(s.due) }}</td>
-                            <td class="px-2 py-2 text-right text-red-600">{{ money(s.overdue) }}</td>
+                            <td class="px-2 py-2 text-end">{{ s.customers }}</td>
+                            <td class="px-2 py-2 text-end">{{ s.due_customers }}</td>
+                            <td class="px-2 py-2 text-end font-medium text-red-600">{{ money(s.due) }}</td>
+                            <td class="px-2 py-2 text-end text-red-600">{{ money(s.overdue) }}</td>
                         </tr>
                     </tbody>
                 </table>

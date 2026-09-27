@@ -61,7 +61,7 @@ async function updateBranchManage() {
                     label="Enable Multi Branch"
                     hint="When enabled, the branch switcher shows up in the topbar so admins can switch between branches"
                 />
-                <div class="pt-3 text-right">
+                <div class="pt-3 text-end">
                     <button type="submit" :disabled="onProgress" class="rounded-md bg-gradient-to-r from-brand-500 to-brand-600 px-6 py-2 text-sm font-medium text-white shadow-sm cursor-pointer disabled:opacity-50">
                         Update Settings
                     </button>

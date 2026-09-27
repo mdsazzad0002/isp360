@@ -109,15 +109,15 @@ onMounted(load);
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Date</th>
                             <th class="px-2 py-2 font-medium">Customer</th>
                             <th class="px-2 py-2 font-medium">Method</th>
                             <th class="px-2 py-2 font-medium">TrxID / Sender</th>
                             <th class="px-2 py-2 font-medium">For</th>
-                            <th class="px-2 py-2 text-right font-medium">Amount</th>
+                            <th class="px-2 py-2 text-end font-medium">Amount</th>
                             <th class="px-2 py-2 font-medium">Status</th>
-                            <th class="px-2 py-2 text-right font-medium">Action</th>
+                            <th class="px-2 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -136,14 +136,14 @@ onMounted(load);
                             </td>
                             <td class="px-2 py-2 font-mono text-xs">{{ row.trx_id || '—' }}<div v-if="row.sender_number" class="text-slate-400">{{ row.sender_number }}</div></td>
                             <td class="px-2 py-2">{{ row.purpose === 'wallet' ? 'Wallet' : 'Bill' }}</td>
-                            <td class="px-2 py-2 text-right font-medium">{{ money(row.amount) }}</td>
+                            <td class="px-2 py-2 text-end font-medium">{{ money(row.amount) }}</td>
                             <td class="px-2 py-2">
                                 <StatusBadge :status="row.status" />
                                 <div v-if="row.customer_payment" class="text-xs text-slate-400">Receipt {{ row.customer_payment.receipt_no }}</div>
                                 <div v-else-if="row.failure_reason" class="max-w-[14rem] truncate text-xs text-slate-400" :title="row.failure_reason">{{ row.failure_reason }}</div>
                                 <div v-if="row.reviewed_by" class="text-xs text-slate-400">by {{ row.reviewed_by.name }}</div>
                             </td>
-                            <td class="px-2 py-2 text-right">
+                            <td class="px-2 py-2 text-end">
                                 <div v-if="canReview && row.status === 'pending_review'" class="flex justify-end gap-1.5">
                                     <button type="button" class="rounded bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700" @click="openReview(row, 'approve')">Approve</button>
                                     <button type="button" class="rounded border border-red-300 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50" @click="openReview(row, 'reject')">Reject</button>

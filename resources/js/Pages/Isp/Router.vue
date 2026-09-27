@@ -139,20 +139,20 @@ onMounted(load);
         <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                    <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                         <th class="px-3 py-2 font-medium">Router</th>
                         <th class="px-3 py-2 font-medium">Address</th>
-                        <th class="px-3 py-2 text-right font-medium">PPPoE / Hotspot users</th>
+                        <th class="px-3 py-2 text-end font-medium">PPPoE / Hotspot users</th>
                         <th class="px-3 py-2 font-medium">Last check</th>
-                        <th class="px-3 py-2 text-right font-medium">Action</th>
+                        <th class="px-3 py-2 text-end font-medium">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="r in routers" :key="r.id" class="border-b border-slate-100">
-                        <td class="px-3 py-2">{{ r.name }} <span v-if="r.is_default" class="ml-1 rounded-full border border-brand-500 px-1.5 text-[10px] text-brand-600">default</span> <span v-if="!r.is_active" class="text-xs text-red-500">inactive</span></td>
+                        <td class="px-3 py-2">{{ r.name }} <span v-if="r.is_default" class="ms-1 rounded-full border border-brand-500 px-1.5 text-[10px] text-brand-600">default</span> <span v-if="!r.is_active" class="text-xs text-red-500">inactive</span></td>
                         <td v-if="r.driver === 'radius'" class="px-3 py-2 font-mono text-xs">RADIUS NAS {{ r.host }} · {{ r.nas_type }} · CoA :{{ r.coa_port }}</td>
                         <td v-else class="px-3 py-2 font-mono text-xs">{{ r.use_https ? 'https' : 'http' }}://{{ r.host }}{{ r.port ? ':' + r.port : '' }} · {{ r.username }}</td>
-                        <td class="px-3 py-2 text-right">{{ r.connections_count }}</td>
+                        <td class="px-3 py-2 text-end">{{ r.connections_count }}</td>
                         <td class="px-3 py-2 text-xs" :class="(r.last_status || '').startsWith('FAILED') ? 'text-red-600' : 'text-slate-500'">{{ r.last_status || 'Never checked' }}<div v-if="r.last_checked_at" class="text-slate-400">{{ fmtDate(r.last_checked_at) }}</div></td>
                         <td class="px-3 py-2">
                             <div class="flex flex-wrap justify-end gap-2">
@@ -179,7 +179,7 @@ onMounted(load);
             </div>
             <div v-if="sessions.loading" class="py-4 text-center text-sm text-slate-400">Loading...</div>
             <table v-else class="w-full text-sm">
-                <thead><tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600"><th class="px-2 py-1.5 font-medium">Type</th><th class="px-2 py-1.5 font-medium">User</th><th class="px-2 py-1.5 font-medium">Address</th><th class="px-2 py-1.5 font-medium">MAC</th><th class="px-2 py-1.5 font-medium">Uptime</th><th class="px-2 py-1.5 font-medium">Billing</th></tr></thead>
+                <thead><tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600"><th class="px-2 py-1.5 font-medium">Type</th><th class="px-2 py-1.5 font-medium">User</th><th class="px-2 py-1.5 font-medium">Address</th><th class="px-2 py-1.5 font-medium">MAC</th><th class="px-2 py-1.5 font-medium">Uptime</th><th class="px-2 py-1.5 font-medium">Billing</th></tr></thead>
                 <tbody>
                     <tr v-for="s in sessions.rows" :key="s.type + s.id" class="border-b border-slate-100">
                         <td class="px-2 py-1.5 text-xs">{{ { hotspot: 'Hotspot', radius: 'RADIUS' }[s.type] || 'PPPoE' }}</td>

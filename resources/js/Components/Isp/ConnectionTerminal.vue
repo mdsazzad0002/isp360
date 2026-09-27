@@ -220,9 +220,9 @@ onMounted(() => {
             </select>
             <span v-for="[name, value] in values" :key="name" class="inline-flex items-center overflow-hidden rounded-md border border-slate-300 text-xs">
                 <button type="button" class="px-2 py-1 font-mono hover:bg-slate-100" :title="`Put ${name} in the prompt`" @click="insert(value)">{{ name }}: {{ value }}</button>
-                <button type="button" class="border-l border-slate-300 px-1.5 py-1 text-slate-500 hover:bg-slate-100" title="Copy" @click="copy(value)"><i class="bi bi-copy"></i></button>
+                <button type="button" class="border-s border-slate-300 px-1.5 py-1 text-slate-500 hover:bg-slate-100" title="Copy" @click="copy(value)"><i class="bi bi-copy"></i></button>
             </span>
-            <div class="ml-auto flex gap-2">
+            <div class="ms-auto flex gap-2">
                 <button type="button" class="rounded-md border border-slate-300 px-2 py-1 text-xs" title="Copy output" @click="copyOutput"><i class="bi bi-clipboard"></i> Copy output</button>
                 <button type="button" class="rounded-md border border-slate-300 px-2 py-1 text-xs" @click="lines = []"><i class="bi bi-eraser"></i> Clear</button>
             </div>
@@ -255,7 +255,7 @@ onMounted(() => {
         <div class="flex flex-wrap items-center gap-1.5 text-xs">
             <span class="text-slate-400">Quick:</span>
             <button v-for="q in QUICK" :key="q" type="button" :disabled="running || !selectedId" class="rounded-full border border-slate-300 px-2.5 py-0.5 font-mono hover:border-brand-400 hover:text-brand-600 disabled:opacity-40" @click="run(q)">{{ q }}</button>
-            <span class="ml-auto text-slate-400">↑/↓ history · Ctrl+L clear</span>
+            <span class="ms-auto text-slate-400">↑/↓ history · Ctrl+L clear</span>
         </div>
     </div>
 </template>

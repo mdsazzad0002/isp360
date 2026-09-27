@@ -96,7 +96,7 @@ onBeforeUnmount(() => {
             <i class="bi bi-bell text-lg"></i>
             <span
                 v-if="notifications.length > 0"
-                class="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white"
+                class="absolute -end-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white"
             >
                 {{ notifications.length > 9 ? '9+' : notifications.length }}
             </span>
@@ -107,7 +107,7 @@ onBeforeUnmount(() => {
             :class="[
                 impersonating ? 'top-[88px]' : 'top-14',
                 'fixed inset-x-2 z-[2000] max-h-96 overflow-y-auto rounded-md border border-slate-200 bg-white p-1 shadow-xl',
-                'sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80',
+                'sm:absolute sm:inset-x-auto sm:end-0 sm:top-full sm:mt-2 sm:w-80',
             ]"
         >
             <div class="px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Notifications</div>
@@ -120,7 +120,7 @@ onBeforeUnmount(() => {
                     class="rounded px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
                 >
                     <div class="flex items-start justify-between gap-2">
-                        <button type="button" class="min-w-0 flex-1 text-left" @click="openNotification(row)">
+                        <button type="button" class="min-w-0 flex-1 text-start" @click="openNotification(row)">
                             <span class="mb-0.5 block text-[10px] font-medium uppercase tracking-wide text-slate-400">{{ typeLabels[row.type] ?? row.type }}</span>
                             <span class="block truncate font-medium">{{ row.title }}</span>
                             <span class="block truncate text-xs text-slate-500">{{ row.subtitle }}</span>

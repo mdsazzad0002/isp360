@@ -194,7 +194,7 @@ function print() {
         </form>
 
         <div v-if="isLoading" class="mt-3">
-            <div v-if="products.length > 0" class="text-right">
+            <div v-if="products.length > 0" class="text-end">
                 <button type="button" @click="print" class="text-sm text-brand-600 hover:underline"><i class="bi bi-printer"></i> Print</button>
             </div>
             <div class="output mt-2 flex flex-wrap justify-center gap-0 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">

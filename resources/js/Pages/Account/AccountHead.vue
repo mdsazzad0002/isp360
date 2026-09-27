@@ -348,7 +348,7 @@ async function startImport() {
             <div class="mt-3 overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Sl</th>
                             <th class="px-2 py-2 font-medium cursor-pointer select-none hover:text-brand-600" @click="sortColumn('name')">
                                 Name <i :class="sortBy === 'name' ? (sortDir === 'asc' ? 'bi bi-caret-up-fill' : 'bi bi-caret-down-fill') : 'bi bi-arrow-down-up text-slate-300'"></i>
@@ -358,7 +358,7 @@ async function startImport() {
                             </th>
                             <th class="px-2 py-2 font-medium">Added By</th>
                             <th class="px-2 py-2 font-medium">Updated By</th>
-                            <th class="px-2 py-2 text-right font-medium">Action</th>
+                            <th class="px-2 py-2 text-end font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -460,8 +460,8 @@ async function startImport() {
                                     <table class="w-full text-xs">
                                         <thead class="sticky top-0 bg-slate-50">
                                             <tr>
-                                                <th class="px-2 py-1.5 text-left font-medium text-slate-600">#</th>
-                                                <th v-for="col in previewColumns" :key="col" class="px-2 py-1.5 text-left font-medium text-slate-600">{{ col }}</th>
+                                                <th class="px-2 py-1.5 text-start font-medium text-slate-600">#</th>
+                                                <th v-for="col in previewColumns" :key="col" class="px-2 py-1.5 text-start font-medium text-slate-600">{{ col }}</th>
                                             </tr>
                                         </thead>
                                         <tbody>

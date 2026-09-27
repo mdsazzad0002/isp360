@@ -49,7 +49,7 @@ onMounted(load);
             <div><label class="mb-1 block text-xs font-medium text-slate-600">To</label><input v-model="filter.dateTo" type="date" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" /></div>
             <button type="button" class="rounded-md bg-brand-500 px-4 py-1.5 text-sm text-white" @click="load">Show</button>
             <span class="text-xs text-slate-500">Whole company, all branches.</span>
-            <button v-if="data" type="button" class="ml-auto text-slate-500 hover:text-brand-500" title="Print" @click="print"><i class="bi bi-printer text-lg"></i></button>
+            <button v-if="data" type="button" class="ms-auto text-slate-500 hover:text-brand-500" title="Print" @click="print"><i class="bi bi-printer text-lg"></i></button>
         </div>
         <template v-if="data">
             <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -61,9 +61,9 @@ onMounted(load);
             <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                 <h2 class="mb-2 text-sm font-semibold text-slate-700">Invoices by rate</h2>
                 <table class="w-full text-sm">
-                    <thead><tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600"><th class="px-2 py-2 font-medium">Rate</th><th class="px-2 py-2 text-right font-medium">Taxable amount</th><th class="px-2 py-2 text-right font-medium">Tax</th></tr></thead>
+                    <thead><tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600"><th class="px-2 py-2 font-medium">Rate</th><th class="px-2 py-2 text-end font-medium">Taxable amount</th><th class="px-2 py-2 text-end font-medium">Tax</th></tr></thead>
                     <tbody>
-                        <tr v-for="r in data.rates" :key="`${r.name}${r.rate}`" class="border-b border-slate-100"><td class="px-2 py-1.5">{{ r.name }} {{ r.rate }}%</td><td class="px-2 py-1.5 text-right">{{ money(r.taxable) }}</td><td class="px-2 py-1.5 text-right font-medium">{{ money(r.tax) }}</td></tr>
+                        <tr v-for="r in data.rates" :key="`${r.name}${r.rate}`" class="border-b border-slate-100"><td class="px-2 py-1.5">{{ r.name }} {{ r.rate }}%</td><td class="px-2 py-1.5 text-end">{{ money(r.taxable) }}</td><td class="px-2 py-1.5 text-end font-medium">{{ money(r.tax) }}</td></tr>
                         <tr v-if="!data.rates.length"><td colspan="3" class="px-2 py-6 text-center text-slate-400">No taxed invoices in this range</td></tr>
                     </tbody>
                 </table>
@@ -73,19 +73,19 @@ onMounted(load);
                 <h2 class="mb-2 text-sm font-semibold text-slate-700">By branch</h2>
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                        <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
                             <th class="px-2 py-2 font-medium">Branch</th>
-                            <th v-for="[k, l] in COLUMNS" :key="k" class="px-2 py-2 text-right font-medium">{{ l }}</th>
+                            <th v-for="[k, l] in COLUMNS" :key="k" class="px-2 py-2 text-end font-medium">{{ l }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="b in data.branches" :key="b.branch" class="border-b border-slate-100">
                             <td class="px-2 py-1.5">{{ b.branch }}</td>
-                            <td v-for="[k] in COLUMNS" :key="k" class="px-2 py-1.5 text-right" :class="k === 'net' ? 'font-semibold' : ''">{{ money(b[k]) }}</td>
+                            <td v-for="[k] in COLUMNS" :key="k" class="px-2 py-1.5 text-end" :class="k === 'net' ? 'font-semibold' : ''">{{ money(b[k]) }}</td>
                         </tr>
                         <tr class="font-semibold">
                             <td class="px-2 py-1.5">Total</td>
-                            <td v-for="[k] in COLUMNS" :key="k" class="px-2 py-1.5 text-right">{{ money(data.totals[k]) }}</td>
+                            <td v-for="[k] in COLUMNS" :key="k" class="px-2 py-1.5 text-end">{{ money(data.totals[k]) }}</td>
                         </tr>
                     </tbody>
                 </table>
