@@ -418,6 +418,7 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::get('/settings', [Isp\SettingController::class, 'create'])->name('isp.settings');
     Route::post('/get-settings', [Isp\SettingController::class, 'show'])->name('isp.settings.show');
     Route::post('/settings', [Isp\SettingController::class, 'update'])->name('isp.settings.update');
+    Route::post('/country-pack', [Isp\SettingController::class, 'applyCountryPack'])->name('isp.country_pack.apply');
     Route::post('/tax-rate', [Isp\TaxRateController::class, 'store'])->name('isp.tax_rate.store');
     Route::post('/get-tax-rates', [Isp\TaxRateController::class, 'index'])->name('isp.tax_rate.index');
 

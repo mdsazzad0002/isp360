@@ -78,6 +78,8 @@ class HandleInertiaRequests extends Middleware
             'currency' => fn () => Money::currency(),
             // the company's timezone: server times are its wall-clock time, and "today" is its date
             'timezone' => fn () => \App\Support\Region::timezone(),
+            // default UI language from the country pack; a user's own pick in the switcher wins
+            'defaultLocale' => fn () => company()?->language ?? 'en',
             'portalUser' => function () use ($request) {
                 // pick the guard from the URL, since one browser can hold both portal sessions
                 $guard = $request->is('customer-portal/*') ? 'customer' : ($request->is('reseller/*') ? 'reseller' : null);

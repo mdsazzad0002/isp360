@@ -41,6 +41,25 @@ function onCountry() {
     if (s.value.currencies.some((x) => x.code === c.currency)) s.value.currency_code = c.currency;
     s.value.timezone = c.timezone;
 }
+// the chosen country's pack: its defaults are shown, and applied only on request
+const pack = computed(() => country.value?.pack);
+const packOptions = ref({ tax: false, billing: false });
+const applying = ref(false);
+async function applyPack() {
+    const c = country.value;
+    if (!c || !confirm(`Apply the ${c.name} country pack to the whole company?`)) return;
+    applying.value = true;
+    try {
+        const res = await axios.post('/isp/country-pack', { country_code: c.code, ...packOptions.value });
+        toast.success(res.data.message);
+        s.value = (await axios.post('/isp/get-settings')).data;
+        router.reload({ only: ['currency', 'timezone', 'defaultLocale'] });
+    } catch (err) {
+        showError(err);
+    } finally {
+        applying.value = false;
+    }
+}
 // tax rates are saved one by one, apart from the settings form
 const newRate = () => ({ id: null, name: '', rate: '', is_default: true, is_active: true, sort: 0 });
 const rateForm = ref(newRate());
@@ -88,6 +107,37 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                     All dates and times (expiry, bills, reports) are in this timezone, and a paid line expires at the same local time even across daylight-saving changes.
                     Payment methods that can't take this currency are hidden from customers.
                 </p>
+
+                <div v-if="pack" class="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <h3 class="mb-2 text-xs font-semibold text-slate-700">
+                        {{ pack.name }} country pack
+                        <span class="font-normal text-slate-400">{{ pack.full ? '' : '(generic: currency and timezone only)' }}</span>
+                    </h3>
+                    <dl class="grid grid-cols-1 gap-x-4 gap-y-1 text-xs md:grid-cols-2">
+                        <div><dt class="inline text-slate-500">Currency / timezone:</dt> <dd class="inline">{{ pack.currency }}, {{ pack.timezone }}</dd></div>
+                        <div><dt class="inline text-slate-500">Language / date format:</dt> <dd class="inline">{{ pack.language }}, {{ pack.date_format }}</dd></div>
+                        <div v-if="pack.phone.calling_code"><dt class="inline text-slate-500">Phone:</dt> <dd class="inline">+{{ pack.phone.calling_code }}, e.g. {{ pack.phone.example }}</dd></div>
+                        <div><dt class="inline text-slate-500">Address:</dt> <dd class="inline">{{ pack.address.state_label }}, {{ pack.address.postcode_label }}{{ pack.address.postcode_required ? ' (required)' : '' }}</dd></div>
+                        <div><dt class="inline text-slate-500">Customer ID types:</dt> <dd class="inline">{{ Object.values(pack.id_types).join(', ') }}</dd></div>
+                        <div>
+                            <dt class="inline text-slate-500">Tax:</dt>
+                            <dd class="inline">{{ pack.tax.label }}, {{ pack.tax.prices_include_tax ? 'included in prices' : 'added to prices' }}; {{ pack.tax.rates.length ? pack.tax.rates.map((r) => r.name).join(' + ') : 'no suggested rate' }}</dd>
+                        </div>
+                        <div v-if="pack.payment_gateways.length">
+                            <dt class="inline text-slate-500">Payment gateways:</dt>
+                            <dd class="inline">{{ pack.available_gateways.join(', ') || 'none built yet' }}<span v-if="pack.payment_gateways.length > pack.available_gateways.length" class="text-slate-400"> (planned: {{ pack.payment_gateways.filter((g) => !pack.available_gateways.includes(g)).join(', ') }})</span></dd>
+                        </div>
+                        <div v-if="pack.sms_providers.length"><dt class="inline text-slate-500">SMS providers:</dt> <dd class="inline">{{ pack.sms_providers.join(', ') }}</dd></div>
+                        <div><dt class="inline text-slate-500">Session log retention:</dt> <dd class="inline">{{ pack.log_retention_days ? `${pack.log_retention_days} days` : 'no legal minimum' }}</dd></div>
+                        <div v-if="pack.regulatory_reports.length"><dt class="inline text-slate-500">Regulatory reports:</dt> <dd class="inline">{{ pack.regulatory_reports.join(', ') }}</dd></div>
+                    </dl>
+                    <div class="mt-3 flex flex-wrap items-center gap-4 text-sm">
+                        <label class="flex items-center gap-2"><input v-model="packOptions.tax" type="checkbox" /> Also set tax name, pricing and suggested rates</label>
+                        <label v-if="Object.keys(pack.billing).length" class="flex items-center gap-2"><input v-model="packOptions.billing" type="checkbox" /> Also set billing defaults on every branch</label>
+                        <button type="button" :disabled="applying" class="ml-auto rounded-md border border-brand-500 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-50" @click="applyPack">Apply country pack</button>
+                    </div>
+                    <p class="mt-2 text-xs text-slate-500">Nothing recorded changes: the currency and timezone stay once money exists, and tax rates are added only when the company has none. Check suggested tax rates with your accountant.</p>
+                </div>
             </section>
 
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

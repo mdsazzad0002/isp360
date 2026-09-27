@@ -142,13 +142,21 @@ The current rules (prepaid, no grace, instant suspend) fit BD home broadband. Ot
 - [ ] Deposit / security deposit (refundable, liability account).
 - [ ] Keep all of these as settings, never forks in code. Current BD behaviour = the default "country pack" (see 2.8).
 
-### 2.8 Country packs — P0, M
+### 2.8 Country packs — P0, M — **done (structure + packs)**
 One place that bundles a country's defaults, so onboarding a new ISP is picking a country, not editing code.
 
 A country pack holds: currency, timezone(s), language, date/number format, phone format (E.164 + national format), address fields (state/province/postcode), ID types, tax rates, invoice template and numbering rules, allowed payment gateways, SMS providers, billing rule defaults (grace/notice), log retention period, regulatory report templates.
 
-- [ ] Grow `config/countries.php` into full packs (one file per country) for BD first, then IN, PK, NP, NG/KE, PH/ID, BR, US/UK.
-- [ ] Installation wizard applies the chosen country's pack to the company.
+- [x] `config/country_packs/{CODE}.php`, one file per country, resolved by `App\Support\CountryPack` over a generic pack and `config/countries.php`. Keys: language, date format, phone (calling code, trunk prefix, national lengths, example), address labels, ID types, tax (label, inclusive pricing, suggested rates), payment gateways (only built ones that take the currency are offered), SMS providers, branch billing defaults (IspSettings keys), log retention days, regulatory reports.
+- [x] Packs: BD (reproduces today's behaviour exactly: BDT, Asia/Dhaka, no tax rates, bKash/Nagad/Rocket/SSLCommerz, default billing), IN (GST as CGST 9% + SGST 9%), PK, NP (VAT 13%), NG (VAT 7.5%), KE (VAT 16%), PH (VAT 12%), ID (PPN 11%), BR (tax-inclusive, rates left to the ISP), US (no tax on internet access), GB (VAT 20%, tax-inclusive). Every other listed country gets the generic pack (currency + timezone).
+- [x] Apply a pack: ISP → Settings shows the chosen country's pack and "Apply country pack" (options: tax name/pricing/suggested rates; billing defaults on every branch). Nothing recorded changes: currency/timezone stay once money exists, tax rates are added only when there are none, a multi-zone country keeps the zone already picked. Audited as `company.country_pack_applied`.
+- [x] Installation from the command line: `php artisan isp:country-pack` (list), `isp:country-pack IN` (show), `isp:country-pack IN --apply --tax --billing`.
+- [x] `company_profiles.language`: the pack's UI language is the default for users who haven't picked one (`defaultLocale` Inertia prop).
+- [ ] Use the pack's phone, address and ID-type data in the customer forms (with 2.9 E.164 phones / generic address and 2.6 KYC).
+- [ ] Use the pack's date format in printed dates and invoices; invoice template/numbering per country.
+- [ ] Grace/notice/late-fee defaults in the packs once 2.7 exists (billing keys are limited to real `IspSettings` keys).
+- [ ] Full installation wizard (4.16) on top of `CountryPack::apply()`.
+- [ ] Check each pack's suggested tax rates with a local accountant before the first customer in that country.
 
 ### 2.9 Internationalisation of the UI — P0, M
 - [ ] Move every visible string to the lang files (check pages and PHP validation/flash messages; `resources/lang` has only `en`).
@@ -354,7 +362,7 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 1. ~~Company currency, Money helper, remove hardcoded Tk/৳/BDT (2.1)~~ — done 2026-09-27
 2. ~~Company timezone + DST tests (2.2)~~ — done 2026-09-27
 3. ~~Per-currency rounding for 0/3-decimal currencies (2.1)~~ — done 2026-09-27
-4. Country packs, BD first (2.8)
+4. ~~Country packs, BD first (2.8)~~ — done 2026-09-27
 5. ~~Tax engine on invoices (2.3)~~ — done 2026-09-27
 6. Configurable billing rules: grace, notice, late fee, postpaid option (2.7)
 7. Stripe + PayPal drivers, webhook idempotency (2.4)
@@ -416,7 +424,7 @@ These protect what already works:
 | 2 | ~~Company timezone + DST tests~~ (done) | P0 | M |
 | 3 | ~~Per-currency rounding (0/3 decimals) + `decimal(18,3)` storage~~ (done) | P0 | M |
 | 4 | ~~Tax rates on invoice items + tax report~~ (done) | P0 | L |
-| 5 | Country pack structure + BD pack | P0 | M |
+| 5 | ~~Country pack structure + BD pack~~ (done) | P0 | M |
 | 6 | 2FA + rate limiting + encrypted router/gateway secrets | P0 | M |
 | 7 | Redis queue + Horizon; move SMS/router sync to jobs | P0 | M |
 | 8 | Stripe driver + webhook idempotency | P0 | M |

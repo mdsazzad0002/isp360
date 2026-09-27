@@ -6,6 +6,7 @@ use App\Models\CompanyProfile;
 use App\Services\Isp\AuditLogger;
 use App\Services\Isp\IspSettings;
 use App\Services\Isp\TaxService;
+use App\Support\CountryPack;
 use App\Support\Money;
 use App\Support\Region;
 use Illuminate\Http\Request;
@@ -27,7 +28,9 @@ class SettingController extends IspController
             'timezone' => Region::timezone(),
             // stored amounts are in the currency and stored times in the timezone, so both are fixed once money is recorded
             'currency_locked' => Money::locked(),
-            'countries' => collect(config('countries'))->map(fn ($c, $code) => ['code' => $code, 'timezones' => Region::timezonesFor($code)] + $c)->values(),
+            'language' => company()?->language ?? 'en',
+            // every country with its resolved pack (config/country_packs), shown before it is applied
+            'countries' => collect(config('countries'))->map(fn ($c, $code) => ['code' => $code, 'timezones' => Region::timezonesFor($code), 'pack' => CountryPack::get($code)] + $c)->values(),
             'currencies' => collect(config('currencies'))->map(fn ($c, $code) => ['code' => $code] + $c)->values(),
             // sales tax, company-wide
             'tax_label' => company()?->tax_label ?? 'VAT',
@@ -95,5 +98,24 @@ class SettingController extends IspController
             AuditLogger::log('settings.updated', null, array_intersect_key($old, array_flip($changed)), array_intersect_key($new, array_flip($changed)), null, $this->branchId);
         }
         return $this->ok('Settings saved successfully');
+    }
+
+    // Applies a country's pack to the company (and, when asked, its tax rates and every branch's
+    // billing defaults). The currency and timezone stay once money is recorded.
+    public function applyCountryPack(Request $request)
+    {
+        if ($r = $this->deny('ispSettings')) return $r;
+        if ($r = $this->validateOrFail($request->all(), [
+            'country_code' => ['required', Rule::in(array_keys(config('countries')))],
+            'tax' => 'boolean',
+            'billing' => 'boolean',
+        ])) return $r;
+
+        try {
+            $done = CountryPack::apply($request->country_code, $request->boolean('tax'), $request->boolean('billing'), $this->branchId);
+            return $this->ok(implode(' ', $done), ['done' => $done]);
+        } catch (\Throwable $th) {
+            return $this->fail($th);
+        }
     }
 }

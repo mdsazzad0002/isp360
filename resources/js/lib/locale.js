@@ -29,6 +29,16 @@ export function resolveLocale() {
     return DEFAULT_LOCALE;
 }
 
+// The company's default language (set by its country pack), used only while the user hasn't
+// picked one in the language switcher.
+export function applyDefaultLocale(i18n, code) {
+    if (getStoredLocale() || !SUPPORTED_LOCALES.some((l) => l.code === code)) return;
+    const locale = i18n.global?.locale ?? i18n.locale;
+    locale.value = code;
+    document.documentElement.setAttribute('lang', code);
+    document.documentElement.setAttribute('dir', localeDir(code));
+}
+
 // Accepts either the composer from useI18n() (has .locale directly) or the
 // createI18n() instance itself (has .global.locale).
 export function setLocale(i18n, code) {
