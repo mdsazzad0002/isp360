@@ -14,10 +14,23 @@ class SmsGateway extends Model
 
     protected $guarded = ['id'];
 
+    // the API key, and the custom URL template that usually carries it, are encrypted at rest;
+    // the key never goes back to the browser (has_api_key says whether one is saved)
     protected $casts = [
         'is_active' => 'boolean',
         'is_default' => 'boolean',
+        'api_key' => 'encrypted',
+        'url_template' => 'encrypted',
     ];
+
+    protected $hidden = ['api_key'];
+
+    protected $appends = ['has_api_key'];
+
+    public function getHasApiKeyAttribute(): bool
+    {
+        return (string) $this->api_key !== '';
+    }
 
     public function adUser()
     {

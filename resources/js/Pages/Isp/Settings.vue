@@ -189,6 +189,23 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
             </section>
 
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 class="mb-3 text-sm font-semibold text-slate-700">Login security <span class="font-normal text-slate-400">(whole company)</span></h2>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Two-factor login (authenticator app)</label>
+                        <select v-model="s.two_factor_policy" :class="input">
+                            <option v-for="p in s.two_factor_policies" :key="p.value" :value="p.value">{{ p.label }}</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">
+                    Anyone who must use it and hasn't set it up is sent to set it up at their next page. Everyone can turn it on for themselves under My profile.
+                    <template v-if="!s.my_two_factor"> Turn it on for your own account first before requiring it.</template>
+                    Five wrong passwords lock that username for 15 minutes from the same address.
+                </p>
+            </section>
+
+            <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <h2 class="mb-3 text-sm font-semibold text-slate-700">Prepaid billing</h2>
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                     <label class="flex items-center gap-2 text-sm"><input v-model="s.auto_invoice" type="checkbox" /> Issue renewal invoices automatically</label>

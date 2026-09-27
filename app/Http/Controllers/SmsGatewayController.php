@@ -35,18 +35,23 @@ class SmsGatewayController extends Controller
 
     public function index(Request $request)
     {
+        if (!checkAccess('smsSetting')) {
+            return send_error('You are not authorized for this action', null, 403);
+        }
         $gateways = SmsGateway::where('branch_id', $this->branchId)->latest()->get();
         return response()->json($gateways);
     }
 
-    private function validatePayload(Request $request, array $extraRules = [])
+    private function validatePayload(Request $request, array $extraRules = [], bool $keySaved = false)
     {
         $rules = [
             'name' => 'required|string|max:255',
             'provider_type' => 'required|in:custom,mram,gennet',
         ];
+        // on edit an empty key keeps the saved one (the key is never sent back to the browser)
+        $key = $keySaved ? 'nullable|string' : 'required|string';
         if ($request->provider_type === 'mram') {
-            $rules['api_key'] = 'required|string';
+            $rules['api_key'] = $key;
             $rules['sender_id'] = 'required|string';
             $rules['sms_type'] = 'required|in:text,unicode';
             $rules['label'] = 'required|in:transactional,promotional';
@@ -55,7 +60,7 @@ class SmsGatewayController extends Controller
             // the same columns "mram" uses for its analogous fields rather than
             // adding gennet-specific columns. Base URL (isms.gennet.com.bd) is
             // fixed in code, same as mram, so no url_template is needed here.
-            $rules['api_key'] = 'required|string';
+            $rules['api_key'] = $key;
             $rules['sender_id'] = 'required|string';
         } else {
             $rules['method'] = 'required|in:GET,POST';
@@ -103,12 +108,12 @@ class SmsGatewayController extends Controller
 
     public function update(Request $request)
     {
-        $validator = $this->validatePayload($request, ['id' => 'required']);
+        $data = SmsGateway::where('id', $request->id)->where('branch_id', $this->branchId)->first();
+        if (empty($data)) return send_error('SMS gateway not found', null, 404);
+        $validator = $this->validatePayload($request, ['id' => 'required'], $data->has_api_key && $data->provider_type === $request->provider_type);
         if ($validator->fails()) return send_error('Validation Error', $validator->errors(), 422);
 
         try {
-            $data = SmsGateway::where('id', $request->id)->where('branch_id', $this->branchId)->first();
-            if (empty($data)) return send_error('SMS gateway not found', null, 404);
 
             $data->name = $request->name;
             $data->provider_type = $request->provider_type;
@@ -118,7 +123,9 @@ class SmsGatewayController extends Controller
                 default => $request->method,
             };
             $data->url_template = in_array($request->provider_type, ['mram', 'gennet']) ? null : $request->url_template;
-            $data->api_key = $request->api_key;
+            if ($request->filled('api_key') || $request->provider_type === 'custom') {
+                $data->api_key = $request->api_key;
+            }
             $data->sender_id = $request->sender_id;
             $data->sms_type = $request->sms_type ?? 'text';
             $data->label = $request->label ?? 'promotional';

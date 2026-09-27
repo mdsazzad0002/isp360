@@ -4,6 +4,7 @@ import axios from 'axios';
 import AppLayout from '../../../Layouts/AppLayout.vue';
 import { useToast } from '../../../lib/toast';
 import { resizeImageFile } from '../../../lib/imageResize';
+import TwoFactorCard from '../../../Components/TwoFactorCard.vue';
 
 defineOptions({ layout: AppLayout });
 
@@ -146,5 +147,6 @@ async function updateUser() {
                 </div>
             </div>
         </form>
+        <TwoFactorCard class="mt-4" base="/two-factor" />
     </div>
 </template>

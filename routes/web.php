@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountHeadController;
 use App\Http\Controllers\AreaController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\BankController;
 use App\Http\Controllers\BankTransactionController;
 use App\Http\Controllers\BranchController;
@@ -35,7 +36,18 @@ Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('p
 
 // user login route
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login.show');
-Route::post('/login', [LoginController::class, 'login'])->name('login');
+Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:login')->name('login');
+Route::post('/login/two-factor', [LoginController::class, 'twoFactor'])->middleware('throttle:login')->name('login.twoFactor');
+
+// the signed-in staff user's own two-factor login (resellers: see the reseller group)
+Route::group(['prefix' => 'two-factor', 'middleware' => ['auth', 'throttle:20,1']], function () {
+    Route::get('/setup', [TwoFactorController::class, 'setupPage'])->name('twoFactor.setup');
+    Route::post('/status', [TwoFactorController::class, 'status'])->name('twoFactor.status');
+    Route::post('/enable', [TwoFactorController::class, 'enable'])->name('twoFactor.enable');
+    Route::post('/confirm', [TwoFactorController::class, 'confirm'])->name('twoFactor.confirm');
+    Route::post('/recovery-codes', [TwoFactorController::class, 'recoveryCodes'])->name('twoFactor.recoveryCodes');
+    Route::post('/disable', [TwoFactorController::class, 'disable'])->name('twoFactor.disable');
+});
 Route::get('/logout', [DashboardController::class, 'Logout'])->middleware('auth')->name('logout');
 
 //company profile update
@@ -94,6 +106,14 @@ Route::group(['prefix' => 'reseller', 'middleware' => 'auth:reseller'], function
     Route::get('/ledger', [ResellerPanelController::class, 'ledger'])->name('reseller.ledger');
     Route::post('/get-ledger', [ResellerPanelController::class, 'getLedger'])->name('reseller.ledger.data');
     Route::get('/logout', [ResellerPanelController::class, 'logout'])->name('reseller.logout');
+    Route::group(['prefix' => 'two-factor', 'middleware' => 'throttle:20,1'], function () {
+        Route::get('/setup', [TwoFactorController::class, 'setupPage'])->defaults('guard', 'reseller')->name('reseller.twoFactor.setup');
+        Route::post('/status', [TwoFactorController::class, 'status'])->defaults('guard', 'reseller')->name('reseller.twoFactor.status');
+        Route::post('/enable', [TwoFactorController::class, 'enable'])->defaults('guard', 'reseller')->name('reseller.twoFactor.enable');
+        Route::post('/confirm', [TwoFactorController::class, 'confirm'])->defaults('guard', 'reseller')->name('reseller.twoFactor.confirm');
+        Route::post('/recovery-codes', [TwoFactorController::class, 'recoveryCodes'])->defaults('guard', 'reseller')->name('reseller.twoFactor.recoveryCodes');
+        Route::post('/disable', [TwoFactorController::class, 'disable'])->defaults('guard', 'reseller')->name('reseller.twoFactor.disable');
+    });
 
     Route::get('/tickets', [\App\Http\Controllers\PortalTicketController::class, 'page'])->name('reseller.tickets');
     Route::post('/get-tickets', [\App\Http\Controllers\PortalTicketController::class, 'index'])->name('reseller.tickets.index');

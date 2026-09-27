@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue';
 import axios from 'axios';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
 import { useToast } from '../../lib/toast';
+import TwoFactorCard from '../../Components/TwoFactorCard.vue';
 
 const props = defineProps({
     reseller: { type: Object, required: true },
@@ -70,5 +71,6 @@ async function save() {
                 </button>
             </div>
         </form>
+        <TwoFactorCard class="mt-4" base="/reseller/two-factor" />
     </PortalLayout>
 </template>

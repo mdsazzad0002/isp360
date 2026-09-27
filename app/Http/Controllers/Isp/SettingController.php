@@ -9,6 +9,7 @@ use App\Services\Isp\TaxService;
 use App\Support\CountryPack;
 use App\Support\Money;
 use App\Support\Region;
+use App\Support\TwoFactorPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -37,6 +38,10 @@ class SettingController extends IspController
             'tax_number' => company()?->tax_number ?? '',
             'prices_include_tax' => (bool) (company()?->prices_include_tax ?? false),
             'tax_rates' => TaxService::all()->values(),
+            // who must use two-factor login, company-wide
+            'two_factor_policy' => TwoFactorPolicy::current(),
+            'two_factor_policies' => collect(TwoFactorPolicy::POLICIES)->map(fn ($label, $value) => compact('value', 'label'))->values(),
+            'my_two_factor' => (bool) auth()->user()?->hasTwoFactor(),
         ]);
     }
 
@@ -51,6 +56,7 @@ class SettingController extends IspController
             'tax_label' => 'required|string|max:20',
             'tax_number' => 'nullable|string|max:60',
             'prices_include_tax' => 'boolean',
+            'two_factor_policy' => ['nullable', Rule::in(array_keys(TwoFactorPolicy::POLICIES))],
             'due_days' => 'required|integer|min:0|max:90',
             'renewal_invoice_days' => 'required|integer|min:0|max:30',
             'init_bonus_days' => 'required|integer|min:0|max:365',
@@ -75,6 +81,11 @@ class SettingController extends IspController
         if (($new['currency_code'] !== $region['currency_code'] || $new['timezone'] !== $region['timezone']) && Money::locked()) {
             return send_error("The currency and timezone can't change: invoices or payments already exist in {$region['currency_code']}, {$region['timezone']}.", null, 422);
         }
+        $policy = $request->two_factor_policy ?? TwoFactorPolicy::current();
+        // whoever requires 2FA must already use it, or they'd lock themselves out of the next page
+        if ($policy !== TwoFactorPolicy::current() && ! auth()->user()->hasTwoFactor() && TwoFactorPolicy::requiredFor(auth()->user(), 'web', $policy)) {
+            return send_error('Turn on two-factor login for your own account first (My profile), then require it for others.', null, 422);
+        }
         $tax = ['tax_label' => $company->tax_label, 'tax_number' => $company->tax_number, 'prices_include_tax' => (bool) $company->prices_include_tax];
         $newTax = ['tax_label' => $request->tax_label, 'tax_number' => $request->tax_number ?: null, 'prices_include_tax' => $request->boolean('prices_include_tax')];
         if ($newTax != $tax) {
@@ -82,6 +93,12 @@ class SettingController extends IspController
             $company->update($newTax);
             clearCompanyCache();
             AuditLogger::log('company.tax_updated', null, $tax, $newTax, null, $this->branchId);
+        }
+        if ($policy !== TwoFactorPolicy::current()) {
+            $oldPolicy = TwoFactorPolicy::current();
+            $company->update(['two_factor_policy' => $policy]);
+            clearCompanyCache();
+            AuditLogger::log('company.two_factor_policy_updated', null, ['two_factor_policy' => $oldPolicy], ['two_factor_policy' => $policy], null, $this->branchId);
         }
         if ($new != $region) {
             $company->update($new);

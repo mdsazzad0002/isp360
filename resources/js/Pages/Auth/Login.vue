@@ -94,7 +94,11 @@ function initialIndex() {
 
 // Each portal keeps its own form, errors and state, so switching tabs never mixes them up.
 function blankState() {
-    return { username: '', password: '', errors: { username: '', password: '' }, generalError: '', showPassword: false, submitting: false, success: false };
+    return {
+        username: '', password: '', errors: { username: '', password: '', code: '' }, generalError: '', showPassword: false, submitting: false, success: false,
+        // second step for accounts with two-factor login: a code from the app, or a recovery code
+        twoFactor: false, code: '', useRecovery: false,
+    };
 }
 const forms = reactive(Object.fromEntries(PORTALS.map((p) => [p.key, blankState()])));
 
@@ -139,10 +143,19 @@ async function login() {
     const key = portal.value.key;
     const f = forms[key];
     f.submitting = true;
-    f.errors = { username: '', password: '' };
+    f.errors = { username: '', password: '', code: '' };
     f.generalError = '';
     try {
-        const res = await axios.post('/login', { username: f.username, password: f.password, portal: key });
+        const res = f.twoFactor
+            ? await axios.post('/login/two-factor', f.useRecovery ? { recovery_code: f.code } : { code: f.code })
+            : await axios.post('/login', { username: f.username, password: f.password, portal: key });
+        if (res.data.two_factor) {
+            f.twoFactor = true;
+            f.submitting = false;
+            f.code = '';
+            nextTick(() => document.getElementById(`${key}-code`)?.focus());
+            return;
+        }
         f.success = true;
         setTimeout(() => (window.location.href = res.data.redirect || '/panel/dashboard'), 650);
     } catch (err) {
@@ -151,9 +164,18 @@ async function login() {
         if (r?.errors && typeof r.errors === 'object') {
             Object.keys(f.errors).forEach((k) => (f.errors[k] = [].concat(r.errors[k] ?? '')[0]));
         }
-        f.generalError = r?.message === 'Unauthorized' ? '' : r?.message || 'Login failed';
+        f.generalError = ['Unauthorized', 'Validation Error', 'Too many attempts'].includes(r?.message) ? '' : r?.message || 'Login failed';
+        // the code step timed out: start again from the password
+        if (f.twoFactor && err.response?.status === 401) backToPassword(f);
         triggerShake();
     }
+}
+
+function backToPassword(f) {
+    f.twoFactor = false;
+    f.code = '';
+    f.useRecovery = false;
+    f.password = '';
 }
 
 const mounted = ref(false);
@@ -280,6 +302,36 @@ onMounted(() => {
                             <p class="mb-7 mt-1 text-sm text-slate-400">Sign in to your {{ portal.heading.toLowerCase() }}.</p>
 
                             <form @submit.prevent="login" class="space-y-5" :class="{ 'animate-shake': shake }" @animationend="shake = false">
+                                <div v-if="form.twoFactor">
+                                    <label :for="`${portal.key}-code`" class="mb-1.5 block text-sm font-medium text-slate-300">
+                                        {{ form.useRecovery ? 'Recovery code' : 'Code from your authenticator app' }}
+                                    </label>
+                                    <div class="flex items-center gap-2 rounded-xl border bg-slate-950/60 px-3.5" :class="form.errors.code ? 'border-red-500/60' : portal.focus">
+                                        <i class="bi bi-shield-lock text-slate-500"></i>
+                                        <input
+                                            :id="`${portal.key}-code`"
+                                            v-model="form.code"
+                                            type="text"
+                                            :inputmode="form.useRecovery ? 'text' : 'numeric'"
+                                            autocomplete="one-time-code"
+                                            required
+                                            :maxlength="form.useRecovery ? 11 : 6"
+                                            :placeholder="form.useRecovery ? 'xxxxx-xxxxx' : '123456'"
+                                            class="w-full border-none bg-transparent px-2 py-2.5 text-sm tracking-widest text-white outline-none placeholder:text-slate-600"
+                                        />
+                                    </div>
+                                    <p v-if="form.errors.code" class="mt-1.5 flex items-center gap-1 text-xs text-red-400">
+                                        <i class="bi bi-exclamation-circle"></i> {{ form.errors.code }}
+                                    </p>
+                                    <div class="mt-2 flex justify-between text-xs">
+                                        <button type="button" class="cursor-pointer text-slate-400 hover:text-slate-200" @click="form.useRecovery = !form.useRecovery; form.code = ''">
+                                            {{ form.useRecovery ? 'Use the app code instead' : 'Lost your phone? Use a recovery code' }}
+                                        </button>
+                                        <button type="button" class="cursor-pointer text-slate-400 hover:text-slate-200" @click="backToPassword(form)">Back</button>
+                                    </div>
+                                </div>
+
+                                <template v-else>
                                 <div>
                                     <label :for="`${portal.key}-username`" class="mb-1.5 block text-sm font-medium text-slate-300">{{ portal.userLabel }}</label>
                                     <div
@@ -336,6 +388,7 @@ onMounted(() => {
                                         <i class="bi bi-exclamation-circle"></i> {{ form.errors.password }}
                                     </p>
                                 </div>
+                                </template>
 
                                 <p v-if="form.generalError" class="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
                                     <i class="bi bi-exclamation-triangle"></i> {{ form.generalError }}
@@ -350,6 +403,7 @@ onMounted(() => {
                                     <span class="shine"></span>
                                     <template v-if="form.success"><i class="bi bi-check2-circle animate-pop text-base"></i> Welcome! Redirecting…</template>
                                     <template v-else-if="form.submitting"><i class="bi bi-arrow-repeat animate-spin"></i> Signing in…</template>
+                                    <template v-else-if="form.twoFactor"><i class="bi bi-shield-check"></i> Verify and sign in</template>
                                     <template v-else><i class="bi bi-box-arrow-in-right transition-transform group-hover:translate-x-0.5"></i> Sign in as {{ portal.label }}</template>
                                 </button>
                             </form>

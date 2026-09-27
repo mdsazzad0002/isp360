@@ -17,6 +17,7 @@ function emptyForm() {
         method: 'GET',
         url_template: '',
         api_key: '',
+        has_api_key: false,
         sender_id: '',
         sms_type: 'text',
         label: 'promotional',
@@ -63,7 +64,9 @@ function editRow(row) {
         provider_type: row.provider_type || 'custom',
         method: row.method,
         url_template: row.url_template || '',
-        api_key: row.api_key || '',
+        // the saved key is never sent back; blank keeps it
+        api_key: '',
+        has_api_key: !!row.has_api_key,
         sender_id: row.sender_id || '',
         sms_type: row.sms_type || 'text',
         label: row.label || 'promotional',
@@ -156,7 +159,7 @@ onMounted(load);
                     <template v-if="form.provider_type === 'mram'">
                         <div>
                             <label class="mb-1 block text-xs font-medium text-slate-600">API Key</label>
-                            <input type="text" autocomplete="off" v-model="form.api_key" placeholder="R700007167f50e7feb3736.24890534" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-mono" />
+                            <input type="text" autocomplete="off" v-model="form.api_key" :placeholder="form.id && form.has_api_key ? 'Saved (hidden). Leave blank to keep it' : 'R700007167f50e7feb3736.24890534'" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-mono" />
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-slate-600">Sender ID</label>
@@ -182,7 +185,7 @@ onMounted(load);
                     <template v-else-if="form.provider_type === 'gennet'">
                         <div>
                             <label class="mb-1 block text-xs font-medium text-slate-600">API Token</label>
-                            <input type="text" autocomplete="off" v-model="form.api_key" placeholder="API token provided by GenNet" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-mono" />
+                            <input type="text" autocomplete="off" v-model="form.api_key" :placeholder="form.id && form.has_api_key ? 'Saved (hidden). Leave blank to keep it' : 'API token provided by GenNet'" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-mono" />
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-slate-600">SID</label>

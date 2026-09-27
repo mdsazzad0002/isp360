@@ -122,7 +122,7 @@ Most ISPs outside small BD markets use **RADIUS** (FreeRADIUS) with Cisco/Junipe
 - [ ] CoA / Disconnect-Message (RFC 5176) for instant suspend and speed change without waiting for the session to drop.
 - [ ] Read `radacct` for sessions, online status, data usage, IP/MAC history.
 - [ ] Choose the driver per router/NAS, not only globally (`ISP_NETWORK_DRIVER`), so one ISP can mix MikroTik API and RADIUS.
-- [ ] Remove the lab router credentials (admin/admin) from any seed/default; router passwords encrypted at rest.
+- [x] Remove the lab router credentials (admin/admin) from any seed/default; router passwords encrypted at rest. (No default credentials in seeds/config; `routers.password` uses the `encrypted` cast.)
 
 ### 2.6 Legal compliance (data and logs) — P0, M
 - [ ] **Lawful-intercept / retention logs**: most regulators (BTRC, India DoT, EU, Pakistan PTA, many African regulators) require session logs: username, assigned IP, NAT/CGNAT port range, start/stop, MAC, for 1–2 years. Store from `radacct` / MikroTik logs; make retention configurable per country; export on request.
@@ -202,7 +202,8 @@ Today: company → reseller → customer (one level).
 - [ ] Role templates: Owner, Manager, Accountant, Billing officer, NOC engineer, Technician, Collector, Support agent, Sales/lead agent, Reseller staff.
 - [ ] Scope per user: organisation / region / branch / zone / area (a collector sees only their areas).
 - [ ] Reporting line (`users.manager_id`) for approvals and escalations.
-- [ ] 2FA (TOTP) mandatory for admin/finance roles; login IP allow-list optional — P0 for security (see 4.12).
+- [x] 2FA (TOTP) mandatory by company policy (see 4.12): off / Superadmin+admin / all staff / all staff + resellers.
+- [ ] Per-role 2FA rules (e.g. accountant) once role templates exist; login IP allow-list optional.
 
 ### 3.5 Approval workflows (maker-checker) — P1, M
 Money must be safe when many people and levels are involved.
@@ -310,11 +311,15 @@ Today: SMS only, 4 events.
 - [ ] Tax report (2.3), aging (4.3), log export (2.6).
 - [ ] Scheduled reports by e-mail; CSV/XLSX export (PhpSpreadsheet is already installed).
 
-### 4.12 Security — P0, M
-- [ ] 2FA (TOTP) for admin, finance, reseller logins; recovery codes.
-- [ ] Password policy, lockout after failed logins, session list with remote logout.
-- [ ] Rate limiting on login, OTP, payment callbacks and public endpoints.
-- [ ] Encrypt all device and gateway secrets at rest (PPPoE password already `encrypted` — do the same for router and gateway credentials, SMS keys).
+### 4.12 Security — P0, M — **login, 2FA and secrets done**
+- [x] 2FA (TOTP, RFC 6238, no extra package: `App\Support\Totp`) for staff and resellers: set up from My profile with a QR code, confirmed with a code, 8 one-time recovery codes, turn off / new codes need the password. Secret and codes encrypted at rest; a code can't be replayed (`two_factor_last_step`).
+- [x] Login second step: after the right password an account with 2FA must enter an app code or a recovery code within 5 minutes.
+- [x] Company policy (ISP → Settings → Login security): off (default) / Superadmin + admin / all staff / all staff + resellers. Anyone covered without 2FA is sent to a setup page (`RequireTwoFactor` middleware) and can't turn it off; "Login as" sessions are exempt. Saving a policy that covers yourself needs your own 2FA first.
+- [x] Lockout: 5 wrong passwords per username + IP lock that username for 15 minutes (`auth.login_locked` audited); 5 wrong codes lock the code step.
+- [x] Rate limiting: `/login` and `/login/two-factor` 30/min per IP; 2FA management 20/min; payment callbacks/IPN already on the `api` limiter (60/min per IP).
+- [x] Secrets at rest: SMS gateway API keys and URL templates now encrypted (existing rows encrypted by the migration), the key is never sent back to the browser (blank on edit keeps it), and the gateway list needs SMS settings access. Router passwords, PPPoE passwords and payment gateway credentials were already encrypted.
+- [x] Audit: 2FA on/off, new recovery codes, recovery code used, lockouts, policy changes.
+- [ ] Password policy (length/complexity), session list with remote logout.
 - [ ] Audit log for every admin action (exists for money — extend to settings, roles, package changes, logins).
 - [ ] Signed webhook verification for every gateway.
 - [ ] Security headers (CSP, HSTS), dependency scanning (`composer audit`, `npm audit`) in CI.
@@ -366,7 +371,7 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 5. ~~Tax engine on invoices (2.3)~~ — done 2026-09-27
 6. Configurable billing rules: grace, notice, late fee, postpaid option (2.7)
 7. Stripe + PayPal drivers, webhook idempotency (2.4)
-8. Security basics: 2FA, rate limit, secret encryption (4.12)
+8. ~~Security basics: 2FA, rate limit, secret encryption (4.12)~~ — done 2026-09-28
 9. Redis + queue + Horizon, incremental scheduler (4.13)
 10. i18n cleanup, RTL, E.164 phones, generic address (2.9)
 
@@ -425,7 +430,7 @@ These protect what already works:
 | 3 | ~~Per-currency rounding (0/3 decimals) + `decimal(18,3)` storage~~ (done) | P0 | M |
 | 4 | ~~Tax rates on invoice items + tax report~~ (done) | P0 | L |
 | 5 | ~~Country pack structure + BD pack~~ (done) | P0 | M |
-| 6 | 2FA + rate limiting + encrypted router/gateway secrets | P0 | M |
+| 6 | ~~2FA + rate limiting + encrypted router/gateway secrets~~ (done) | P0 | M |
 | 7 | Redis queue + Horizon; move SMS/router sync to jobs | P0 | M |
 | 8 | Stripe driver + webhook idempotency | P0 | M |
 | 9 | Grace/notice/late-fee settings (default off) | P0 | M |
