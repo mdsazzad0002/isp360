@@ -56,9 +56,28 @@ class OverdueService
         return $at;
     }
 
-    // Time's up for an active line: paid time over, grace over, notice rule met.
+    public static function isPostpaid(Connection $connection): bool
+    {
+        return (bool) $connection->package?->isPostpaid();
+    }
+
+    // Postpaid: the oldest service bill still unpaid after its due date plus the grace days, or null.
+    public static function overdueBill(Connection $connection, ?array $settings = null): ?Invoice
+    {
+        $settings ??= IspSettings::all($connection->branch_id);
+        return Invoice::where('connection_id', $connection->id)->whereNotNull('service_months')
+            ->whereIn('status', Invoice::OPEN_STATUSES)->where('due', '>', 0)
+            ->where('due_date', '<', now()->subDays((int) $settings['grace_days'])->toDateString())
+            ->orderBy('due_date')->first();
+    }
+
+    // Time's up for an active line: paid time over, grace over, notice rule met (prepaid), or a
+    // bill overdue past the grace days (postpaid).
     public static function isDueForSuspension(Connection $connection, ?array $settings = null): bool
     {
+        if (self::isPostpaid($connection)) {
+            return self::overdueBill($connection, $settings) !== null;
+        }
         if ($connection->expire_at && $connection->expire_at->isFuture()) {
             return false;
         }
@@ -88,13 +107,20 @@ class OverdueService
         // candidates only: the exact moment (notice rule) is checked per line in applyExpiry
         $cutoff = now()->subDays((int) $settings['grace_days']);
 
-        Connection::where('branch_id', $branchId)
+        $postpaid = fn ($q) => $q->select('id')->from('packages')->where('billing_mode', 'postpaid');
+        Connection::with('package')->where('branch_id', $branchId)
             ->where('status', 'active')
-            ->where(fn ($q) => $q->where('expire_at', '<=', $cutoff)
+            ->where(fn ($c) => $c->where(fn ($pre) => $pre->where(fn ($x) => $x->whereNull('package_id')->orWhereNotIn('package_id', $postpaid))->where(fn ($q) => $q->where('expire_at', '<=', $cutoff)
                 ->orWhere(fn ($w) => $w->whereNull('expire_at')->where('activated_at', '<=', $cutoff)->whereExists(fn ($sub) => $sub->selectRaw(1)->from('invoices')
                     ->whereColumn('invoices.connection_id', 'connections.id')
                     ->whereNotNull('invoices.service_months')
-                    ->whereNotIn('invoices.status', ['draft', 'void', 'cancelled']))))
+                    ->whereNotIn('invoices.status', ['draft', 'void', 'cancelled'])))))
+                // postpaid: an unpaid bill past its due date and the grace days
+                ->orWhere(fn ($post) => $post->whereIn('package_id', $postpaid)->whereExists(fn ($sub) => $sub->selectRaw(1)->from('invoices')
+                    ->whereColumn('invoices.connection_id', 'connections.id')
+                    ->whereNotNull('invoices.service_months')
+                    ->whereIn('invoices.status', Invoice::OPEN_STATUSES)->where('invoices.due', '>', 0)
+                    ->where('invoices.due_date', '<', now()->subDays((int) $settings['grace_days'])->toDateString()))))
             ->chunkById(200, function ($connections) use (&$count) {
                 foreach ($connections as $connection) {
                     try {
@@ -129,6 +155,7 @@ class OverdueService
         Connection::with('customer')->where('branch_id', $branchId)
             ->where('status', 'active')
             ->whereNotNull('expire_at')
+            ->where(fn ($x) => $x->whereNull('package_id')->orWhereNotIn('package_id', fn ($q) => $q->select('id')->from('packages')->where('billing_mode', 'postpaid')))
             ->where('expire_at', '<=', now()->addDays($days)->subDays((int) $settings['grace_days']))
             ->where(fn ($q) => $q->whereNull('expiry_notice_for')->orWhereColumn('expiry_notice_for', '!=', 'expire_at'))
             ->chunkById(200, function ($connections) use (&$count, $settings) {
@@ -226,11 +253,11 @@ class OverdueService
     public static function reactivateIfClear(int $customerId): int
     {
         $count = 0;
-        $connections = Connection::where('customer_id', $customerId)
+        $connections = Connection::with('package')->where('customer_id', $customerId)
             ->where('status', 'suspended')
             ->whereIn('suspension_reason', self::SUSPEND_REASONS)
-            ->where('expire_at', '>', now())
-            ->get();
+            ->get()
+            ->filter(fn ($c) => self::isPostpaid($c) ? ! self::overdueBill($c) : ($c->expire_at && $c->expire_at->isFuture()));
         foreach ($connections as $connection) {
             try {
                 ConnectionService::applyExpiry($connection);

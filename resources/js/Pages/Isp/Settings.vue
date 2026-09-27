@@ -218,6 +218,10 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                         <input v-model="s.init_bonus_days" type="number" min="0" max="365" :class="input" />
                     </div>
                     <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Postpaid packages: bill due, days into its period</label>
+                        <input v-model="s.postpaid_due_days" type="number" min="0" max="60" :class="input" />
+                    </div>
+                    <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Manual invoice due = invoice date + days</label>
                         <input v-model="s.due_days" type="number" min="0" max="90" :class="input" />
                     </div>

@@ -56,6 +56,7 @@ class PackageController extends IspController
             'upload_mbps' => 'required|integer|min:0',
             'price' => 'required|numeric|min:0|max:9999999',
             'billing_cycle' => 'required|in:monthly,quarterly,half_yearly,yearly',
+            'billing_mode' => 'nullable|in:prepaid,postpaid',
             'validity_days' => 'nullable|integer|min:1|max:400',
             'installation_fee' => 'nullable|numeric|min:0',
             'activation_fee' => 'nullable|numeric|min:0',
@@ -73,7 +74,7 @@ class PackageController extends IspController
                 $old = $package->exists ? $package->only(['name', 'price', 'download_mbps', 'upload_mbps', 'billing_cycle', 'is_active']) : null;
                 $oldPrice = $package->exists ? (float) $package->price : null;
 
-                $package->fill($request->only(['name', 'code', 'download_mbps', 'upload_mbps', 'price', 'billing_cycle', 'description', 'network_profile']) + [
+                $package->fill($request->only(['name', 'code', 'download_mbps', 'upload_mbps', 'price', 'billing_cycle', 'description', 'network_profile']) + ['billing_mode' => $request->billing_mode ?: ($package->billing_mode ?? 'prepaid')] + [
                     'validity_days' => (int) ($request->validity_days ?: 30),
                     'installation_fee' => (float) $request->installation_fee,
                     'activation_fee' => (float) $request->activation_fee,

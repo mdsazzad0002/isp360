@@ -339,6 +339,10 @@ class ConnectionService
         if (! IspSettings::get($connection->branch_id, 'auto_suspend')) {
             return false;
         }
+        $connection->loadMissing('package');
+        if (OverdueService::isPostpaid($connection)) {
+            return OverdueService::overdueBill($connection) !== null;
+        }
         if ($connection->expire_at && $connection->expire_at->isFuture()) {
             return false;
         }
@@ -359,16 +363,19 @@ class ConnectionService
     public static function applyExpiry(Connection $connection): bool
     {
         $settings = IspSettings::all($connection->branch_id);
-        $hasTime = $connection->expire_at && $connection->expire_at->isFuture();
+        $connection->loadMissing('package');
+        $postpaid = OverdueService::isPostpaid($connection);
+        // postpaid: back on once no bill is overdue (its time runs on credit meanwhile)
+        $hasTime = $postpaid ? ! OverdueService::overdueBill($connection, $settings) : ($connection->expire_at && $connection->expire_at->isFuture());
 
         if ($connection->status === 'active' && $settings['auto_suspend'] && OverdueService::isDueForSuspension($connection, $settings)) {
-            self::suspend($connection, OverdueService::SUSPEND_REASON, true);
+            self::suspend($connection, $postpaid ? 'Overdue' : OverdueService::SUSPEND_REASON, true);
             DB::afterCommit(fn () => IspNotifier::send($connection->branch_id, $connection->customer, 'suspend', ['connection' => $connection->code]));
             return true;
         }
         if ($connection->status === 'suspended' && $hasTime && $settings['auto_reactivate']
             && in_array($connection->suspension_reason, OverdueService::SUSPEND_REASONS, true)) {
-            self::reactivate($connection, 'Paid until ' . $connection->expire_at->format('d M Y h:i A'), true);
+            self::reactivate($connection, $postpaid ? 'Overdue bills paid' : 'Paid until ' . $connection->expire_at->format('d M Y h:i A'), true);
             DB::afterCommit(fn () => IspNotifier::send($connection->branch_id, $connection->customer, 'reactivate', ['connection' => $connection->code]));
             return true;
         }

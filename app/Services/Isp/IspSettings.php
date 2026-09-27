@@ -27,6 +27,8 @@ class IspSettings
         'referral_commission' => '0',
         'auto_suspend' => true,
         'auto_reactivate' => true,
+        // postpaid packages: a bill falls due this many days after its service period starts
+        'postpaid_due_days' => 15,
         // grace: an expired line stays on this many days before it is suspended (0 = at once)
         'grace_days' => 0,
         // notice: an SMS this many days before the line is suspended (0 = none); with

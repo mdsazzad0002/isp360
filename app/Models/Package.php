@@ -27,9 +27,19 @@ class Package extends Model
     // Fields a reseller customizes on their copy of a company package; everything
     // technical (speed, router profile, cycle, fees) always follows the base package.
     public const RESELLER_FIELDS = ['name', 'code', 'price', 'description', 'is_active'];
-    public const INHERITED_FIELDS = ['download_mbps', 'upload_mbps', 'billing_cycle', 'validity_days', 'installation_fee', 'activation_fee', 'network_profile'];
+    public const INHERITED_FIELDS = ['download_mbps', 'upload_mbps', 'billing_cycle', 'billing_mode', 'validity_days', 'installation_fee', 'activation_fee', 'network_profile'];
+
+    // prepaid: the time starts once the bill is paid (default). postpaid: each bill's time starts at
+    // once on credit, the bill falls due postpaid_due_days later, and the line is suspended only
+    // when a bill is overdue (plus the grace period).
+    public const BILLING_MODES = ['prepaid', 'postpaid'];
 
     public const CYCLE_MONTHS = ['monthly' => 1, 'quarterly' => 3, 'half_yearly' => 6, 'yearly' => 12];
+
+    public function isPostpaid(): bool
+    {
+        return $this->billing_mode === 'postpaid';
+    }
 
     public function cycleMonths(): int
     {

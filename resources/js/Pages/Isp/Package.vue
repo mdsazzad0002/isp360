@@ -15,7 +15,7 @@ const showError = useApiError();
 const cycleDays = { monthly: 30, quarterly: 90, half_yearly: 180, yearly: 365 };
 
 function blank() {
-    return { id: null, name: '', code: '', download_mbps: '', upload_mbps: '', price: '', billing_cycle: 'monthly', validity_days: 30, installation_fee: 0, activation_fee: 0, network_profile: '', description: '', is_active: true, visibility: 'universal', reseller_id: null, price_change_reason: '', tax_mode: 'default', tax_rate_ids: [] };
+    return { id: null, name: '', code: '', download_mbps: '', upload_mbps: '', price: '', billing_cycle: 'monthly', billing_mode: 'prepaid', validity_days: 30, installation_fee: 0, activation_fee: 0, network_profile: '', description: '', is_active: true, visibility: 'universal', reseller_id: null, price_change_reason: '', tax_mode: 'default', tax_rate_ids: [] };
 }
 const form = reactive(blank());
 const rows = ref([]);
@@ -56,7 +56,7 @@ const defaultTaxNames = computed(() => taxRates.value.filter((r) => r.is_default
 function fromRow(row) {
     return {
         name: row.name, code: row.code || '', download_mbps: row.download_mbps, upload_mbps: row.upload_mbps, price: Number(row.price),
-        billing_cycle: row.billing_cycle, validity_days: row.validity_days, installation_fee: Number(row.installation_fee), activation_fee: Number(row.activation_fee),
+        billing_cycle: row.billing_cycle, billing_mode: row.billing_mode || 'prepaid', validity_days: row.validity_days, installation_fee: Number(row.installation_fee), activation_fee: Number(row.activation_fee),
         network_profile: row.network_profile || '', description: row.description || '', is_active: !!row.is_active,
         visibility: row.visibility || 'universal', reseller_id: row.reseller_id,
         // tax_rate_ids: null = the default rates, [] = exempt, [ids] = these rates
@@ -208,7 +208,7 @@ onMounted(load);
                             </td>
                             <td class="px-3 py-2.5 text-right">
                                 <div class="font-semibold text-slate-800">{{ money(row.price) }}</div>
-                                <div class="text-xs text-slate-400">{{ label(row.billing_cycle) }} · {{ row.validity_days }}d</div>
+                                <div class="text-xs text-slate-400">{{ label(row.billing_cycle) }} · {{ row.validity_days }}d<span v-if="row.billing_mode === 'postpaid'" class="ml-1 rounded bg-indigo-50 px-1 text-indigo-600">postpaid</span></div>
                             </td>
                             <td class="px-3 py-2.5 text-right text-slate-600">{{ money(row.installation_fee) }} / {{ money(row.activation_fee) }}</td>
                             <td class="px-3 py-2.5">
@@ -304,6 +304,13 @@ onMounted(load);
                                     <option value="quarterly">Quarterly</option>
                                     <option value="half_yearly">Half-yearly</option>
                                     <option value="yearly">Yearly</option>
+                                </select>
+                            </div>
+                            <div class="col-span-2">
+                                <label class="mb-1 block text-xs font-medium text-slate-600">Billing mode</label>
+                                <select v-model="form.billing_mode" class="w-full rounded-md border border-slate-300 px-3 py-1.5">
+                                    <option value="prepaid">Prepaid: time starts when the bill is paid</option>
+                                    <option value="postpaid">Postpaid: service on credit, bill due later (Settings → postpaid due days)</option>
                                 </select>
                             </div>
                             <div>

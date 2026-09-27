@@ -198,4 +198,51 @@ class BillingRulesTest extends TestCase
         $this->assertSame('paid', $bill->fresh()->status);
         $this->artisan('isp:ledger-check')->assertSuccessful();
     }
+
+    public function test_postpaid_runs_on_credit_and_suspends_only_when_a_bill_is_overdue(): void
+    {
+        $this->settings(['postpaid_due_days' => 10]);
+        $this->api('/isp/package', ['name' => 'BR Post', 'download_mbps' => 10, 'upload_mbps' => 5, 'price' => 1000, 'billing_cycle' => 'monthly', 'billing_mode' => 'postpaid'])->assertOk();
+        $this->package = Package::where('name', 'BR Post')->whereNull('reseller_id')->firstOrFail();
+        $this->assertTrue($this->package->isPostpaid());
+
+        // on without paying: the first month runs on credit, the bill is due 10 days in
+        $connection = $this->paidConnection(pay: false);
+        $bill = Invoice::where('connection_id', $connection->id)->firstOrFail();
+        $connection->refresh();
+        $this->assertSame(['active', '2026-10-15 10:00:00'], [$connection->status, $connection->expire_at->toDateTimeString()]);
+        $this->assertSame('2026-09-25', $bill->due_date->toDateString());
+        $this->assertNotNull($bill->credit_at);
+        $this->assertFalse(ConnectionService::needsPayment($connection));
+
+        $this->runAt('2026-09-25 23:59:00');
+        $this->assertSame('active', $connection->fresh()->status);
+        $this->runAt('2026-09-26 00:01:00');
+        $this->assertSame(['suspended', 'Overdue'], [$connection->fresh()->status, $connection->fresh()->suspension_reason]);
+        $this->assertTrue(ConnectionService::needsPayment($connection->fresh()));
+
+        // paying the overdue bill brings it back; the paid time didn't move
+        $this->api('/isp/payment', ['customer_id' => $connection->customer_id, 'amount' => 1000, 'method' => 'cash', 'payment_date' => '2026-09-26'])->assertOk();
+        $connection->refresh();
+        $this->assertSame(['active', '2026-10-15 10:00:00'], [$connection->status, $connection->expire_at->toDateTimeString()]);
+
+        // next period billed 3 days ahead, on credit, due 10 days into it
+        $this->settings(['grace_days' => 2]);
+        $this->runAt('2026-10-12 10:00:00');
+        $next = Invoice::where('connection_id', $connection->id)->latest('id')->firstOrFail();
+        $this->assertNotSame($bill->id, $next->id);
+        $this->assertSame('2026-10-25', $next->due_date->toDateString());
+        $this->assertSame('2026-11-15 10:00:00', $connection->fresh()->expire_at->toDateTimeString());
+        $this->runAt('2026-10-12 10:05:00');
+        $this->assertSame(2, Invoice::where('connection_id', $connection->id)->count()); // once per period
+
+        // unpaid: stays on through the due date and the 2 grace days
+        $this->runAt('2026-10-27 12:00:00');
+        $this->assertSame('active', $connection->fresh()->status);
+        $this->runAt('2026-10-28 00:01:00');
+        $this->assertSame('suspended', $connection->fresh()->status);
+        $this->api('/isp/payment', ['customer_id' => $connection->customer_id, 'amount' => 1000, 'method' => 'cash', 'payment_date' => '2026-10-28'])->assertOk();
+        $this->assertSame('active', $connection->fresh()->status);
+        $this->artisan('isp:ledger-check')->assertSuccessful();
+    }
 }

@@ -36,13 +36,21 @@ class BillingService
         $horizon = now()->addDays($settings['renewal_invoice_days']);
         $stats = ['created' => 0, 'skipped' => 0, 'failed' => 0, 'errors' => []];
 
+        $postpaid = fn ($q) => $q->select('id')->from('packages')->where('billing_mode', 'postpaid');
         Connection::where('branch_id', $branchId)
-            // A line cut off for expiry is still billed, so there is always an invoice to pay to get it back.
-            ->where(fn ($q) => $q->where('status', 'active')
-                ->orWhere(fn ($w) => $w->where('status', 'suspended')->whereIn('suspension_reason', OverdueService::SUSPEND_REASONS)))
             ->whereNotNull('activated_at')
             ->where(fn ($q) => $q->whereNull('expire_at')->orWhere('expire_at', '<=', $horizon))
-            ->whereNotExists(fn ($q) => self::openServiceInvoice($q))
+            ->where(fn ($q) => $q
+                // prepaid: a line cut off for expiry is still billed, so there is always an invoice to
+                // pay to get it back; one open bill at a time
+                ->where(fn ($p) => $p->where(fn ($x) => $x->whereNull('package_id')->orWhereNotIn('package_id', $postpaid))
+                    ->where(fn ($s) => $s->where('status', 'active')
+                        ->orWhere(fn ($w) => $w->where('status', 'suspended')->whereIn('suspension_reason', OverdueService::SUSPEND_REASONS)))
+                    ->whereNotExists(fn ($e) => self::openServiceInvoice($e)))
+                // postpaid: each period is billed while the line is on, unpaid earlier bills or not
+                // (they run on credit; an overdue one suspends the line instead)
+                ->orWhere(fn ($p) => $p->whereIn('package_id', $postpaid)->where('status', 'active')
+                    ->whereNotExists(fn ($e) => self::openServiceInvoice($e)->whereNull('invoices.credit_at'))))
             ->when($connectionIds, fn ($q) => $q->whereIn('id', $connectionIds))
             ->orderBy('id')
             ->chunkById(200, function ($connections) use (&$stats) {
@@ -75,8 +83,11 @@ class BillingService
             if (! $connection || ! $connection->package) {
                 return null;
             }
+            $postpaid = $connection->package->isPostpaid();
+            // postpaid bills run on credit: an unpaid earlier one doesn't hold back the next period
             $open = Invoice::where('connection_id', $connection->id)->whereNotNull('service_months')
-                ->whereIn('status', array_merge(Invoice::OPEN_STATUSES, ['draft']))->exists();
+                ->whereIn('status', array_merge(Invoice::OPEN_STATUSES, ['draft']))
+                ->when($postpaid, fn ($q) => $q->whereNull('credit_at'))->exists();
             if ($open && ! $extra) { // $extra: an advance cycle bought on top, paid right away
                 return null;
             }
@@ -88,6 +99,10 @@ class BillingService
             $length = $months === 1 ? '1 month' : "{$months} months";
             $today = now()->startOfDay();
             $dueDate = $connection->expire_at && $connection->expire_at->isFuture() ? $connection->expire_at->copy()->startOfDay() : $today;
+            if ($postpaid) {
+                // due some days into the period it pays for
+                $dueDate = $dueDate->copy()->addDays(IspSettings::get($connection->branch_id, 'postpaid_due_days'));
+            }
 
             $invoice = self::createInvoiceRecord($connection->customer, $connection->branch_id, [
                 'connection_id' => $connection->id,
@@ -103,6 +118,11 @@ class BillingService
                 'discount' => 0,
             ]], true);
 
+            if ($postpaid) {
+                // the period starts now, on credit (like "start on due", automatically)
+                Invoice::whereKey($invoice->id)->update(['credit_at' => now()]);
+                ConnectionService::refreshExpiry($connection->id);
+            }
             CollectionService::autoAllocate($connection->customer_id);
             return $invoice->fresh();
         });
