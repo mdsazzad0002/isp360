@@ -250,6 +250,15 @@ class ConnectionController extends IspController
         if (! $router || ! $connection->pppoe_username) {
             return response()->json(['managed' => false]);
         }
+        if ($router->isRadius()) {
+            try {
+                $session = \App\Services\Network\RadiusDriver::activeSession($connection);
+                $reason = $session ? null : $this->radiusOfflineReason($connection);
+                return response()->json(['managed' => true, 'radius' => true, 'router' => $router->name, 'router_host' => $router->host, 'online' => (bool) $session, 'session' => $session, 'reason' => $reason]);
+            } catch (\Throwable $th) {
+                return response()->json(['managed' => true, 'radius' => true, 'router' => $router->name, 'router_host' => $router->host, 'error' => $th->getMessage()]);
+            }
+        }
         try {
             $api = new \App\Services\Network\MikroTikClient($router);
             $session = \App\Services\Network\MikroTikDriver::activeSession($api, $connection);
@@ -260,13 +269,45 @@ class ConnectionController extends IspController
         }
     }
 
+    // Why a RADIUS user is offline, from the last login attempt FreeRADIUS logged (radpostauth).
+    private function radiusOfflineReason(Connection $connection): ?string
+    {
+        if ($connection->status !== 'active') {
+            return "The connection is {$connection->status}: RADIUS rejects its login.";
+        }
+        $last = \App\Services\Network\RadiusDriver::db()->table('radpostauth')->where('username', $connection->pppoe_username)->orderByDesc('id')->first();
+        if (! $last) {
+            return 'No login attempt reached RADIUS yet (router off, or not pointing at this RADIUS server).';
+        }
+        return str_contains(strtolower($last->reply), 'reject')
+            ? "Last login {$last->authdate} was rejected (wrong password, or the MAC lock)."
+            : "Last login {$last->authdate} was accepted; no session is open now.";
+    }
+
+    // RADIUS session history: start/stop, IP, MAC and data used per session.
+    public function sessions(Request $request)
+    {
+        if ($r = $this->deny('connection')) return $r;
+        $connection = Connection::where('branch_id', $this->branchId)->findOrFail($request->id);
+        $router = \App\Models\Router::forConnection($connection);
+        if (! $router?->isRadius() || ! $connection->pppoe_username) {
+            return response()->json(['radius' => false, 'sessions' => []]);
+        }
+        try {
+            return response()->json(['radius' => true, 'sessions' => \App\Services\Network\RadiusDriver::sessions($connection, min(200, (int) ($request->limit ?: 50)))]);
+        } catch (\Throwable $th) {
+            return send_error($th->getMessage(), null, 422);
+        }
+    }
+
     // One live traffic reading for the connection panel's graph (polled every few seconds while it is open).
     public function traffic(Request $request)
     {
         if ($r = $this->deny('connection')) return $r;
         $connection = Connection::where('branch_id', $this->branchId)->findOrFail($request->id);
         $router = \App\Models\Router::forConnection($connection);
-        if (! $router || ! $connection->pppoe_username || ! isset(\App\Services\Network\MikroTikDriver::SERVICES[$connection->connection_type])) {
+        // live graphs read the MikroTik interface; a RADIUS NAS only reports totals (see sessions)
+        if (! $router || $router->isRadius() || ! $connection->pppoe_username || ! isset(\App\Services\Network\MikroTikDriver::SERVICES[$connection->connection_type])) {
             return response()->json(['managed' => false]);
         }
         try {

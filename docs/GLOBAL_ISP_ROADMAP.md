@@ -115,14 +115,16 @@ Built 2026-09-27. With no rates set, nothing changes.
 - [ ] Saved card / auto-debit (Stripe customer + mandate) for auto-renewal — P1.
 - [ ] Chargeback/dispute handling: reverse the payment through `CollectionService`, keep the audit trail — P1.
 
-### 2.5 Network control is MikroTik-only — P0, L
+### 2.5 Network control is MikroTik-only — P0, L — **RADIUS done**
 Most ISPs outside small BD markets use **RADIUS** (FreeRADIUS) with Cisco/Juniper/Huawei/MikroTik BRAS/BNG. A MikroTik-only driver blocks medium and large ISPs.
 
 **Tasks**
-- [ ] `RadiusDriver` implementing `NetworkDriver`: write `radcheck`/`radreply`/`radusergroup` (FreeRADIUS SQL schema), speed via vendor attributes (Mikrotik-Rate-Limit, Cisco-AVPair, Huawei-Input/Output-Average-Rate).
-- [ ] CoA / Disconnect-Message (RFC 5176) for instant suspend and speed change without waiting for the session to drop.
-- [ ] Read `radacct` for sessions, online status, data usage, IP/MAC history.
-- [ ] Choose the driver per router/NAS, not only globally (`ISP_NETWORK_DRIVER`), so one ISP can mix MikroTik API and RADIUS.
+- [x] `RadiusDriver` implementing `NetworkDriver`: writes `radcheck`/`radreply`/`radusergroup`/`radgroupreply` and the `nas` client list (FreeRADIUS SQL schema, own `radius` DB connection, tables created if missing); speed via vendor attributes per NAS type (Mikrotik-Rate-Limit, Huawei-Input/Output-Average-Rate, Cisco-AVPair); suspension = `Auth-Type := Reject`; static IP = `Framed-IP-Address`; hotspot MAC lock = `Calling-Station-Id`. Checked end to end against FreeRADIUS 3 (`radtest` Accept with the rate / Reject when suspended). Setup guide: `docs/RADIUS_SETUP.md`.
+- [x] CoA / Disconnect-Message (RFC 5176, `RadiusClient`, signed and answer-verified with the NAS secret): suspension, rename and IP/MAC changes disconnect the live session; a package change on a MikroTik NAS is a live CoA with the new rate, else a disconnect. A NAS that doesn't answer fails the sync, which is retried.
+- [x] Read `radacct` for online status (connection panel), session history with IP / MAC / data used, and a NAS's online users; `radpostauth` explains a failed login.
+- [x] Driver per router/NAS (`routers.driver`, `RouterDriver`), so one ISP mixes MikroTik API routers and RADIUS NAS devices; `ISP_NETWORK_DRIVER` = MikroTik keeps meaning "per router".
+- [ ] CoA speed change for Huawei / Cisco (vendor CoA attributes); today they get a disconnect.
+- [ ] Usage-based features on top of `radacct` (data caps / FUP 4.2, lawful session-log export 2.6).
 - [x] Remove the lab router credentials (admin/admin) from any seed/default; router passwords encrypted at rest. (No default credentials in seeds/config; `routers.password` uses the `encrypted` cast.)
 
 ### 2.6 Legal compliance (data and logs) — P0, M
@@ -385,7 +387,7 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 **Exit check:** a test installation in USD/America/New_York with 8% sales tax and Stripe passes the full billing test suite and `isp:ledger-check`.
 
 ### Phase B — Network and compliance (P0/P1) ≈ 6–8 weeks
-1. RADIUS driver + CoA + accounting (2.5)
+1. ~~RADIUS driver + CoA + accounting (2.5)~~ — done 2026-09-28
 2. Session/NAT log retention and export (2.6)
 3. KYC, consent, pseudonymised erasure, terms acceptance (2.6)
 4. IPAM + CGNAT port blocks (4.6)
@@ -441,4 +443,4 @@ These protect what already works:
 | 7 | ~~Redis queue + Horizon; move SMS/router sync to jobs~~ (done) | P0 | M |
 | 8 | ~~Stripe driver + webhook idempotency~~ (done) | P0 | M |
 | 9 | ~~Grace/notice/late-fee settings (default off)~~ (done) | P0 | M |
-| 10 | RADIUS driver (FreeRADIUS SQL + CoA) | P0 | L |
+| 10 | ~~RADIUS driver (FreeRADIUS SQL + CoA)~~ (done) | P0 | L |

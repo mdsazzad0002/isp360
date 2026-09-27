@@ -34,9 +34,9 @@ abstract class IspController extends Controller
         return checkAccess($access) ? null : send_error('You are not authorized for this action', null, 403);
     }
 
-    protected function validateOrFail(array $data, array $rules)
+    protected function validateOrFail(array $data, array $rules, array $messages = [])
     {
-        $validator = Validator::make($data, $rules);
+        $validator = Validator::make($data, $rules, $messages);
         return $validator->fails() ? send_error('Validation Error', $validator->errors(), 422) : null;
     }
 

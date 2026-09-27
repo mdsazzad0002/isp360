@@ -16,7 +16,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->bind(\App\Services\Network\NetworkDriver::class, fn ($app) => $app->make(config('isp.network_driver')));
+        // MikroTik (the default) means "per router": each router is driven over its API or by RADIUS
+        $this->app->bind(\App\Services\Network\NetworkDriver::class, function ($app) {
+            $class = config('isp.network_driver');
+            return $app->make($class === \App\Services\Network\MikroTikDriver::class ? \App\Services\Network\RouterDriver::class : $class);
+        });
     }
 
     /**

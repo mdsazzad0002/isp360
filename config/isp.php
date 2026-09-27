@@ -1,8 +1,10 @@
 <?php
 
 return [
-    // Class implementing App\Services\Network\NetworkDriver. The MikroTik driver does nothing
-    // for a branch until a default router is added under Network Setup > Routers.
+    // Class implementing App\Services\Network\NetworkDriver. The MikroTik driver (default) works
+    // per router: a router set to "RADIUS" is driven through FreeRADIUS (RadiusDriver, database
+    // connection "radius"), any other over the MikroTik API. Nothing is pushed for a branch until
+    // a default router is added under Network Setup > Routers. NullNetworkDriver = manual mode.
     'network_driver' => env('ISP_NETWORK_DRIVER', \App\Services\Network\MikroTikDriver::class),
 
     // Router pushes and SMS run on queues ("network", "sms", "default"). Pick one:

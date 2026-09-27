@@ -376,6 +376,7 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/connection-package-quote', [Isp\ConnectionController::class, 'packageQuote'])->name('isp.connection.packageQuote');
     Route::post('/connection-sync', [Isp\ConnectionController::class, 'sync'])->name('isp.connection.sync');
     Route::post('/connection-online', [Isp\ConnectionController::class, 'online'])->name('isp.connection.online');
+    Route::post('/connection-sessions', [Isp\ConnectionController::class, 'sessions'])->name('isp.connection.sessions');
     Route::post('/connection-traffic', [Isp\ConnectionController::class, 'traffic'])->middleware('throttle:90,1')->name('isp.connection.traffic');
     Route::post('/connection-verify', [Isp\ConnectionController::class, 'verify'])->middleware('throttle:30,1')->name('isp.connection.verify');
     Route::post('/connection-terminal', [Isp\ConnectionController::class, 'terminal'])->middleware('throttle:60,1')->name('isp.connection.terminal');

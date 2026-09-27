@@ -104,6 +104,9 @@ class NetworkTerminalService
         if (! $router) {
             throw new RuntimeException("Connection {$connection->code} has no router (set one on the connection or a default router).");
         }
+        if ($router->isRadius()) {
+            throw new RuntimeException("{$router->name} is a RADIUS NAS: the terminal needs a MikroTik router with API access. Use the connection's online status and sessions instead.");
+        }
         return [new MikroTikClient($router), $router];
     }
 
@@ -189,7 +192,9 @@ class NetworkTerminalService
         $ip = null;
         if (($router = Router::forConnection($c)) && isset(MikroTikDriver::SERVICES[$c->connection_type]) && $c->pppoe_username) {
             try {
-                $ip = MikroTikDriver::activeSession(new MikroTikClient($router), $c)['address'] ?? null;
+                $ip = $router->isRadius()
+                    ? (RadiusDriver::activeSession($c)['address'] ?? null)
+                    : (MikroTikDriver::activeSession(new MikroTikClient($router), $c)['address'] ?? null);
             } catch (RuntimeException) {
                 // router down: fall back to the static IP
             }

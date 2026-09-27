@@ -43,6 +43,23 @@ return [
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
         ],
 
+        // FreeRADIUS SQL tables (radcheck, radreply, radusergroup, radacct, nas...). Same database as
+        // the app unless RADIUS_DB_* point at the FreeRADIUS server's own database.
+        'radius' => [
+            'driver' => 'mysql',
+            'host' => env('RADIUS_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('RADIUS_DB_PORT', env('DB_PORT', '3306')),
+            'database' => env('RADIUS_DB_DATABASE', env('DB_DATABASE', 'forge')),
+            'username' => env('RADIUS_DB_USERNAME', env('DB_USERNAME', 'forge')),
+            'password' => env('RADIUS_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('RADIUS_DB_SOCKET', env('DB_SOCKET', '')),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_general_ci',
+            'prefix' => '',
+            'strict' => false,
+            'engine' => null,
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DATABASE_URL'),

@@ -57,11 +57,27 @@ function load() {
     secret.value = '';
     pkg.open = false;
     online.value = null;
+    radiusSessions.value = null;
     axios.post('/isp/get-connection', { id: props.connectionId }).then((res) => {
         conn.value = res.data;
         if (['pppoe', 'hotspot'].includes(res.data.connection_type)) axios.post('/isp/connection-online', { id: res.data.id }).then((r) => (online.value = r.data));
     });
 }
+
+// RADIUS accounting: past sessions with IP, MAC and data used
+const radiusSessions = ref(null);
+async function loadSessions() {
+    if (radiusSessions.value) {
+        radiusSessions.value = null; // toggle off
+        return;
+    }
+    try {
+        radiusSessions.value = (await axios.post('/isp/connection-sessions', { id: conn.value.id, limit: 50 })).data.sessions;
+    } catch (err) {
+        showError(err);
+    }
+}
+const bytes = (n) => (n >= 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.round(n / 1e3) + ' KB');
 
 async function syncNow() {
     busy.value = true;
@@ -202,18 +218,35 @@ function describe(h) {
                 <div>
                     <!-- two separate facts: can we reach the router, and is the customer connected to it -->
                     <div>
-                        <i class="bi bi-router"></i> Router {{ online.router }}<span v-if="online.router_host" class="font-mono text-slate-500"> ({{ online.router_host }})</span>:
+                        <i class="bi bi-router"></i> {{ online.radius ? 'RADIUS NAS' : 'Router' }} {{ online.router }}<span v-if="online.router_host" class="font-mono text-slate-500"> ({{ online.router_host }})</span>:
                         <span v-if="online.error" class="text-red-600">not reachable · {{ online.error }}</span>
-                        <span v-else class="text-emerald-700">reachable</span>
+                        <span v-else class="text-emerald-700">{{ online.radius ? 'RADIUS database reachable' : 'reachable' }}</span>
                     </div>
                     <div v-if="!online.error">
                         <i class="bi bi-person"></i> Customer session:
-                        <span v-if="online.online" class="font-medium text-emerald-700"><i class="bi bi-circle-fill text-[8px]"></i> Online · {{ online.session?.address }} · up {{ online.session?.uptime }}</span>
+                        <span v-if="online.online" class="font-medium text-emerald-700"><i class="bi bi-circle-fill text-[8px]"></i> Online · {{ online.session?.address }} · {{ online.radius ? `since ${fmtDateTime(online.session?.start)}` : `up ${online.session?.uptime}` }}</span>
                         <span v-else class="text-slate-500"><i class="bi bi-circle text-[8px]"></i> Offline<span v-if="online.reason"> · {{ online.reason }}</span></span>
                     </div>
                 </div>
+                <button v-if="online.radius" type="button" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs" @click="loadSessions"><i class="bi bi-clock-history"></i> Sessions</button>
             </div>
-            <LiveTrafficChart v-if="online && online.managed && !online.error" :connection-id="conn.id" :package-mbps="conn.package ? { down: conn.package.download_mbps, up: conn.package.upload_mbps } : null" />
+            <div v-if="radiusSessions" class="overflow-x-auto rounded-md border border-slate-200">
+                <table class="w-full text-xs">
+                    <thead><tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600"><th class="px-2 py-1 font-medium">Start</th><th class="px-2 py-1 font-medium">Stop</th><th class="px-2 py-1 font-medium">IP</th><th class="px-2 py-1 font-medium">MAC</th><th class="px-2 py-1 text-right font-medium">Down / Up</th><th class="px-2 py-1 font-medium">Ended by</th></tr></thead>
+                    <tbody>
+                        <tr v-for="x in radiusSessions" :key="x.session_id + x.start" class="border-b border-slate-100">
+                            <td class="px-2 py-1">{{ fmtDateTime(x.start) }}</td>
+                            <td class="px-2 py-1">{{ x.stop ? fmtDateTime(x.stop) : 'online' }}</td>
+                            <td class="px-2 py-1 font-mono">{{ x.address }}</td>
+                            <td class="px-2 py-1 font-mono">{{ x.mac }}</td>
+                            <td class="px-2 py-1 text-right">{{ bytes(x.download_bytes) }} / {{ bytes(x.upload_bytes) }}</td>
+                            <td class="px-2 py-1">{{ x.terminate_cause }}</td>
+                        </tr>
+                        <tr v-if="!radiusSessions.length"><td colspan="6" class="px-2 py-3 text-center text-slate-400">No sessions recorded yet</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <LiveTrafficChart v-if="online && online.managed && !online.error && !online.radius" :connection-id="conn.id" :package-mbps="conn.package ? { down: conn.package.download_mbps, up: conn.package.upload_mbps } : null" />
             <TestDial v-if="conn.connection_type === 'pppoe' && conn.pppoe_username" :username="conn.pppoe_username" :password="secret" :can-reveal="!!can.connectionSecret" :router-name="online?.router || 'the router'" @reveal="reveal" />
             <div class="flex flex-wrap items-start justify-between gap-2 rounded-md border p-2" :class="conn.status === 'active' && !['synced', 'not_managed'].includes(conn.network_sync_status) ? 'border-red-200 bg-red-50/50' : 'border-slate-200'">
                 <div>
