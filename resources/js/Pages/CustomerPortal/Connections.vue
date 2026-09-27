@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Link, usePage } from '@inertiajs/vue3';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
-import { money, fmtDate, label } from '../../lib/isp';
+import { money, fmtDate, label, expiryClass, fmtDateTime } from '../../lib/isp';
 import { printInvoice } from '../../lib/ispPrint';
 
 const props = defineProps({
@@ -99,7 +99,7 @@ function toggle(c) {
                                 <th class="px-2 py-2 font-medium">Code</th>
                                 <th class="px-2 py-2 font-medium">Package</th>
                                 <th class="px-2 py-2 font-medium">Type / User</th>
-                                <th class="px-2 py-2 font-medium">{{ tab === 'active' ? 'Next bill' : 'Since' }}</th>
+                                <th class="px-2 py-2 font-medium">{{ tab === 'active' ? 'Expire date' : 'Since' }}</th>
                                 <th class="px-2 py-2 text-right font-medium">Billed</th>
                                 <th class="px-2 py-2 text-right font-medium">Collected</th>
                                 <th class="px-2 py-2 text-right font-medium">Due</th>
@@ -117,7 +117,7 @@ function toggle(c) {
                                     </td>
                                     <td class="px-2 py-2">{{ label(c.connection_type) }} <div class="text-xs text-slate-400">{{ c.pppoe_username || c.static_ip || '—' }}</div></td>
                                     <td class="px-2 py-2">
-                                        <template v-if="tab === 'active'">{{ fmtDate(c.next_billing_date) || '—' }}</template>
+                                        <template v-if="tab === 'active'"><span :class="expiryClass(c.expire_at)">{{ fmtDateTime(c.expire_at) || 'Unpaid' }}</span></template>
                                         <template v-else>{{ fmtDate(c.terminated_at || c.suspended_at) || '—' }}</template>
                                     </td>
                                     <td class="px-2 py-2 text-right">{{ money(c.billed) }}</td>
@@ -148,7 +148,7 @@ function toggle(c) {
                                             <tbody>
                                                 <tr v-for="i in invoicesOf(c.id)" :key="i.id" class="border-t border-slate-200/70">
                                                     <td class="py-1.5">{{ i.invoice_no }}</td>
-                                                    <td class="py-1.5">{{ i.period_start ? `${fmtDate(i.period_start)} – ${fmtDate(i.period_end)}` : fmtDate(i.invoice_date) }}</td>
+                                                    <td class="py-1.5">{{ i.period_start ? `${fmtDateTime(i.period_start)} – ${fmtDateTime(i.period_end)}` : fmtDate(i.invoice_date) }}</td>
                                                     <td class="py-1.5">{{ fmtDate(i.due_date) }}</td>
                                                     <td class="py-1.5 text-right">{{ money(i.total) }}</td>
                                                     <td class="py-1.5 text-right text-emerald-700">{{ money(i.paid) }}</td>

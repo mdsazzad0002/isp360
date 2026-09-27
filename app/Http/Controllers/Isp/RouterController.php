@@ -76,6 +76,37 @@ class RouterController extends IspController
         }
     }
 
+    // Read-only setup check for the Routers page guide: what the router has for PPPoE customers to connect.
+    public function readiness(Request $request)
+    {
+        if ($r = $this->deny('router')) return $r;
+        $router = Router::where('branch_id', $this->branchId)->findOrFail($request->id);
+        $api = new MikroTikClient($router);
+        try {
+            $res = $api->get('/system/resource');
+            $profiles = $api->get('/ppp/profile');
+            $ours = array_values(array_filter($profiles, fn ($p) => str_starts_with($p['comment'] ?? '', 'ISP package') || str_starts_with($p['name'] ?? '', 'isp-pkg-')));
+            $default = collect($profiles)->firstWhere('name', 'default') ?? [];
+            $bw = $api->get('/tool/bandwidth-server');
+            return response()->json([
+                'version' => $res['version'] ?? '',
+                'board' => $res['board-name'] ?? '',
+                'interfaces' => array_values(array_map(fn ($i) => ['name' => $i['name'], 'type' => $i['type'] ?? '', 'running' => ($i['running'] ?? 'false') === 'true'], array_filter($api->get('/interface'), fn ($i) => ! str_starts_with($i['name'] ?? '', '<')))),
+                'addresses' => array_map(fn ($a) => ['address' => $a['address'], 'interface' => $a['interface'] ?? ''], $api->get('/ip/address')),
+                'pppoe_servers' => array_map(fn ($s) => ['service' => $s['service-name'] ?? '', 'interface' => $s['interface'] ?? '', 'profile' => $s['default-profile'] ?? '', 'enabled' => ($s['disabled'] ?? 'false') !== 'true'], $api->get('/interface/pppoe-server/server')),
+                'pools' => array_map(fn ($p) => ['name' => $p['name'], 'ranges' => $p['ranges'] ?? ''], $api->get('/ip/pool')),
+                'default_profile' => ['local' => $default['local-address'] ?? '', 'remote' => $default['remote-address'] ?? ''],
+                'profiles' => array_map(fn ($p) => ['name' => $p['name'], 'rate' => $p['rate-limit'] ?? '', 'local' => $p['local-address'] ?? '', 'remote' => $p['remote-address'] ?? ''], $ours),
+                'masquerade' => count(array_filter($api->get('/ip/firewall/nat'), fn ($n) => ($n['action'] ?? '') === 'masquerade' && ($n['disabled'] ?? 'false') !== 'true')),
+                'bandwidth_server' => ($bw['enabled'] ?? 'false') === 'true',
+                'hotspot_servers' => count($api->get('/ip/hotspot')),
+                'online' => count($api->get('/ppp/active')),
+            ]);
+        } catch (\Throwable $th) {
+            return send_error($th->getMessage(), null, 422);
+        }
+    }
+
     // Live PPPoE + Hotspot sessions, matched to connections by username.
     public function sessions(Request $request)
     {

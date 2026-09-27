@@ -8,8 +8,8 @@ use App\Services\Isp\AuditLogger;
 use RuntimeException;
 
 // The customer page's diagnostic terminal. It is NOT a shell: each line is parsed into one
-// of the commands below, and each runs through the router's REST API. Nothing runs on the
-// server itself. The terminal is opened for one connection; commands that take a username
+// of the commands below, and each runs through the router's REST API. Only sping/port/trace
+// (and ping/diagnose when the connection has no router) run from the server, through ServerProbe. The terminal is opened for one connection; commands that take a username
 // act on that connection by default, or on another connection of the branch whose
 // username was pasted in.
 class NetworkTerminalService
@@ -18,7 +18,10 @@ class NetworkTerminalService
         'help' => 'List commands',
         'info [user]' => 'Connection details from the billing system',
         'session [user]' => 'Live session on the router: IP, MAC, uptime',
-        'ping [ip|host] [count]' => 'Ping from the router (default: the session IP, 4 packets, max 10)',
+        'ping [ip|host] [count]' => 'Ping from the router (default: the session IP, 4 packets, max 10); from this server if there is no router',
+        'sping [ip|host] [count]' => 'Ping from this server, without the router (default: the connection IP)',
+        'port [ip|host] <port>' => 'Is a TCP port open, checked from this server (e.g. port 80, port 8291)',
+        'trace [ip|host]' => 'Path from this server to the target, hop by hop (max 15 hops)',
         'secret [user]' => 'Router account: profile, disabled, last logout, last MAC',
         'traffic [user]' => 'Current download/upload speed of the session',
         'log [user|all] [lines]' => 'Router log lines about the user (default 20, max 100)',
@@ -51,7 +54,10 @@ class NetworkTerminalService
                 'help', '?' => self::help($out),
                 'info' => self::info($out, self::target($context, $args[0] ?? null)),
                 'session', 'status' => self::session($out, self::target($context, $args[0] ?? null)),
-                'ping' => self::ping($out, $context, $args),
+                'ping' => Router::forConnection($context) ? self::ping($out, $context, $args) : self::serverPing($out, $context, $args, true),
+                'sping' => self::serverPing($out, $context, $args),
+                'port' => self::port($out, $context, $args),
+                'trace', 'traceroute', 'tracert' => self::trace($out, $context, $args),
                 'secret' => self::secret($out, self::target($context, $args[0] ?? null), ! empty($can['secret'])),
                 'traffic' => self::traffic($out, self::target($context, $args[0] ?? null)),
                 'log' => self::log($out, $context, $args),
@@ -177,6 +183,68 @@ class NetworkTerminalService
         }
     }
 
+    // IP the server-side checks aim at when none is given: live session IP (if the router answers), else static IP.
+    private static function connectionIp(Connection $c): string
+    {
+        $ip = null;
+        if (($router = Router::forConnection($c)) && isset(MikroTikDriver::SERVICES[$c->connection_type]) && $c->pppoe_username) {
+            try {
+                $ip = MikroTikDriver::activeSession(new MikroTikClient($router), $c)['address'] ?? null;
+            } catch (RuntimeException) {
+                // router down: fall back to the static IP
+            }
+        }
+        $ip = $ip ?: $c->static_ip;
+        if (! $ip) {
+            throw new RuntimeException("No IP for {$c->code}: no live session and no static IP. Give one, e.g. sping 8.8.8.8");
+        }
+        return $ip;
+    }
+
+    private static function serverPing(TerminalOutput $out, Connection $c, array $args, bool $noRouter = false): void
+    {
+        $target = ServerProbe::target($args[0] ?? self::connectionIp($c));
+        $count = max(1, min(10, (int) ($args[1] ?? 4)));
+        if ($noRouter) {
+            $out->line("{$c->code} has no router: pinging from this server instead.", 'warn');
+        }
+        $out->line("PING {$target} from this server, {$count} packets", 'muted');
+        AuditLogger::log('terminal.server', $c, null, ['cmd' => 'ping', 'target' => $target]);
+        $r = ServerProbe::ping($target, $count);
+        foreach ($r['lines'] as $line) {
+            $out->line($line, str_contains($line, 'Unreachable') ? 'warn' : null);
+        }
+        $out->line("--- {$r['sent']} sent, {$r['received']} received, {$r['loss']}% loss" . ($r['rtt'] ? ", rtt min/avg/max {$r['rtt']} ms" : ''), $r['loss'] === 0 ? 'ok' : ($r['loss'] < 100 ? 'warn' : 'error'));
+        if ($r['loss'] === 100) {
+            $out->line('No reply from the server does not always mean the customer is down: a private IP behind the router is often not routed to the server, and many CPEs drop ping. Try ping (from the router) or port.', 'muted');
+        }
+    }
+
+    private static function port(TerminalOutput $out, Connection $c, array $args): void
+    {
+        // "port 80" (connection IP) or "port 10.0.0.5 80"
+        [$target, $port] = count($args) >= 2 ? [$args[0], $args[1]] : [null, $args[0] ?? null];
+        if (! ctype_digit((string) $port)) {
+            throw new RuntimeException('Usage: port [ip|host] <port>, e.g. port 80 or port 10.0.0.5 8291');
+        }
+        $target = ServerProbe::target($target ?? self::connectionIp($c));
+        AuditLogger::log('terminal.server', $c, null, ['cmd' => 'port', 'target' => $target, 'port' => (int) $port]);
+        $r = ServerProbe::tcp($target, (int) $port);
+        $r['open']
+            ? $out->line("{$target}:{$port} OPEN ({$r['ms']} ms from this server)", 'ok')
+            : $out->line("{$target}:{$port} CLOSED / no answer from this server: {$r['error']}", 'error');
+    }
+
+    private static function trace(TerminalOutput $out, Connection $c, array $args): void
+    {
+        $target = ServerProbe::target($args[0] ?? self::connectionIp($c));
+        $out->line("TRACE {$target} from this server (max 15 hops)", 'muted');
+        AuditLogger::log('terminal.server', $c, null, ['cmd' => 'trace', 'target' => $target]);
+        foreach (ServerProbe::trace($target) as $line) {
+            $out->line($line, str_contains($line, 'no reply') ? 'warn' : null);
+        }
+    }
+
     private static function secret(TerminalOutput $out, Connection $c, bool $showPassword): void
     {
         $menu = self::menu($c);
@@ -194,26 +262,16 @@ class NetworkTerminalService
 
     private static function traffic(TerminalOutput $out, Connection $c): void
     {
-        $menu = self::menu($c);
+        self::menu($c);
         [$api] = self::api($c);
-        $session = MikroTikDriver::activeSession($api, $c);
-        if (! $session) {
+        $t = MikroTikDriver::trafficSample($api, $c);
+        if (! $t) {
             $out->line("{$c->pppoe_username} is offline: no traffic.", 'warn');
             return;
         }
-        if ($c->connection_type === 'hotspot') {
-            $out->pairs(['bytes in' => self::bytes($session['bytes-in'] ?? 0), 'bytes out' => self::bytes($session['bytes-out'] ?? 0), 'uptime' => $session['uptime'] ?? '']);
-            return;
-        }
-        // PPPoE server creates a dynamic interface named <pppoe-username>
-        $rows = $api->run('/interface/monitor-traffic', ['interface' => "<pppoe-{$c->pppoe_username}>", 'once' => ''], 10);
-        $r = $rows[0] ?? [];
-        // the router's tx is the customer's download
-        $out->pairs([
-            'download' => self::bps($r['tx-bits-per-second'] ?? 0),
-            'upload' => self::bps($r['rx-bits-per-second'] ?? 0),
-            'packets down/up' => ($r['tx-packets-per-second'] ?? 0) . ' / ' . ($r['rx-packets-per-second'] ?? 0) . ' pps',
-        ]);
+        $out->pairs(isset($t['down_bps'])
+            ? ['download' => self::bps($t['down_bps']), 'upload' => self::bps($t['up_bps'])]
+            : ['bytes down' => self::bytes($t['down_bytes']), 'bytes up' => self::bytes($t['up_bytes']), 'uptime' => $t['uptime'] ?? '']);
     }
 
     private static function log(TerminalOutput $out, Connection $context, array $args): void
@@ -267,7 +325,7 @@ class NetworkTerminalService
         if (isset(MikroTikDriver::SERVICES[$c->connection_type]) && $c->pppoe_username) {
             $step('live session', fn () => self::session($out, $c));
         }
-        $step('ping', fn () => self::ping($out, $c, []));
+        $step('ping', fn () => Router::forConnection($c) ? self::ping($out, $c, []) : self::serverPing($out, $c, [], true));
         if ($c->pppoe_username) {
             $step('recent log', fn () => self::log($out, $c, [$c->pppoe_username, '8']));
         }

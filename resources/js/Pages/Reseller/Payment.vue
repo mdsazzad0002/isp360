@@ -5,11 +5,12 @@ import PortalLayout from '../../Layouts/PortalLayout.vue';
 import Pagination from '../../Components/Pagination.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
 import { useToast } from '../../lib/toast';
-import { money, fmtDate, label, monthStart, today, useApiError } from '../../lib/isp';
+import { money, fmtDate, label, monthStart, today, useApiError, fmtDateTime } from '../../lib/isp';
 
 // Reseller collects a bill from one of their customers (cash or into their own mobile
 // wallet). The money is credited to the customer at once and counted in the reseller's
-// wallet as money in hand, to settle with the company.
+// wallet as money in hand, to settle with the company. "My wallet" pays the bill from the
+// reseller's wallet balance instead.
 const props = defineProps({
     reseller: { type: Object, required: true },
     customers: { type: Array, default: () => [] },
@@ -24,7 +25,9 @@ const METHODS = [
     { value: 'nagad', label: 'Nagad' },
     { value: 'rocket', label: 'Rocket' },
     { value: 'other', label: 'Other' },
+    { value: 'wallet', label: 'Pay from my wallet' },
 ];
+const needsTrx = computed(() => !['cash', 'wallet'].includes(form.method));
 
 function blank() {
     return { customer_id: '', amount: '', method: 'cash', transaction_id: '', notes: '' };
@@ -121,11 +124,11 @@ onMounted(load);
                         <option v-for="m in METHODS" :key="m.value" :value="m.value">{{ m.label }}</option>
                     </select>
                 </div>
-                <div v-if="form.method !== 'cash'">
+                <div v-if="needsTrx">
                     <label class="mb-1 block text-xs font-medium text-slate-600">Transaction ID</label>
                     <input v-model="form.transaction_id" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                 </div>
-                <div :class="form.method !== 'cash' ? 'col-span-1 md:col-span-3' : 'col-span-2 md:col-span-4'">
+                <div :class="needsTrx ? 'col-span-1 md:col-span-3' : 'col-span-2 md:col-span-4'">
                     <label class="mb-1 block text-xs font-medium text-slate-600">Note</label>
                     <input v-model="form.notes" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                 </div>
@@ -134,6 +137,7 @@ onMounted(load);
                     <div class="mb-2 flex flex-wrap gap-4">
                         <span>Current due: <b :class="dues.balance > 0 ? 'text-red-600' : 'text-slate-700'">{{ money(Math.max(0, dues.balance)) }}</b></span>
                         <span v-if="dues.advance > 0">Advance: <b class="text-emerald-700">{{ money(dues.advance) }}</b></span>
+                        <span v-if="form.method === 'wallet'">My wallet available: <b :class="dues.wallet >= Number(form.amount || 0) ? 'text-emerald-700' : 'text-red-600'">{{ money(dues.wallet) }}</b></span>
                     </div>
                     <table v-if="dues.invoices.length" class="w-full text-xs">
                         <thead>
@@ -148,7 +152,7 @@ onMounted(load);
                         <tbody>
                             <tr v-for="inv in dues.invoices" :key="inv.id" class="border-t border-slate-200">
                                 <td class="py-1">{{ inv.invoice_no }}</td>
-                                <td class="py-1">{{ fmtDate(inv.period_start) }}<span v-if="inv.period_end"> – {{ fmtDate(inv.period_end) }}</span></td>
+                                <td class="py-1">{{ fmtDateTime(inv.period_start) }}<span v-if="inv.period_end"> – {{ fmtDateTime(inv.period_end) }}</span></td>
                                 <td class="py-1">{{ fmtDate(inv.due_date) }}</td>
                                 <td class="py-1 text-right">{{ money(inv.total) }}</td>
                                 <td class="py-1 text-right font-medium text-red-600">{{ money(inv.due) }}</td>
@@ -159,7 +163,7 @@ onMounted(load);
                 </div>
 
                 <div class="col-span-2 flex justify-end md:col-span-4">
-                    <button type="submit" :disabled="saving" class="rounded-md bg-emerald-600 px-4 py-1.5 text-sm text-white hover:bg-emerald-700 disabled:opacity-50"><i class="bi bi-check2-circle"></i> Receive payment</button>
+                    <button type="submit" :disabled="saving" class="rounded-md bg-emerald-600 px-4 py-1.5 text-sm text-white hover:bg-emerald-700 disabled:opacity-50"><i class="bi bi-check2-circle"></i> {{ form.method === 'wallet' ? 'Pay from wallet' : 'Receive payment' }}</button>
                 </div>
             </form>
         </div>

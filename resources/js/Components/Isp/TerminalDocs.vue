@@ -8,7 +8,7 @@ import { ref, computed } from 'vue';
 //   {router} IP/host of the connection's MikroTik (where commands run; never a btest target)
 // A value that is not known stays as <placeholder>; such an example can only be "used".
 const props = defineProps({ ctx: { type: Object, default: () => ({}) } });
-const emit = defineEmits(['use', 'run']);
+const emit = defineEmits(['use', 'run', 'refresh']);
 
 function fill(template) {
     return template
@@ -19,6 +19,25 @@ function fill(template) {
         .replace(/\{router\}/g, props.ctx.routerIp || '<router>');
 }
 const needsInput = (cmd) => /<[a-z]+>/.test(cmd);
+// Only real values are shown: examples needing a value the connection does not have are hidden.
+// The btest password is the one value a person always types, so it may stay a placeholder.
+const CTX_KEY = { user: 'user', ip: 'ip', profile: 'profile', mac: 'mac', router: 'routerIp' };
+const known = (template) => [...template.matchAll(/\{(\w+)\}/g)].every(([, k]) => !CTX_KEY[k] || props.ctx[CTX_KEY[k]]);
+function examplesOf(c) {
+    if (c.needsIp && !props.ctx.ip) return [];
+    return (c.examples || []).filter(known).map(fill);
+}
+// Says why there is no IP, from what the router answered (never just "offline").
+const noIpText = computed(() => {
+    const c = props.ctx;
+    const who = c.user || 'This connection';
+    switch (c.sessionStatus) {
+        case 'checking': return 'Checking the live session on the router…';
+        case 'error': return `Could not ask ${c.routerName || 'the router'}: ${c.sessionReason || 'no answer'}. The customer may be online.`;
+        case 'offline': return `${who} is offline on ${c.routerName || 'the router'} (no static IP). ${c.sessionReason || ''}`;
+        default: return `${who} has no session IP${c.sessionReason ? `: ${c.sessionReason}` : ''} and no static IP.`;
+    }
+});
 const search = ref('');
 const section = ref('start');
 
@@ -57,6 +76,33 @@ const COMMANDS = [
         examples: ['ping', 'ping {ip}', 'ping {ip} 10', 'ping 8.8.8.8', 'ping google.com 3'],
         output: 'time = round trip per packet. The last line gives sent/received, % loss and min/avg/max.',
         tips: ['0% loss but customer says slow: run traffic to see if the line is full.', '100% loss while ONLINE: customer router may block ping (ICMP). Not always a fault.', 'Loss to 8.8.8.8 too: the problem is upstream, not this customer.'],
+    },
+    {
+        name: 'sping',
+        syntax: 'sping [ip|host] [count]',
+        summary: 'Ping from THIS SERVER, without the router.',
+        details: 'For connections with no router (static IP, no default router) or when the router is down. With no target it uses the live session IP (if the router answers) or the static IP. "ping" does this by itself when the connection has no router. Audited.',
+        examples: ['sping', 'sping {ip}', 'sping {ip} 10', 'sping {router}', 'sping 8.8.8.8'],
+        output: 'Same as ping: reply lines, then sent/received, % loss and min/avg/max in ms.',
+        tips: ['The server reaches only IPs routed to it. A private PPPoE IP (e.g. 10.x) behind the router usually is not: then 100% loss means nothing, use ping (from the router).', 'sping {router} fails = the server cannot reach the router at all; every router command will fail too.'],
+    },
+    {
+        name: 'port',
+        syntax: 'port [ip|host] <port>',
+        summary: 'Is a TCP port open? Checked from this server.',
+        details: 'Opens a TCP connection and closes it at once (no data sent). With only a port it uses the connection IP. Audited.',
+        examples: ['port 80', 'port {ip} 80', 'port {ip} 8291', 'port {ip} 2000', 'port {router} 80', 'port {router} 8291'],
+        output: 'OPEN with the time taken, or CLOSED / no answer with the reason (refused = host up, port closed; timed out = filtered or host down).',
+        tips: ['Common ports: 80/443 web UI, 8291 WinBox, 22 SSH, 2000 bandwidth-test server, 8728 RouterOS API.', 'port {router} 80 closed = the REST API (www service) is off or blocked: the app cannot manage this router.'],
+    },
+    {
+        name: 'trace',
+        syntax: 'trace [ip|host]',
+        summary: 'Path from this server to the target, hop by hop.',
+        details: 'tracepath, max 15 hops. With no target it uses the connection IP. Audited.',
+        examples: ['trace', 'trace {ip}', 'trace {router}', 'trace 8.8.8.8'],
+        output: 'One line per hop with its time. "no reply" hops are routers that do not answer; only the last lines matter.',
+        tips: ['Stops at one hop = the next router drops or has no route: the problem is there.'],
     },
     {
         name: 'traffic',
@@ -100,6 +146,7 @@ const COMMANDS = [
     },
     {
         name: 'btest',
+        needsIp: true, // even the bare form aims at the session IP
         syntax: 'btest [address] [user=<u>] [password=<p>] [direction=both|receive|transmit] [duration=5s] [protocol=tcp|udp]',
         summary: 'Bandwidth test from the connection\'s router, drawn as a graph.',
         details: 'Same as RouterOS "/tool bandwidth-test" (you can paste that form too). The test always runs FROM the connection\'s MikroTik; address= is the OTHER end (see "Which IP" above), never the MikroTik itself. With no address it tests to the customer\'s live session IP; with no user/password it logs in with the connection\'s own username and password (never shown or logged). The target must be a MikroTik with /tool bandwidth-server enabled, e.g. the customer\'s MikroTik CPE. Duration is capped at 15 s. Needs "Connection Activate / Suspend" or "Routers (MikroTik)". Audited.',
@@ -136,6 +183,15 @@ const COMMANDS = [
 ];
 
 const PLAYBOOKS = [
+    {
+        title: 'No router / static IP customer',
+        steps: [
+            ['info', 'Check the static IP and that billing is active.'],
+            ['sping', 'Replies = the customer device is up and reachable from the server.'],
+            ['port 80', 'Their router web UI answers = the device is up even if it drops ping.'],
+            ['trace', 'Where the path stops is where the problem is.'],
+        ],
+    },
     {
         title: 'Customer says: no internet',
         steps: [
@@ -175,6 +231,8 @@ const PLAYBOOKS = [
     {
         title: 'Router sync failed / unreachable',
         steps: [
+            ['sping {router}', 'No reply = the server cannot reach the router (network/VPN/firewall).'],
+            ['port {router} 80', 'Closed = REST API (www service) off or blocked.'],
             ['router', 'If this fails too, the server cannot reach the router (network, port, REST service, credentials).'],
             ['info', 'Check which router the connection uses.'],
             ['sync', 'Retry once the router is reachable.'],
@@ -225,13 +283,23 @@ function onSearch() {
 
         <div class="flex-1 space-y-3 overflow-y-auto p-3">
             <div class="rounded-md border border-slate-200 bg-white p-2 text-[11px] text-slate-500">
-                Examples use <b class="text-slate-700">{{ ctx.code || 'the selected connection' }}</b>:
-                <span class="font-mono">router={{ ctx.routerName ? `${ctx.routerName} (${ctx.routerIp || '—'})` : '—' }} · user={{ ctx.user || '—' }} · ip={{ ctx.ip || '—' }}{{ ctx.sessionIp ? ' (live)' : ctx.staticIp ? ' (static)' : '' }} · profile={{ ctx.profile || '—' }}</span>.
-                <span v-if="!ctx.ip">No live IP (offline): examples with <span class="font-mono">&lt;ip&gt;</span> need one.</span>
-                Dashed examples need a value (e.g. the btest password) before running.
+                <div>
+                    Examples use <b class="text-slate-700">{{ ctx.code || 'the selected connection' }}</b>:
+                    <span class="font-mono">router={{ ctx.routerName ? `${ctx.routerName} (${ctx.routerIp || '—'})` : '—' }} · user={{ ctx.user || '—' }} · ip={{ ctx.ip || '—' }}{{ ctx.sessionIp ? ' (live)' : ctx.staticIp ? ' (static)' : '' }} · profile={{ ctx.profile || '—' }}</span>
+                </div>
+                <div v-if="!ctx.ip" class="mt-1.5 flex items-start gap-2 rounded px-2 py-1" :class="ctx.sessionStatus === 'error' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'">
+                    <i class="bi mt-px" :class="ctx.sessionStatus === 'error' ? 'bi-x-circle' : 'bi-exclamation-triangle'"></i>
+                    <div class="flex-1">
+                        <div>{{ noIpText }}</div>
+                        <div class="opacity-75">Examples that need the customer IP are hidden until it is known.</div>
+                    </div>
+                    <button type="button" class="shrink-0 rounded border border-current px-1.5 font-medium hover:bg-white" @click="emit('refresh')"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+                </div>
+                <div v-else class="mt-1">Dashed examples need a value you type (the btest password).</div>
             </div>
             <template v-if="section === 'start'">
-                <p>The terminal runs a fixed set of <b>diagnostic commands on the connection's MikroTik router</b> through its REST API. It is not a shell: nothing runs on the server, and anything not listed here is refused.</p>
+                <p>The terminal runs a fixed set of <b>diagnostic commands on the connection's MikroTik router</b> through its REST API. It is not a shell, and anything not listed here is refused.</p>
+                <p class="text-xs text-slate-600"><b>No router?</b> <span class="font-mono">sping</span>, <span class="font-mono">port</span> and <span class="font-mono">trace</span> run from this server instead (and <span class="font-mono">ping</span> / <span class="font-mono">diagnose</span> switch to it by themselves). They only reach IPs routed to the server.</p>
                 <ol class="list-decimal space-y-1 pl-5">
                     <li>Pick the connection at the top (or open the terminal from a connection's <b>Test</b> button).</li>
                     <li>Start with <button type="button" class="font-mono text-brand-600 hover:underline" @click="emit('run', 'diagnose')">diagnose</button>: it runs the usual checks and tells you what to do next.</li>
@@ -274,8 +342,13 @@ function onSearch() {
                     <ul v-if="c.tips" class="mt-1 list-disc pl-4 text-xs text-slate-600">
                         <li v-for="t in c.tips" :key="t">{{ fill(t) }}</li>
                     </ul>
-                    <div v-if="c.examples" class="mt-1.5 flex flex-wrap gap-1">
-                        <span v-for="ex in c.examples.map(fill)" :key="ex" class="inline-flex overflow-hidden rounded border font-mono text-[11px]" :class="needsInput(ex) ? 'border-dashed border-amber-400' : 'border-slate-300'">
+                    <div v-if="c.examples && !examplesOf(c).length" class="mt-1.5 rounded border border-dashed border-amber-300 bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
+                        No example: {{ noIpText }}
+                        Examples appear with the real IP once it is known.
+                        <button type="button" class="ml-1 font-medium underline" @click="emit('refresh')">Refresh</button>
+                    </div>
+                    <div v-if="examplesOf(c).length" class="mt-1.5 flex flex-wrap gap-1">
+                        <span v-for="ex in examplesOf(c)" :key="ex" class="inline-flex overflow-hidden rounded border font-mono text-[11px]" :class="needsInput(ex) ? 'border-dashed border-amber-400' : 'border-slate-300'">
                             <button type="button" class="px-1.5 py-0.5 hover:bg-slate-100" :title="needsInput(ex) ? 'Put in the prompt, then fill the <…> part' : 'Put in the prompt'" @click="emit('use', ex)">{{ ex }}</button>
                             <button v-if="!c.danger && !needsInput(ex)" type="button" class="border-l border-slate-300 px-1.5 text-emerald-600 hover:bg-emerald-50" title="Run now" @click="emit('run', ex)"><i class="bi bi-play-fill"></i></button>
                         </span>
@@ -288,7 +361,7 @@ function onSearch() {
                 <div v-for="p in PLAYBOOKS" :key="p.title" class="rounded-md border border-slate-200 p-2.5">
                     <div class="mb-1.5 font-semibold text-slate-800">{{ p.title }}</div>
                     <ol class="space-y-1">
-                        <li v-for="([cmd, why], i) in p.steps" :key="i" class="flex gap-2 text-xs">
+                        <li v-for="([cmd, why], i) in p.steps.filter(([cmd]) => known(cmd))" :key="i" class="flex gap-2 text-xs">
                             <span class="w-4 shrink-0 text-right text-slate-400">{{ i + 1 }}.</span>
                             <button type="button" class="shrink-0 rounded border px-1.5 font-mono hover:border-brand-400 hover:text-brand-600" :class="needsInput(fill(cmd)) ? 'border-dashed border-amber-400' : 'border-slate-300'" @click="emit('use', fill(cmd))">{{ fill(cmd) }}</button>
                             <span class="text-slate-600">{{ why }}</span>

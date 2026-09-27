@@ -153,7 +153,7 @@ class ResellerPanelController extends Controller
         $connections = Connection::with(['customer:id,code,name,phone,address,ledger_balance', 'package:id,name,price,download_mbps,upload_mbps,billing_cycle'])
             ->whereHas('customer', fn ($q) => $q->where('reseller_id', $reseller->id))
             ->latest('id')
-            ->get(['id', 'code', 'customer_id', 'package_id', 'connection_type', 'pppoe_username', 'status', 'discount', 'installation_date', 'activation_date', 'next_billing_date', 'created_at']);
+            ->get(['id', 'code', 'customer_id', 'package_id', 'connection_type', 'pppoe_username', 'status', 'discount', 'installation_date', 'activation_date', 'expire_at', 'created_at']);
 
         return \Inertia\Inertia::render('Reseller/Connections', [
             'reseller' => $reseller->only(['id', 'name']),
@@ -202,6 +202,7 @@ class ResellerPanelController extends Controller
         return response()->json([
             'balance' => round((float) $customer->ledger_balance, 2),
             'advance' => CollectionService::advanceCredit($customer->id),
+            'wallet' => ResellerWalletService::summary($reseller->id)['available'],
             'invoices' => Invoice::where('customer_id', $customer->id)->whereIn('status', Invoice::OPEN_STATUSES)
                 ->orderBy('due_date')->orderBy('id')
                 ->get(['id', 'invoice_no', 'invoice_date', 'due_date', 'period_start', 'period_end', 'total', 'paid', 'due', 'status']),
@@ -216,14 +217,18 @@ class ResellerPanelController extends Controller
         $validator = Validator::make($request->all(), [
             'customer_id' => 'required|integer',
             'amount' => 'required|numeric|gt:0|max:9999999',
-            'method' => 'required|in:cash,bkash,nagad,rocket,other',
-            'transaction_id' => 'required_unless:method,cash|nullable|max:100',
+            'method' => 'required|in:cash,bkash,nagad,rocket,other,wallet',
+            'transaction_id' => 'required_unless:method,cash,wallet|nullable|max:100',
             'notes' => 'nullable|max:500',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
 
         try {
             $customer = Customer::where('reseller_id', $reseller->id)->findOrFail($request->customer_id);
+            if ($request->input('method') === 'wallet') {
+                $payment = ResellerWalletService::payFromWallet($reseller, $customer, (float) $request->amount, $request->notes);
+                return response()->json(['status' => true, 'message' => "Payment {$payment->receipt_no} paid from your wallet", 'id' => $payment->id]);
+            }
             $payment = CollectionService::receive($customer, $request->only(['amount', 'method', 'transaction_id', 'notes']) + [
                 'payment_date' => now()->toDateString(),
                 'source' => 'reseller',

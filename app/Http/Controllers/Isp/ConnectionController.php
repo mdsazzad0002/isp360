@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Isp;
 
 use App\Models\Connection;
+use App\Models\Invoice;
 use App\Services\Isp\AuditLogger;
 use App\Services\Isp\BillingService;
 use App\Services\Isp\ConnectionService;
@@ -16,6 +17,7 @@ class ConnectionController extends IspController
         return $this->page('connection', 'Isp/Connection', [
             'canAct' => checkAccess('connectionAction'),
             'canSecret' => checkAccess('connectionSecret'),
+            'canPay' => checkAccess('ispPayment'),
         ]);
     }
 
@@ -23,6 +25,11 @@ class ConnectionController extends IspController
     {
         $query = Connection::with(['customer:id,code,name,phone,area_id,zone_id', 'customer.area:id,name', 'package:id,name,price,download_mbps,network_profile', 'box:id,name,code'])
             ->where('branch_id', $this->branchId)
+            // the connection's unpaid service bill, so it can be paid from the list
+            ->addSelect(['connections.*',
+                'open_invoice_id' => Invoice::select('id')->whereColumn('connection_id', 'connections.id')->whereNotNull('service_months')->whereIn('status', Invoice::OPEN_STATUSES)->limit(1),
+                'open_due' => Invoice::selectRaw('coalesce(sum(due), 0)')->whereColumn('connection_id', 'connections.id')->whereIn('status', Invoice::OPEN_STATUSES),
+            ])
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->when($request->syncStatus, fn ($q, $s) => $q->where('network_sync_status', $s))
             ->when($request->customerId, fn ($q, $id) => $q->where('customer_id', $id))
@@ -84,10 +91,59 @@ class ConnectionController extends IspController
                         $items[] = ['description' => "{$label} — {$connection->code}", 'unit_price' => (float) $connection->package->{$field}, 'quantity' => 1];
                     }
                 }
-                $invoice = BillingService::createManual($connection->customer, ['connection_id' => $connection->id], $items);
-                $message .= " with invoice {$invoice->invoice_no}";
+                BillingService::createManual($connection->customer, ['connection_id' => $connection->id], $items);
             }
+            $message .= $this->billingSummary($connection);
             return $this->ok($message, ['id' => $connection->id]);
+        } catch (\Throwable $th) {
+            return $this->fail($th);
+        }
+    }
+
+    // What the new connection was billed and how much of it the customer's balance paid.
+    private function billingSummary(Connection $connection): string
+    {
+        $invoices = Invoice::where('connection_id', $connection->id)->whereNotIn('status', ['draft', 'void', 'cancelled'])->get(['invoice_no', 'total', 'paid', 'due']);
+        if ($invoices->isEmpty()) {
+            return '';
+        }
+        $paid = round((float) $invoices->sum('paid'), 2);
+        $due = round((float) $invoices->sum('due'), 2);
+        $text = '. Invoice ' . $invoices->pluck('invoice_no')->implode(', ') . ' (Tk ' . number_format((float) $invoices->sum('total'), 2) . ')';
+        if ($paid > 0) {
+            $text .= ', Tk ' . number_format($paid, 2) . ' paid from balance';
+        }
+        return $text . ($due > 0 ? ', Tk ' . number_format($due, 2) . ' due' : '');
+    }
+
+    // Pay panel: cost and paid-until for 1..12 cycles.
+    public function payQuote(Request $request)
+    {
+        if ($r = $this->deny('ispPayment')) return $r;
+        $connection = Connection::with('customer:id,code,name,phone', 'package:id,name,price,billing_cycle,download_mbps')
+            ->where('branch_id', $this->branchId)->findOrFail($request->id);
+        return response()->json(['connection' => $connection] + BillingService::payQuote($connection));
+    }
+
+    public function pay(Request $request)
+    {
+        if ($r = $this->deny('ispPayment')) return $r;
+        if ($r = $this->validateOrFail($request->all(), [
+            'id' => 'required|integer',
+            'cycles' => 'required|integer|min:1|max:12',
+            'method' => 'required|in:' . implode(',', \App\Models\CustomerPayment::METHODS),
+            'bank_id' => 'required_unless:method,cash|nullable|integer|exists:banks,id',
+            'transaction_id' => 'nullable|max:100',
+            'notes' => 'nullable|max:500',
+        ])) return $r;
+        try {
+            $connection = Connection::where('branch_id', $this->branchId)->findOrFail($request->id);
+            $payment = BillingService::payConnection($connection, (int) $request->cycles,
+                $request->only(['method', 'bank_id', 'transaction_id', 'notes']) + ['payment_date' => now()->toDateString()]);
+            $connection->refresh();
+            $until = $connection->expire_at ? ' Paid until ' . $connection->expire_at->format('d M Y h:i A') . '.' : ' The time starts when the connection is activated.';
+            return $this->ok(($payment ? "Payment {$payment->receipt_no} of Tk " . number_format((float) $payment->amount, 2) . ' received.' : 'Paid from advance credit.') . $until,
+                ['id' => $payment?->id]);
         } catch (\Throwable $th) {
             return $this->fail($th);
         }
@@ -112,7 +168,7 @@ class ConnectionController extends IspController
                 'deactivate' => ConnectionService::deactivate($connection, $request->reason),
                 'terminate' => ConnectionService::terminate($connection, $request->reason),
             };
-            return $this->ok("Connection {$connection->code} is now {$connection->status}");
+            return $this->ok("Connection {$connection->code} is now {$connection->status}" . ($request->action === 'activate' ? $this->billingSummary($connection) : ''));
         } catch (\Throwable $th) {
             return $this->fail($th);
         }
@@ -159,10 +215,29 @@ class ConnectionController extends IspController
             return response()->json(['managed' => false]);
         }
         try {
-            $session = \App\Services\Network\MikroTikDriver::activeSession(new \App\Services\Network\MikroTikClient($router), $connection);
-            return response()->json(['managed' => true, 'router' => $router->name, 'router_host' => $router->host, 'online' => (bool) $session, 'session' => $session]);
+            $api = new \App\Services\Network\MikroTikClient($router);
+            $session = \App\Services\Network\MikroTikDriver::activeSession($api, $connection);
+            $reason = $session ? null : \App\Services\Network\MikroTikDriver::offlineReason($api, $connection);
+            return response()->json(['managed' => true, 'router' => $router->name, 'router_host' => $router->host, 'online' => (bool) $session, 'session' => $session, 'reason' => $reason]);
         } catch (\Throwable $th) {
             return response()->json(['managed' => true, 'router' => $router->name, 'router_host' => $router->host, 'error' => $th->getMessage()]);
+        }
+    }
+
+    // One live traffic reading for the connection panel's graph (polled every few seconds while it is open).
+    public function traffic(Request $request)
+    {
+        if ($r = $this->deny('connection')) return $r;
+        $connection = Connection::where('branch_id', $this->branchId)->findOrFail($request->id);
+        $router = \App\Models\Router::forConnection($connection);
+        if (! $router || ! $connection->pppoe_username || ! isset(\App\Services\Network\MikroTikDriver::SERVICES[$connection->connection_type])) {
+            return response()->json(['managed' => false]);
+        }
+        try {
+            $sample = \App\Services\Network\MikroTikDriver::trafficSample(new \App\Services\Network\MikroTikClient($router), $connection);
+            return response()->json(['managed' => true, 'online' => (bool) $sample, 'sample' => $sample, 'at' => microtime(true)]);
+        } catch (\Throwable $th) {
+            return response()->json(['managed' => true, 'error' => $th->getMessage()]);
         }
     }
 
@@ -183,7 +258,7 @@ class ConnectionController extends IspController
     }
 
     // Diagnostic terminal on the customer page: a fixed command set run through the
-    // router's REST API (see NetworkTerminalService), never a shell.
+    // router's REST API, plus a few server-side probes (see NetworkTerminalService), never a shell.
     public function terminal(Request $request)
     {
         if ($r = $this->deny('connection')) return $r;
@@ -217,6 +292,8 @@ class ConnectionController extends IspController
             $rules['package_id'] = 'required|integer';
             $rules['area_id'] = 'nullable|integer|exists:areas,id';
             $rules['activation_date'] = 'nullable|date';
+            $rules['bonus_days'] = 'nullable|integer|min:0|max:365';
+            $rules['referred_by_id'] = 'nullable|integer|different:customer_id';
         }
         return $rules;
     }

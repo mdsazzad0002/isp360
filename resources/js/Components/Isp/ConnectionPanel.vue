@@ -6,7 +6,9 @@ import SearchSelect from '../SearchSelect.vue';
 import StatusBadge from './StatusBadge.vue';
 import SyncBadge from './SyncBadge.vue';
 import TerminalOffcanvas from './TerminalOffcanvas.vue';
-import { money, fmtDate, label, today, promptReason, useApiError } from '../../lib/isp';
+import LiveTrafficChart from './LiveTrafficChart.vue';
+import TestDial from './TestDial.vue';
+import { money, fmtDate, label, today, promptReason, useApiError, expiryClass, fmtDateTime } from '../../lib/isp';
 import { useToast } from '../../lib/toast';
 
 // Connection details, full history and lifecycle actions.
@@ -171,16 +173,25 @@ function describe(h) {
                 <div><span class="text-slate-400">Static IP / MAC</span><br />{{ conn.static_ip || '—' }} / {{ conn.mac_address || '—' }}</div>
                 <div><span class="text-slate-400">Box</span><br />{{ conn.box ? `${conn.box.name}${conn.box.code ? ' (' + conn.box.code + ')' : ''}` : '—' }}</div>
                 <div><span class="text-slate-400">Installed / Activated</span><br />{{ fmtDate(conn.installation_date) || '—' }} / {{ fmtDate(conn.activation_date) || '—' }}</div>
-                <div><span class="text-slate-400">Next billing from</span><br />{{ fmtDate(conn.next_billing_date) || '—' }}</div>
+                <div><span class="text-slate-400">Expire date</span><br /><span :class="expiryClass(conn.expire_at)">{{ fmtDateTime(conn.expire_at) || 'Unpaid' }}</span></div>
             </div>
             <div v-if="online && online.managed" class="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 p-2">
-                <span>
-                    <i class="bi bi-router"></i> {{ online.router }}:
-                    <span v-if="online.error" class="text-red-600">{{ online.error }}</span>
-                    <span v-else-if="online.online" class="font-medium text-emerald-700"><i class="bi bi-circle-fill text-[8px]"></i> Online · {{ online.session?.address }} · up {{ online.session?.uptime }}</span>
-                    <span v-else class="text-slate-500"><i class="bi bi-circle text-[8px]"></i> Offline</span>
-                </span>
+                <div>
+                    <!-- two separate facts: can we reach the router, and is the customer connected to it -->
+                    <div>
+                        <i class="bi bi-router"></i> Router {{ online.router }}<span v-if="online.router_host" class="font-mono text-slate-500"> ({{ online.router_host }})</span>:
+                        <span v-if="online.error" class="text-red-600">not reachable · {{ online.error }}</span>
+                        <span v-else class="text-emerald-700">reachable</span>
+                    </div>
+                    <div v-if="!online.error">
+                        <i class="bi bi-person"></i> Customer session:
+                        <span v-if="online.online" class="font-medium text-emerald-700"><i class="bi bi-circle-fill text-[8px]"></i> Online · {{ online.session?.address }} · up {{ online.session?.uptime }}</span>
+                        <span v-else class="text-slate-500"><i class="bi bi-circle text-[8px]"></i> Offline<span v-if="online.reason"> · {{ online.reason }}</span></span>
+                    </div>
+                </div>
             </div>
+            <LiveTrafficChart v-if="online && online.managed && !online.error" :connection-id="conn.id" :package-mbps="conn.package ? { down: conn.package.download_mbps, up: conn.package.upload_mbps } : null" />
+            <TestDial v-if="conn.connection_type === 'pppoe' && conn.pppoe_username" :username="conn.pppoe_username" :password="secret" :can-reveal="!!can.connectionSecret" :router-name="online?.router || 'the router'" @reveal="reveal" />
             <div class="flex flex-wrap items-start justify-between gap-2 rounded-md border p-2" :class="conn.status === 'active' && !['synced', 'not_managed'].includes(conn.network_sync_status) ? 'border-red-200 bg-red-50/50' : 'border-slate-200'">
                 <div>
                     <div class="mb-0.5 text-xs text-slate-400">Router sync</div>

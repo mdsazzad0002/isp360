@@ -38,18 +38,29 @@ try {
 // Live session IP of the selected connection and the MikroTik it runs on (asked from the server when it is picked).
 const sessionIp = ref(null);
 const router = ref(null); // { name, host }: the MikroTik that runs every command
+// checking | online | offline | error | unmanaged, with the router's reason, so "offline" is never a guess
+const sessionState = ref({ status: 'checking', reason: null });
 async function loadSession() {
     sessionIp.value = null;
     router.value = null;
     const c = selected.value;
-    if (!c || !['pppoe', 'hotspot'].includes(c.connection_type)) return;
+    if (!c) return;
+    if (!['pppoe', 'hotspot'].includes(c.connection_type)) {
+        sessionState.value = { status: 'unmanaged', reason: 'static IP / DHCP has no router session' }; // uses the static IP, if any
+        return;
+    }
+    sessionState.value = { status: 'checking', reason: null };
     try {
         const res = await axios.post('/isp/connection-online', { id: c.id });
         if (selected.value?.id !== c.id) return;
-        sessionIp.value = res.data.session?.address || null;
-        if (res.data.router) router.value = { name: res.data.router, host: res.data.router_host || null };
-    } catch {
-        /* chips just lack the session IP */
+        const d = res.data;
+        sessionIp.value = d.session?.address || null;
+        if (d.router) router.value = { name: d.router, host: d.router_host || null };
+        if (!d.managed) sessionState.value = { status: 'unmanaged', reason: 'No router (or no username) for this connection.' };
+        else if (d.error) sessionState.value = { status: 'error', reason: d.error };
+        else sessionState.value = d.online ? { status: 'online', reason: null } : { status: 'offline', reason: d.reason || null };
+    } catch (e) {
+        if (selected.value?.id === c.id) sessionState.value = { status: 'error', reason: e.response?.data?.message || e.message };
     }
 }
 
@@ -67,6 +78,8 @@ const context = computed(() => {
         profile: c.package ? c.package.network_profile || `isp-pkg-${c.package.id ?? c.package_id}` : null,
         routerName: router.value?.name || null,
         routerIp: router.value?.host || null,
+        sessionStatus: sessionState.value.status,
+        sessionReason: sessionState.value.reason,
     };
 });
 watch(context, (ctx) => emit('context', ctx), { immediate: true, deep: true });
@@ -173,7 +186,7 @@ function setInput(text) {
         if (m) el.setSelectionRange(m.index, m.index + m[0].length);
     });
 }
-defineExpose({ insert, setInput, run: (cmd) => run(cmd) });
+defineExpose({ insert, setInput, run: (cmd) => run(cmd), refresh: () => loadSession() });
 
 function copyOutput() {
     copy(lines.value.map((l) => l.text).join('\n'));
@@ -193,7 +206,7 @@ watch(selectedId, () => {
 
 onMounted(() => {
     loadSession();
-    print('ISP diagnostic terminal. Commands run on the connection\'s router. Type help.', 'muted');
+    print('ISP diagnostic terminal. Commands run on the connection\'s router; sping, port and trace run from this server. Type help.', 'muted');
     if (selected.value) print(`— connection ${selected.value.code} (${selected.value.pppoe_username || selected.value.connection_type}) —`, 'muted');
     inputEl.value?.focus();
 });

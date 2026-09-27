@@ -23,10 +23,10 @@ class SettingController extends IspController
         if ($r = $this->deny('ispSettings')) return $r;
         if ($r = $this->validateOrFail($request->all(), [
             'due_days' => 'required|integer|min:0|max:90',
-            'grace_days' => 'required|integer|min:0|max:90',
-            'invoice_generate_day' => 'required|integer|min:1|max:28',
-            'billing_month' => 'required|in:current,previous',
-            'first_month_billing' => 'required|in:prorate,full,next_month',
+            'renewal_invoice_days' => 'required|integer|min:0|max:30',
+            'init_bonus_days' => 'required|integer|min:0|max:365',
+            'referral_commission_type' => 'required|in:fixed,percent',
+            'referral_commission' => 'required|numeric|min:0|max:100000' . ($request->referral_commission_type === 'percent' ? '|max:100' : ''),
             'invoice_prefix' => 'required|alpha_num|max:8',
             'receipt_prefix' => 'required|alpha_num|max:8',
             'credit_note_prefix' => 'required|alpha_num|max:8',

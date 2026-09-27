@@ -31,47 +31,51 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
     <div class="p-4">
         <form v-if="s" class="space-y-3" @submit.prevent="save">
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                <h2 class="mb-3 text-sm font-semibold text-slate-700">Billing cycle</h2>
+                <h2 class="mb-3 text-sm font-semibold text-slate-700">Prepaid billing</h2>
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <label class="flex items-center gap-2 text-sm"><input v-model="s.auto_invoice" type="checkbox" /> Generate invoices automatically</label>
+                    <label class="flex items-center gap-2 text-sm"><input v-model="s.auto_invoice" type="checkbox" /> Issue renewal invoices automatically</label>
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-slate-600">Generate on day of month</label>
-                        <input v-model="s.invoice_generate_day" type="number" min="1" max="28" :class="input" />
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Renewal invoice, days before expiry</label>
+                        <input v-model="s.renewal_invoice_days" type="number" min="0" max="30" :class="input" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-slate-600">Which month is billed</label>
-                        <select v-model="s.billing_month" :class="input">
-                            <option value="current">Running month (prepaid — bill Sep on 1 Sep)</option>
-                            <option value="previous">Previous month (postpaid — bill Sep on 1 Oct)</option>
-                        </select>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">New connection bonus days <span class="text-slate-400">(default, free)</span></label>
+                        <input v-model="s.init_bonus_days" type="number" min="0" max="365" :class="input" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-slate-600">Mid-month activation</label>
-                        <select v-model="s.first_month_billing" :class="input">
-                            <option value="prorate">Prorate the first month by days</option>
-                            <option value="full">Charge the full first month</option>
-                            <option value="next_month">Free until next month</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-xs font-medium text-slate-600">Due date = invoice date + days</label>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Manual invoice due = invoice date + days</label>
                         <input v-model="s.due_days" type="number" min="0" max="90" :class="input" />
                     </div>
-                    <label class="flex items-center gap-2 text-sm"><input v-model="s.bill_suspended" type="checkbox" /> Keep billing suspended connections</label>
                 </div>
+                <p class="mt-2 text-xs text-slate-500">A package bill buys one billing cycle (1, 3, 6 or 12 months). The time starts the moment the bill is fully paid — or when the current paid time ends, if that is later — and runs to the same date and time. A new connection is billed when it is created.</p>
             </section>
 
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                <h2 class="mb-3 text-sm font-semibold text-slate-700">Overdue &amp; suspension</h2>
+                <h2 class="mb-3 text-sm font-semibold text-slate-700">Expiry &amp; suspension</h2>
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <div>
-                        <label class="mb-1 block text-xs font-medium text-slate-600">Grace period after due date (days)</label>
-                        <input v-model="s.grace_days" type="number" min="0" max="90" :class="input" />
-                    </div>
-                    <label class="flex items-center gap-2 text-sm"><input v-model="s.auto_suspend" type="checkbox" /> Auto-suspend after grace period</label>
-                    <label class="flex items-center gap-2 text-sm"><input v-model="s.auto_reactivate" type="checkbox" /> Auto-reactivate when dues are cleared</label>
+                    <label class="flex items-center gap-2 text-sm"><input v-model="s.auto_suspend" type="checkbox" /> Auto-suspend when the expire date passes</label>
+                    <label class="flex items-center gap-2 text-sm"><input v-model="s.auto_reactivate" type="checkbox" /> Auto-reactivate when payment extends the expire date</label>
                 </div>
-                <p class="mt-2 text-xs text-slate-500">Example: due date 10 Oct + {{ s.grace_days }} grace days → suspended on the next nightly run after {{ 10 + Number(s.grace_days) }} Oct if still unpaid.</p>
+                <p class="mt-2 text-xs text-slate-500">No grace period. Example: paid until 5 Nov 2:30 PM → the line goes off at 5 Nov 2:30 PM (checked every minute) and comes back the moment the renewal is paid.</p>
+            </section>
+
+            <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 class="mb-3 text-sm font-semibold text-slate-700">Referral commission</h2>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <label class="flex items-center gap-2 text-sm"><input v-model="s.referral_enabled" type="checkbox" /> Reward customers who refer a new customer</label>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Commission type</label>
+                        <select v-model="s.referral_commission_type" :class="input">
+                            <option value="fixed">Fixed amount (Tk)</option>
+                            <option value="percent">Percent of the first bill</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">{{ s.referral_commission_type === 'percent' ? 'Commission (%)' : 'Commission (Tk)' }}</label>
+                        <input v-model="s.referral_commission" type="number" min="0" step="0.01" :class="input" />
+                    </div>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">Pick the referrer ("Referred by") on the new connection form. When the new customer's first bill is fully paid, the commission goes to the referrer's wallet (advance credit) and pays their next bills automatically. Once per new customer; no cash-book entry.</p>
             </section>
 
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

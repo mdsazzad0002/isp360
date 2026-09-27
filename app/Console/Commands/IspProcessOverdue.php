@@ -10,7 +10,7 @@ class IspProcessOverdue extends Command
 {
     protected $signature = 'isp:process-overdue {--branch= : Only this branch id}';
 
-    protected $description = 'Mark overdue invoices and auto-suspend connections past the grace period';
+    protected $description = 'Mark overdue invoices and suspend connections whose expire date has passed';
 
     public function handle(): int
     {
@@ -18,7 +18,9 @@ class IspProcessOverdue extends Command
         foreach ($branches as $branchId) {
             $overdue = OverdueService::markOverdue($branchId);
             $suspended = OverdueService::autoSuspend($branchId);
-            $this->info("Branch {$branchId}: {$overdue} invoices marked overdue, {$suspended} connections suspended");
+            if ($overdue || $suspended) {
+                $this->info("Branch {$branchId}: {$overdue} invoices marked overdue, {$suspended} connections suspended");
+            }
         }
         return self::SUCCESS;
     }

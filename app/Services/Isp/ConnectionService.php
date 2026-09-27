@@ -5,6 +5,7 @@ namespace App\Services\Isp;
 use App\Jobs\SyncConnectionToNetwork;
 use App\Models\Connection;
 use App\Models\ConnectionHistory;
+use App\Models\Invoice;
 use App\Models\Customer;
 use App\Models\Package;
 use App\Models\PackageHistory;
@@ -40,6 +41,7 @@ class ConnectionService
             }
             self::assertBoxHasRoom($data['box_id'] ?? null);
             $boxId = self::resolveArea($customer, $data, $branchId);
+            self::setReferrer($customer, $data['referred_by_id'] ?? null);
 
             $connection = Connection::create([
                 'code' => SequenceService::next($branchId, 'connection', IspSettings::get($branchId, 'connection_prefix')),
@@ -53,6 +55,7 @@ class ConnectionService
                 'static_ip' => $data['static_ip'] ?? null,
                 'mac_address' => $data['mac_address'] ?? null,
                 'discount' => $data['discount'] ?? 0,
+                'bonus_days' => (int) ($data['bonus_days'] ?? IspSettings::get($branchId, 'init_bonus_days')),
                 'installation_date' => $data['installation_date'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'status' => 'pending',
@@ -77,6 +80,9 @@ class ConnectionService
             ]);
             AuditLogger::log('connection.created', $connection, null, $connection->only(['code', 'customer_id', 'package_id', 'pppoe_username', 'static_ip']));
 
+            // The first invoice is shown right away. The internet time it buys starts only once
+            // it is paid (and the connection is switched on).
+            BillingService::billNow($connection);
             if (! empty($data['activate_now'])) {
                 self::activate($connection, $data['activation_date'] ?? now()->toDateString());
             }
@@ -147,15 +153,16 @@ class ConnectionService
 
             $connection->status = 'active';
             $connection->activation_date = $connection->activation_date ?? $date;
-            if (empty($connection->next_billing_date)) {
-                $connection->next_billing_date = self::firstBillingDate($connection->branch_id, $date);
-            }
+            // Paid time runs from this moment (from the start of the day for a back-dated activation).
+            $connection->activated_at = $connection->activated_at ?? ($date->isToday() ? now() : $date);
             $connection->save();
 
-            self::history($connection, 'activated', null, ['activation_date' => $date->toDateString(), 'next_billing_date' => $connection->next_billing_date?->toDateString()]);
+            self::history($connection, 'activated', null, ['activation_date' => $date->toDateString()]);
             AuditLogger::log('connection.activated', $connection, null, ['activation_date' => $date->toDateString()]);
             self::syncNetwork($connection);
-            return $connection;
+            // Starts the paid time — or suspends it straight away while the invoice is unpaid.
+            self::refreshExpiry($connection->id);
+            return $connection->fresh();
         });
     }
 
@@ -260,13 +267,66 @@ class ConnectionService
         });
     }
 
-    public static function firstBillingDate(int $branchId, Carbon $activation): Carbon
+    // Replays the connection's paid service invoices in the order they were paid. Each buys
+    // service_months starting when it was paid, or when the time already bought runs out if that
+    // is later (never before the connection was switched on). Writes each invoice's window and
+    // the connection's expire_at, then switches the line off or on to match — so a payment starts
+    // the line at once and a reversal or void takes the time back at once.
+    public static function refreshExpiry(int $connectionId, bool $apply = true): void
     {
-        return match (IspSettings::get($branchId, 'first_month_billing')) {
-            'full' => $activation->copy()->startOfMonth(),
-            'next_month' => $activation->copy()->addMonthNoOverflow()->startOfMonth(),
-            default => $activation->copy(),
-        };
+        $connection = Connection::find($connectionId);
+        if (! $connection) {
+            return;
+        }
+        $cursor = null;
+        $invoices = Invoice::where('connection_id', $connectionId)
+            ->whereNotNull('service_months')
+            ->whereNotIn('status', ['draft', 'void', 'cancelled'])
+            ->orderByRaw('paid_at is null, paid_at, id')
+            ->get(['id', 'status', 'paid_at', 'service_months', 'period_start', 'period_end']);
+        foreach ($invoices as $invoice) {
+            $start = $end = null;
+            if ($invoice->status === 'paid' && $invoice->paid_at && $connection->activated_at) {
+                $start = collect([$invoice->paid_at, $connection->activated_at, $cursor])->filter()->max()->copy();
+                $end = $start->copy()->addMonthsNoOverflow($invoice->service_months);
+                if (! $cursor && $connection->bonus_days) {
+                    $end->addDays($connection->bonus_days); // first paid time only
+                }
+                $cursor = $end;
+            }
+            if ($invoice->period_start?->toDateTimeString() !== $start?->toDateTimeString() || $invoice->period_end?->toDateTimeString() !== $end?->toDateTimeString()) {
+                Invoice::whereKey($invoice->id)->update(['period_start' => $start, 'period_end' => $end]);
+            }
+        }
+
+        $old = $connection->expire_at?->toDateTimeString();
+        $new = $cursor?->toDateTimeString();
+        if ($old !== $new) {
+            Connection::whereKey($connectionId)->update(['expire_at' => $new]);
+            if ($apply) {
+                self::history($connection, $new && (! $old || $new > $old) ? 'expiry_extended' : 'expiry_reduced', ['expire_at' => $old], ['expire_at' => $new]);
+            }
+        }
+        if ($apply) {
+            self::applyExpiry($connection->fresh());
+        }
+    }
+
+    // No grace: an active line whose time is up (or was never paid) goes off now; a line
+    // suspended for that comes back as soon as it has time again.
+    public static function applyExpiry(Connection $connection): void
+    {
+        $settings = IspSettings::all($connection->branch_id);
+        $hasTime = $connection->expire_at && $connection->expire_at->isFuture();
+
+        if ($connection->status === 'active' && ! $hasTime && $settings['auto_suspend']) {
+            self::suspend($connection, OverdueService::SUSPEND_REASON, true);
+            DB::afterCommit(fn () => IspNotifier::send($connection->branch_id, $connection->customer, 'suspend', ['connection' => $connection->code]));
+        } elseif ($connection->status === 'suspended' && $hasTime && $settings['auto_reactivate']
+            && in_array($connection->suspension_reason, OverdueService::SUSPEND_REASONS, true)) {
+            self::reactivate($connection, 'Paid until ' . $connection->expire_at->format('d M Y h:i A'), true);
+            DB::afterCommit(fn () => IspNotifier::send($connection->branch_id, $connection->customer, 'reactivate', ['connection' => $connection->code]));
+        }
     }
 
     private static function simpleTransition(Connection $connection, array $from, string $to, string $action, string $reason): Connection
@@ -313,6 +373,24 @@ class ConnectionService
             $customer->save();
         }
         return $box?->id;
+    }
+
+    // A new customer's referrer is set once (never changed later), to another customer of the branch.
+    private static function setReferrer(Customer $customer, $referrerId): void
+    {
+        if (empty($referrerId) || $customer->referred_by_id) {
+            return;
+        }
+        if ((int) $referrerId === (int) $customer->id) {
+            throw new RuntimeException('A customer cannot refer themselves.');
+        }
+        $referrer = Customer::where('branch_id', $customer->branch_id)->findOrFail($referrerId);
+        if ((int) $referrer->referred_by_id === (int) $customer->id) {
+            throw new RuntimeException("{$referrer->name} was referred by this customer.");
+        }
+        $customer->referred_by_id = $referrer->id;
+        $customer->save();
+        AuditLogger::log('customer.referred', $customer, null, ['referred_by' => $referrer->code]);
     }
 
     private static function assertBoxHasRoom($boxId): void

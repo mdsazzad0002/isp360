@@ -7,7 +7,6 @@ use App\Models\Invoice;
 use App\Services\Isp\BillingService;
 use App\Services\Isp\LedgerService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 
 class InvoiceController extends IspController
 {
@@ -143,14 +142,12 @@ class InvoiceController extends IspController
         }
     }
 
-    // Runs the billing engine as of a date (same code path as the scheduler). Which month
-    // that bills depends on the "billing_month" setting (current vs previous month).
+    // Issues renewal invoices now (the same code path the scheduler runs every minute).
     public function generate(Request $request)
     {
         if ($r = $this->deny('invoiceGenerate')) return $r;
-        if ($r = $this->validateOrFail($request->all(), ['date' => 'required|date|before_or_equal:today'])) return $r;
         try {
-            $stats = BillingService::generateForBranch($this->branchId, Carbon::parse($request->date)->startOfDay());
+            $stats = BillingService::generateForBranch($this->branchId);
             $message = "{$stats['created']} invoice(s) generated";
             if ($stats['failed']) {
                 $message .= ", {$stats['failed']} failed";

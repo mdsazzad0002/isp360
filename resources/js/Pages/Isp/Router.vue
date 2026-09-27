@@ -1,9 +1,10 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import axios from 'axios';
 import { Link } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
+import RouterSetupGuide from '../../Components/Isp/RouterSetupGuide.vue';
 import { useToast } from '../../lib/toast';
 import { confirmDialog } from '../../lib/confirm';
 import { fmtDate, useApiError } from '../../lib/isp';
@@ -22,6 +23,19 @@ const sessions = reactive({ router: null, rows: [], loading: false });
 
 function load() {
     axios.post('/isp/get-routers').then((r) => (routers.value = r.data));
+}
+// Setup guide: the picked router, else the default one, else the first
+const guideId = ref(null);
+const guideRouter = computed(() => routers.value.find((r) => r.id === guideId.value) || null); // only after Setup is clicked
+const guideEl = ref(null);
+async function openGuide(r) {
+    if (guideId.value === r.id) {
+        guideId.value = null; // Setup again closes it
+        return;
+    }
+    guideId.value = r.id;
+    await nextTick();
+    guideEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function call(url, data, key) {
@@ -73,7 +87,7 @@ onMounted(load);
     <div class="space-y-3 p-4">
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <h1 class="mb-1 text-base font-semibold text-slate-800">{{ form.id ? `Edit router ${form.name}` : 'Add MikroTik router' }}</h1>
-            <p class="mb-3 text-xs text-slate-500">RouterOS v7 REST API (IP → Services → www or www-ssl must be enabled). Packages become PPP / hotspot user profiles with their speed as rate-limit; each PPPoE or Hotspot connection becomes a router user that is disabled on suspension. Hotspot also needs a hotspot server on the LAN interface (IP → Hotspot → Hotspot Setup).</p>
+            <p class="mb-3 text-xs text-slate-500">After saving, use <b>Setup</b> on the router for a live check and the exact commands. RouterOS v7 REST API (IP → Services → www or www-ssl must be enabled). Packages become PPP / hotspot user profiles with their speed as rate-limit; each PPPoE or Hotspot connection becomes a router user that is disabled on suspension. Hotspot also needs a hotspot server on the LAN interface (IP → Hotspot → Hotspot Setup).</p>
             <form class="grid grid-cols-2 gap-3 md:grid-cols-6" @submit.prevent="save">
                 <div><label class="mb-1 block text-xs font-medium text-slate-600">Name</label><input v-model="form.name" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" /></div>
                 <div><label class="mb-1 block text-xs font-medium text-slate-600">Host / IP</label><input v-model="form.host" required placeholder="192.168.88.1" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" /></div>
@@ -113,6 +127,7 @@ onMounted(load);
                             <div class="flex flex-wrap justify-end gap-2">
                                 <button type="button" :disabled="busy === 'test' + r.id" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs" @click="call('/isp/router-test', { id: r.id }, 'test' + r.id)"><i class="bi bi-plug"></i> Test</button>
                                 <button type="button" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs" @click="showSessions(r)"><i class="bi bi-activity"></i> Online users</button>
+                                <button type="button" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs" :class="guideRouter?.id === r.id ? 'border-slate-800' : ''" @click="openGuide(r)"><i class="bi bi-journal-check"></i> Setup</button>
                                 <button type="button" :disabled="busy === 'sync' + r.id" class="rounded-md border border-brand-500 px-2.5 py-1 text-xs text-brand-600" @click="syncAll(r)"><i class="bi bi-arrow-repeat"></i> Sync all</button>
                                 <i class="bi bi-pen cursor-pointer self-center text-brand-500" @click="edit(r)"></i>
                                 <i class="bi bi-trash cursor-pointer self-center text-red-500" @click="remove(r)"></i>
@@ -123,6 +138,8 @@ onMounted(load);
                 </tbody>
             </table>
         </div>
+
+        <div ref="guideEl"><RouterSetupGuide v-if="guideRouter" :router="guideRouter" @close="guideId = null" /></div>
 
         <div v-if="sessions.router" class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
             <div class="mb-2 flex items-center justify-between">

@@ -88,6 +88,7 @@
             "userManage": "User Manage",
             "setting": "Setting",
             "ispCustomers": "Customers",
+            "ispSupport": "Support",
             "ispBilling": "Billing & Collection",
             "ispNetwork": "MikroTik & Packages",
             "ispLocation": "Address Setup",

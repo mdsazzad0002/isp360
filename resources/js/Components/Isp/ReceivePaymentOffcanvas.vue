@@ -5,6 +5,8 @@ import ReceivePaymentForm from './ReceivePaymentForm.vue';
 const props = defineProps({
     modelValue: { type: Boolean, default: false },
     customer: { type: Object, default: () => ({}) },
+    // preselects this invoice with its full due amount
+    invoiceId: { type: [Number, null], default: null },
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 
@@ -31,7 +33,7 @@ function onSaved(id) {
                 </div>
                 <div class="flex-1 overflow-y-auto p-5">
                     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                        <ReceivePaymentForm v-if="customer?.id" :key="customer.id" :customer-id="customer.id" @saved="onSaved" />
+                        <ReceivePaymentForm v-if="customer?.id" :key="`${customer.id}-${invoiceId}`" :customer-id="customer.id" :invoice-id="invoiceId" @saved="onSaved" />
                     </div>
                 </div>
             </div>

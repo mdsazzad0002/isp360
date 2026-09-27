@@ -5,7 +5,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
 import LedgerStatement from '../../Components/Isp/LedgerStatement.vue';
-import { money, fmtDate, label } from '../../lib/isp';
+import { money, fmtDate, label, fmtDateTime } from '../../lib/isp';
 import { printInvoice } from '../../lib/ispPrint';
 
 const props = defineProps({
@@ -78,7 +78,7 @@ async function printInv(inv) {
                     <tbody>
                         <tr v-for="i in invoices" :key="i.id" class="border-b border-slate-100">
                             <td class="px-2 py-2">{{ i.invoice_no }}</td>
-                            <td class="px-2 py-2 text-xs">{{ i.period_start ? `${fmtDate(i.period_start)} – ${fmtDate(i.period_end)}` : fmtDate(i.invoice_date) }}</td>
+                            <td class="px-2 py-2 text-xs">{{ i.period_start ? `${fmtDateTime(i.period_start)} – ${fmtDateTime(i.period_end)}` : fmtDate(i.invoice_date) }}</td>
                             <td class="px-2 py-2">{{ fmtDate(i.due_date) }}</td>
                             <td class="px-2 py-2 text-right">{{ money(i.total) }}</td>
                             <td class="px-2 py-2 text-right font-medium" :class="Number(i.due) > 0 ? 'text-red-600' : ''">{{ money(i.due) }}</td>

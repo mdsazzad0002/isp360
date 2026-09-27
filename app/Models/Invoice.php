@@ -9,8 +9,9 @@ class Invoice extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'period_start' => 'date:Y-m-d',
-        'period_end' => 'date:Y-m-d',
+        'period_start' => 'datetime:Y-m-d H:i:s',
+        'period_end' => 'datetime:Y-m-d H:i:s',
+        'paid_at' => 'datetime:Y-m-d H:i:s',
         'invoice_date' => 'date:Y-m-d',
         'due_date' => 'date:Y-m-d',
         'subtotal' => 'decimal:2',

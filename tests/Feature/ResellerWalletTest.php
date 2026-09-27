@@ -54,6 +54,48 @@ class ResellerWalletTest extends TestCase
         ]);
     }
 
+    // A reseller's new connection is invoiced at once and stays due; the reseller can pay it
+    // out of their wallet, which then drops by the amount (only up to what is available).
+    public function test_new_connection_invoice_stays_due_until_reseller_pays_from_wallet(): void
+    {
+        $this->api('/isp/package', ['name' => 'WP 10', 'download_mbps' => 10, 'upload_mbps' => 5, 'price' => 500, 'billing_cycle' => 'monthly'])->assertOk();
+        $package = Package::where('name', 'WP 10')->whereNull('reseller_id')->firstOrFail();
+        $reseller = $this->makeReseller('wp_reseller_1');
+        $this->api('/isp/zone', ['name' => 'WP Zone', 'code' => 'WPZ'])->assertOk();
+        $this->api('/area', ['name' => 'WP Area', 'zone_id' => DB::table('zones')->where('name', 'WP Zone')->value('id')])->assertOk();
+        $this->api('/customer', ['name' => 'WP Customer', 'phone' => '01799998101', 'area_id' => DB::table('areas')->where('name', 'WP Area')->value('id')])->assertOk();
+        $customer = Customer::where('phone', '01799998101')->firstOrFail();
+        $customer->forceFill(['reseller_id' => $reseller->id])->save();
+
+        $this->api('/isp/connection', [
+            'customer_id' => $customer->id, 'package_id' => $package->id, 'connection_type' => 'pppoe', 'pppoe_username' => 'wp_user_1',
+            'activate_now' => true, 'activation_date' => '2026-09-01',
+        ])->assertOk()->assertJsonPath('message', fn ($m) => str_contains($m, 'Tk 500.00 due'));
+        $invoice = Invoice::where('customer_id', $customer->id)->whereNotNull('service_months')->firstOrFail();
+        $this->assertEquals('suspended', DB::table('connections')->where('pppoe_username', 'wp_user_1')->value('status'));
+        $this->assertEquals(500.0, (float) $invoice->due);
+
+        // empty wallet: cannot pay
+        $portal = fn () => $this->actingAs($reseller, 'reseller');
+        $portal()->postJson('/reseller/payment', ['customer_id' => $customer->id, 'amount' => 500, 'method' => 'wallet'])->assertStatus(422);
+
+        // after a deposit the reseller pays the bill from the wallet; no company cash book row
+        $this->api('/isp/reseller-deposit', ['reseller_id' => $reseller->id, 'amount' => 600, 'method' => 'cash'])->assertOk();
+        $portal()->postJson('/reseller/payment', ['customer_id' => $customer->id, 'amount' => 500, 'method' => 'wallet'])->assertOk();
+        $this->assertEquals('paid', $invoice->fresh()->status);
+        $this->assertEquals(0.0, (float) $customer->fresh()->ledger_balance);
+        // the month starts the moment the reseller pays
+        $this->assertEquals('active', DB::table('connections')->where('pppoe_username', 'wp_user_1')->value('status'));
+        $this->assertEquals('2026-10-01 10:00:00', DB::table('connections')->where('pppoe_username', 'wp_user_1')->value('expire_at'));
+        $paymentId = DB::table('customer_payments')->where('customer_id', $customer->id)->value('id');
+        $this->assertEquals(0, DB::table('receives')->where('customer_payment_id', $paymentId)->count());
+
+        $wallet = ResellerWalletService::summary($reseller->id);
+        $this->assertEquals(100.0, $wallet['balance']);
+        $this->assertEquals($wallet['balance'], ResellerLedgerService::statement($reseller->id)['closing']);
+        $portal()->postJson('/reseller/payment', ['customer_id' => $customer->id, 'amount' => 150, 'method' => 'wallet'])->assertStatus(422);
+    }
+
     public function test_reseller_package_billing_collection_and_withdrawal(): void
     {
         $this->api('/isp/package', ['name' => 'W Hidden 20', 'download_mbps' => 20, 'upload_mbps' => 10, 'price' => 800, 'billing_cycle' => 'monthly', 'visibility' => 'hidden'])->assertOk();
@@ -85,9 +127,8 @@ class ResellerWalletTest extends TestCase
             'customer_id' => $customer->id, 'package_id' => $mine->id, 'connection_type' => 'pppoe', 'pppoe_username' => 'w_user_1',
             'activate_now' => true, 'activation_date' => '2026-09-01',
         ])->assertOk();
-        $this->api('/isp/invoice-generate', ['date' => '2026-09-01'])->assertOk();
 
-        $invoice = Invoice::where('customer_id', $customer->id)->where('period_start', '2026-09-01')->firstOrFail();
+        $invoice = Invoice::where('customer_id', $customer->id)->whereNotNull('service_months')->firstOrFail();
         $this->assertEquals(1000.0, (float) $invoice->total);
         $this->assertEquals($reseller->id, $invoice->reseller_id);
         $this->assertEquals(800.0, (float) $invoice->reseller_cost);
@@ -145,10 +186,11 @@ class ResellerWalletTest extends TestCase
         $portal()->postJson('/reseller/get-packages')->assertOk()->assertJsonPath('0.base_changes.company_price', [800, 900]);
         $this->api('/isp/get-reseller-package-requests', ['status' => 'waiting'])->assertOk()->assertJsonCount(1);
 
-        // October bill still uses the company price the reseller accepted
-        Carbon::setTestNow('2026-10-01 10:00:00');
-        $this->api('/isp/invoice-generate', ['date' => '2026-10-01'])->assertOk();
-        $october = Invoice::where('customer_id', $customer->id)->where('period_start', '2026-10-01')->firstOrFail();
+        // the renewal bill still uses the company price the reseller accepted
+        Carbon::setTestNow('2026-09-29 10:00:00');
+        $this->api('/isp/invoice-generate')->assertOk();
+        $october = Invoice::where('customer_id', $customer->id)->whereNotNull('service_months')->latest('id')->firstOrFail();
+        $this->assertNotEquals($invoice->id, $october->id);
         $this->assertEquals(1100.0, (float) $october->total);
         $this->assertEquals(800.0, (float) $october->reseller_cost);
 

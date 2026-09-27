@@ -27,6 +27,8 @@ const areas = ref([]);
 const selectedArea = ref(null);
 const saving = ref(false);
 const form = reactive({});
+const referrer = ref(null);
+const settings = ref({});
 
 function reset() {
     const c = props.connection;
@@ -42,6 +44,7 @@ function reset() {
         activation_date: today(),
         activate_now: true,
         charge_installation: true,
+        bonus_days: Number(settings.value.init_bonus_days || 0),
         notes: c?.notes ?? '',
         reason: '',
     });
@@ -54,6 +57,10 @@ watch(
     () => props.show,
     async (open) => {
         if (!open) return;
+        referrer.value = null;
+        if (!props.connection) {
+            settings.value = (await axios.post('/isp/get-settings').catch(() => ({ data: {} }))).data;
+        }
         reset();
         const [p] = await Promise.all([axios.post('/isp/get-packages', { activeOnly: true }), loadBoxes(), loadAreas()]);
         packages.value = p.data;
@@ -120,6 +127,7 @@ async function save() {
             package_id: selectedPackage.value?.id,
             box_id: selectedBox.value?.id ?? null,
             area_id: form.id ? undefined : selectedArea.value?.id,
+            referred_by_id: form.id ? undefined : referrer.value?.id ?? null,
         });
         toast.success(res.data.message);
         emit('saved', res.data.id);
@@ -202,9 +210,22 @@ async function save() {
             </div>
 
             <div v-if="!form.id" class="space-y-2 rounded-md border border-slate-200 p-3">
-                <label class="flex items-center gap-2"><input v-model="form.activate_now" type="checkbox" /> Activate now (billing starts from activation date)</label>
+                <label class="flex items-center gap-2"><input v-model="form.activate_now" type="checkbox" /> Activate now (the time starts when the bill is paid)</label>
                 <div v-if="form.activate_now" class="w-48">
                     <input v-model="form.activation_date" type="date" class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Bonus days <span class="text-slate-400">(free, added to the first paid time)</span></label>
+                        <input v-model="form.bonus_days" type="number" min="0" max="365" class="w-full rounded-md border border-slate-300 px-3 py-1.5" />
+                    </div>
+                    <div v-if="!customer?.referred_by_id">
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Referred by <span class="text-slate-400">(existing customer)</span></label>
+                        <CustomerPicker v-model="referrer" placeholder="Search referrer (optional)" />
+                        <p v-if="settings.referral_enabled && referrer" class="mt-1 text-xs text-emerald-700">
+                            {{ referrer.name }} gets {{ settings.referral_commission_type === 'percent' ? `${settings.referral_commission}% of the first bill` : `Tk ${settings.referral_commission}` }} in their wallet once this first bill is paid.
+                        </p>
+                    </div>
                 </div>
                 <label v-if="selectedPackage && (Number(selectedPackage.installation_fee) || Number(selectedPackage.activation_fee))" class="flex items-center gap-2">
                     <input v-model="form.charge_installation" type="checkbox" /> Invoice installation/activation fee (Tk {{ Number(selectedPackage.installation_fee) + Number(selectedPackage.activation_fee) }})

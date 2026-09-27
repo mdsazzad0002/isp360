@@ -21,6 +21,8 @@ class Connection extends Model
         'installation_date' => 'date:Y-m-d',
         'activation_date' => 'date:Y-m-d',
         'next_billing_date' => 'date:Y-m-d',
+        'activated_at' => 'datetime:Y-m-d H:i:s',
+        'expire_at' => 'datetime:Y-m-d H:i:s',
         'suspended_at' => 'datetime',
         'terminated_at' => 'datetime',
         'network_synced_at' => 'datetime',

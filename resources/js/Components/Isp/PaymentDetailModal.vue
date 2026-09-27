@@ -5,7 +5,7 @@ import { usePage } from '@inertiajs/vue3';
 import Modal from '../Modal.vue';
 import SearchSelect from '../SearchSelect.vue';
 import StatusBadge from './StatusBadge.vue';
-import { money, fmtDate, label, today, PAYMENT_METHODS, promptReason, useApiError } from '../../lib/isp';
+import { money, fmtDate, label, today, PAYMENT_METHODS, promptReason, useApiError, fmtDateTime } from '../../lib/isp';
 import { printReceipt } from '../../lib/ispPrint';
 import { useToast } from '../../lib/toast';
 
@@ -118,7 +118,7 @@ function print() {
             <div>
                 <h3 class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Applied to invoices</h3>
                 <div v-for="a in payment.allocations" :key="a.id" class="flex items-center justify-between border-b border-slate-100 py-1.5" :class="a.status === 'reversed' ? 'text-slate-400' : ''">
-                    <span :class="a.status === 'reversed' ? 'line-through' : ''">{{ a.invoice?.invoice_no }} <span v-if="a.invoice?.period_start" class="text-xs text-slate-400">{{ fmtDate(a.invoice.period_start) }} – {{ fmtDate(a.invoice.period_end) }}</span></span>
+                    <span :class="a.status === 'reversed' ? 'line-through' : ''">{{ a.invoice?.invoice_no }} <span v-if="a.invoice?.period_start" class="text-xs text-slate-400">{{ fmtDateTime(a.invoice.period_start) }} – {{ fmtDateTime(a.invoice.period_end) }}</span></span>
                     <span class="flex items-center gap-3">
                         <span :class="a.status === 'reversed' ? 'line-through' : ''">{{ money(a.amount) }}</span>
                         <button v-if="a.status === 'active' && can.reverse" type="button" class="text-xs text-brand-600 hover:underline" @click="openMove(a)">Move / remove</button>

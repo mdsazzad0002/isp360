@@ -10,11 +10,12 @@ import ConnectionPanel from '../../Components/Isp/ConnectionPanel.vue';
 import ConnectionFormModal from '../../Components/Isp/ConnectionFormModal.vue';
 import SyncBadge from '../../Components/Isp/SyncBadge.vue';
 import TerminalOffcanvas from '../../Components/Isp/TerminalOffcanvas.vue';
-import { money, fmtDate, label, useApiError } from '../../lib/isp';
+import ConnectionPayOffcanvas from '../../Components/Isp/ConnectionPayOffcanvas.vue';
+import { money, fmtDate, label, useApiError, expiryClass, fmtDateTime } from '../../lib/isp';
 import { useToast } from '../../lib/toast';
 
 defineOptions({ layout: AppLayout });
-const props = defineProps({ canAct: Boolean, canSecret: Boolean });
+const props = defineProps({ canAct: Boolean, canSecret: Boolean, canPay: Boolean });
 const can = { connection: true, connectionAction: props.canAct, connectionSecret: props.canSecret };
 
 const rows = ref([]);
@@ -27,6 +28,11 @@ const filter = reactive({ search: '', status: '', syncStatus: '', package: null,
 const syncCounts = ref({});
 const verifying = ref(false);
 const terminal = reactive({ show: false, row: null });
+// pay the unpaid bill and/or extra months without leaving the list
+const pay = reactive({ show: false, id: null });
+function openPay(row) {
+    Object.assign(pay, { show: true, id: row.id });
+}
 const toast = useToast();
 const showError = useApiError();
 // active in billing but not confirmed on the router
@@ -150,28 +156,35 @@ onMounted(() => {
                             <th class="px-2 py-2 font-medium">Package</th>
                             <th class="px-2 py-2 font-medium">Type / User / IP</th>
                             <th class="px-2 py-2 font-medium">Activated</th>
-                            <th class="px-2 py-2 font-medium">Next bill</th>
+                            <th class="px-2 py-2 font-medium">Expire date</th>
                             <th class="px-2 py-2 font-medium">Status</th>
                             <th class="px-2 py-2 font-medium">Router sync</th>
                             <th class="px-2 py-2"></th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in rows" :key="row.id" class="cursor-pointer border-b border-slate-100 hover:bg-slate-50" @click="open(row)">
+                        <tr v-for="row in rows" :key="row.id" class="border-b border-slate-100 hover:bg-slate-50">
                             <td class="px-2 py-2 font-medium text-brand-600">{{ row.code }}</td>
                             <td class="px-2 py-2">
-                                <Link :href="`/isp/customer/${row.customer_id}`" class="hover:underline" @click.stop>{{ row.customer?.name }}</Link>
+                                <Link :href="`/isp/customer/${row.customer_id}`" class="hover:underline">{{ row.customer?.name }}</Link>
                                 <div class="text-xs text-slate-400">{{ row.customer?.code }} · {{ row.customer?.phone }}</div>
                             </td>
                             <td class="px-2 py-2">{{ row.customer?.area?.name || '—' }}<div class="text-xs text-slate-400">{{ row.box?.name }}</div></td>
                             <td class="px-2 py-2">{{ row.package?.name }}<div class="text-xs text-slate-400">Tk {{ money(row.package?.price) }}<span v-if="Number(row.discount)"> − {{ money(row.discount) }}</span></div></td>
                             <td class="px-2 py-2">{{ label(row.connection_type) }}<div class="text-xs text-slate-400">{{ row.pppoe_username || row.static_ip || '—' }}</div></td>
                             <td class="px-2 py-2">{{ fmtDate(row.activation_date) || '—' }}</td>
-                            <td class="px-2 py-2">{{ fmtDate(row.next_billing_date) || '—' }}</td>
+                            <td class="px-2 py-2">
+                                <span :class="expiryClass(row.expire_at)">{{ fmtDateTime(row.expire_at) || 'Unpaid' }}</span>
+                                <div v-if="Number(row.open_due) > 0" class="mt-0.5 text-xs text-red-600">Tk {{ money(row.open_due) }} due</div>
+                            </td>
                             <td class="px-2 py-2"><StatusBadge :status="row.status" /></td>
                             <td class="px-2 py-2"><SyncBadge :connection="row" /></td>
-                            <td class="px-2 py-2 text-right">
-                                <button type="button" class="rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:border-slate-800 hover:bg-slate-900 hover:text-emerald-400" title="Open terminal" @click.stop="Object.assign(terminal, { show: true, row })"><i class="bi bi-terminal"></i></button>
+                            <td class="px-2 py-2">
+                                <div class="flex justify-end gap-1 whitespace-nowrap">
+                                    <button type="button" class="rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-100" title="Connection details" @click="open(row)"><i class="bi bi-eye"></i> Details</button>
+                                    <button v-if="canPay && !['terminated', 'inactive'].includes(row.status)" type="button" class="rounded bg-emerald-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-emerald-700" :title="Number(row.open_due) > 0 ? `Due Tk ${money(row.open_due)}` : 'Pay extra months in advance'" @click="openPay(row)"><i class="bi bi-cash-coin"></i> Pay</button>
+                                    <button type="button" class="rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:border-slate-800 hover:bg-slate-900 hover:text-emerald-400" title="Open terminal" @click="Object.assign(terminal, { show: true, row })"><i class="bi bi-terminal"></i></button>
+                                </div>
                             </td>
                         </tr>
                         <tr v-if="!rows.length"><td colspan="10" class="px-2 py-6 text-center text-slate-400">No connections found</td></tr>
@@ -186,6 +199,7 @@ onMounted(() => {
 
         <TerminalOffcanvas v-if="terminal.row" v-model="terminal.show" :connections="[terminal.row]" :connection-id="terminal.row.id" @changed="load" />
         <ConnectionPanel :show="panel.show" :connection-id="panel.id" :can="can" @close="panel.show = false" @changed="load" @edit="edit" />
+        <ConnectionPayOffcanvas v-model="pay.show" :connection-id="pay.id" @saved="load" />
         <ConnectionFormModal :show="formModal.show" :connection="formModal.connection" @close="formModal.show = false" @saved="load" />
     </div>
 </template>

@@ -2,6 +2,7 @@
 
 namespace App\Services\Isp;
 
+use App\Models\Customer;
 use App\Models\CustomerPayment;
 use App\Models\Invoice;
 use App\Models\Reseller;
@@ -15,7 +16,8 @@ use RuntimeException;
 //
 //  earned     = the reseller's margin on paid invoices of their packages, recognised as the
 //               customer pays: paid - reseller_cost * paid / total (reversals reduce it again)
-//  collected  = cash the reseller took from customers in the reseller portal (still in their hand)
+//  collected  = cash the reseller took from customers in the reseller portal (still in their hand),
+//               plus customer bills the reseller paid from the wallet (method 'wallet')
 //  balance    = earned - collected + deposits - paid withdrawals
 //               > 0 the company owes the reseller, < 0 the reseller owes the company
 //  available  = balance - pending withdrawal requests
@@ -58,6 +60,34 @@ class ResellerWalletService
             'balance' => $balance,
             'available' => round(max(0, $balance - (float) $tx->pending), 2),
         ];
+    }
+
+    // The reseller pays a customer's bill out of their wallet balance. It is recorded as a
+    // payment collected by the reseller (method 'wallet'), so the wallet drops by the amount
+    // and the customer's invoices are paid, oldest first.
+    public static function payFromWallet(Reseller $reseller, Customer $customer, float $amount, ?string $notes = null): CustomerPayment
+    {
+        return DB::transaction(function () use ($reseller, $customer, $amount, $notes) {
+            // Same lock as withdrawals, so two requests can't both spend the same balance.
+            Reseller::whereKey($reseller->id)->lockForUpdate()->first();
+            if ((int) $customer->reseller_id !== (int) $reseller->id) {
+                throw new RuntimeException('This customer is not yours.');
+            }
+            $amount = round($amount, 2);
+            $available = self::summary($reseller->id)['available'];
+            if ($amount > $available + 0.001) {
+                throw new RuntimeException('Your wallet only has ' . number_format($available, 2) . ' available.');
+            }
+            return CollectionService::receive($customer, [
+                'amount' => $amount,
+                'method' => 'wallet',
+                'payment_date' => now()->toDateString(),
+                'source' => 'reseller',
+                'reference' => 'Reseller wallet ' . $reseller->code,
+                'notes' => $notes,
+                'collected_by_reseller_id' => $reseller->id,
+            ]);
+        });
     }
 
     public static function requestWithdrawal(Reseller $reseller, array $data): ResellerTransaction

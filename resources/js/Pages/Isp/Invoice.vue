@@ -10,7 +10,7 @@ import StatusBadge from '../../Components/Isp/StatusBadge.vue';
 import InvoiceDetailModal from '../../Components/Isp/InvoiceDetailModal.vue';
 import ManualInvoiceModal from '../../Components/Isp/ManualInvoiceModal.vue';
 import ReceivePaymentForm from '../../Components/Isp/ReceivePaymentForm.vue';
-import { money, fmtDate, today, label, useApiError } from '../../lib/isp';
+import { money, fmtDate, label, useApiError, fmtDateTime } from '../../lib/isp';
 import { useToast } from '../../lib/toast';
 import { confirmDialog } from '../../lib/confirm';
 
@@ -29,7 +29,6 @@ const detail = reactive({ show: false, id: null });
 const manual = reactive({ show: false, draft: null });
 const receive = reactive({ show: false, customerId: null, invoiceId: null });
 const generating = ref(false);
-const runDate = ref(today());
 let timer = null;
 
 function load() {
@@ -51,10 +50,10 @@ function onSearch() {
 }
 
 async function generate() {
-    if (!(await confirmDialog({ title: 'Run billing now?', text: `Generates every missing invoice as of ${fmtDate(runDate.value)}. Already billed periods are skipped, so running twice is safe.`, confirmButtonText: 'Generate' }))) return;
+    if (!(await confirmDialog({ title: 'Issue renewal invoices now?', text: 'Every connection whose paid time ends soon (or has ended) and has no open bill gets one. This also runs automatically every minute, so running it again is safe.', confirmButtonText: 'Generate' }))) return;
     generating.value = true;
     try {
-        const res = await axios.post('/isp/invoice-generate', { date: runDate.value });
+        const res = await axios.post('/isp/invoice-generate');
         toast.success(res.data.message);
         (res.data.stats?.errors || []).slice(0, 5).forEach((e) => toast.error(e));
         reload();
@@ -119,12 +118,8 @@ onMounted(() => {
                 </div>
                 <div class="flex flex-wrap items-end gap-2">
                     <template v-if="can.generate">
-                        <div>
-                            <label class="mb-1 block text-xs font-medium text-slate-600">Billing run date</label>
-                            <input v-model="runDate" type="date" :max="today()" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
-                        </div>
                         <button type="button" :disabled="generating" class="rounded-md border border-brand-500 px-3 py-1.5 text-sm font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-50" @click="generate">
-                            <i class="bi bi-lightning-charge"></i> {{ generating ? 'Generating...' : 'Generate invoices' }}
+                            <i class="bi bi-lightning-charge"></i> {{ generating ? 'Generating...' : 'Generate renewals' }}
                         </button>
                     </template>
                     <button v-if="can.create" type="button" class="rounded-md bg-brand-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600" @click="Object.assign(manual, { show: true, draft: null })">
@@ -153,7 +148,7 @@ onMounted(() => {
                                 <Link :href="`/isp/customer/${row.customer_id}`" class="hover:underline" @click.stop>{{ row.customer?.name }}</Link>
                                 <div class="text-xs text-slate-400">{{ row.customer?.code }} · {{ row.customer?.area?.name }}</div>
                             </td>
-                            <td class="px-2 py-2 text-xs">{{ row.period_start ? `${fmtDate(row.period_start)} – ${fmtDate(row.period_end)}` : '—' }}</td>
+                            <td class="px-2 py-2 text-xs">{{ row.period_start ? `${fmtDateTime(row.period_start)} – ${fmtDateTime(row.period_end)}` : row.service_months ? 'Starts when paid' : '—' }}</td>
                             <td class="px-2 py-2">{{ fmtDate(row.invoice_date) }}<div class="text-xs text-slate-400">due {{ fmtDate(row.due_date) }}</div></td>
                             <td class="px-2 py-2 text-right">{{ money(row.total) }}</td>
                             <td class="px-2 py-2 text-right text-emerald-700">{{ money(row.paid) }}</td>

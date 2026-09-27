@@ -22,6 +22,15 @@ function appMenuGroups()
             'items' => [
                 ['access' => 'customer', 'uri' => '/customer', 'match' => 'customer', 'icon' => 'bi-people', 'label' => 'Customers'],
                 ['access' => 'connection', 'uri' => '/isp/connections', 'match' => 'isp/connections', 'icon' => 'bi-ethernet', 'label' => 'Connections'],
+            ],
+        ],
+        [
+            'section' => 'customers',
+            'sectionLabel' => 'Customers',
+            'key' => 'ispSupport',
+            'label' => 'Support',
+            'icon' => 'bi-life-preserver',
+            'items' => [
                 ['access' => 'ticket', 'uri' => '/isp/tickets', 'match' => 'isp/tickets', 'icon' => 'bi-life-preserver', 'label' => 'Support Tickets'],
             ],
         ],
@@ -61,6 +70,7 @@ function appMenuGroups()
             'items' => [
                 ['access' => 'router', 'uri' => '/isp/routers', 'match' => 'isp/routers', 'icon' => 'bi-router', 'label' => 'Routers (MikroTik)'],
                 ['access' => 'package', 'uri' => '/isp/packages', 'match' => 'isp/packages', 'icon' => 'bi-speedometer2', 'label' => 'Packages'],
+                ['access' => 'bandwidth', 'uri' => '/isp/bandwidth', 'match' => 'isp/bandwidth', 'icon' => 'bi-cloud-download', 'label' => 'Bandwidth Purchase'],
             ],
         ],
         [
@@ -113,6 +123,8 @@ function appMenuGroups()
             'items' => [
                 ['access' => 'ispReport', 'uri' => '/isp/due-report', 'match' => 'isp/due-report', 'icon' => 'bi-exclamation-triangle', 'label' => 'Due & Overdue'],
                 ['access' => 'ispReport', 'uri' => '/isp/collection-report', 'match' => 'isp/collection-report', 'icon' => 'bi-graph-up', 'label' => 'Collection Report'],
+                ['access' => 'ispReport', 'uri' => '/isp/bandwidth-usage', 'match' => 'isp/bandwidth-usage', 'icon' => 'bi-speedometer', 'label' => 'Bandwidth Usage'],
+                ['access' => 'ispReport', 'uri' => '/isp/bandwidth-profit', 'match' => 'isp/bandwidth-profit', 'icon' => 'bi-bar-chart-line', 'label' => 'Bandwidth Profit'],
                 ['access' => 'customerDue', 'uri' => '/customerDue', 'match' => 'customerDue', 'icon' => 'bi-cash', 'label' => 'Customer Due'],
                 ['access' => 'customerLedger', 'uri' => '/customerLedger', 'match' => 'customerLedger', 'icon' => 'bi-list', 'label' => 'Customer Ledger'],
             ],

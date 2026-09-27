@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
-import { money, fmtDate, label } from '../../lib/isp';
+import { money, fmtDate, label, expiryClass, fmtDateTime } from '../../lib/isp';
 
 // Connections of the reseller's customers (read-only; the company creates and runs them).
 const props = defineProps({
@@ -61,7 +61,7 @@ const filtered = computed(() => {
                             <th class="px-3 py-2 font-medium">Package</th>
                             <th class="px-3 py-2 font-medium">Type / Username</th>
                             <th class="px-3 py-2 font-medium">Activated</th>
-                            <th class="px-3 py-2 font-medium">Next bill</th>
+                            <th class="px-3 py-2 font-medium">Expire date</th>
                             <th class="px-3 py-2 text-right font-medium">Customer due</th>
                             <th class="px-3 py-2 font-medium">Status</th>
                         </tr>
@@ -79,7 +79,7 @@ const filtered = computed(() => {
                             </td>
                             <td class="px-3 py-2">{{ label(row.connection_type) }}<div class="text-xs text-slate-400">{{ row.pppoe_username }}</div></td>
                             <td class="px-3 py-2">{{ fmtDate(row.activation_date) || '—' }}</td>
-                            <td class="px-3 py-2">{{ fmtDate(row.next_billing_date) || '—' }}</td>
+                            <td class="px-3 py-2" :class="expiryClass(row.expire_at)">{{ fmtDateTime(row.expire_at) || 'Unpaid' }}</td>
                             <td class="px-3 py-2 text-right" :class="row.customer?.ledger_balance > 0 ? 'font-medium text-red-600' : 'text-slate-500'">{{ money(Math.max(0, row.customer?.ledger_balance || 0)) }}</td>
                             <td class="px-3 py-2"><StatusBadge :status="row.status" /></td>
                         </tr>

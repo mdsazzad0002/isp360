@@ -119,6 +119,8 @@ class ConnectionTerminalTest extends TestCase
         $packageId = DB::table('packages')->where('name', 'Sync 10')->value('id');
         $this->api('/customer', ['name' => 'Sync Customer', 'phone' => '01799996002'])->assertOk();
         $customerId = DB::table('customers')->where('phone', '01799996002')->value('id');
+        // prepaid: advance credit pays each new connection's bill, so the lines run
+        $this->api('/isp/payment', ['customer_id' => $customerId, 'amount' => 10000, 'method' => 'cash', 'payment_date' => now()->toDateString()])->assertOk();
         $make = fn ($user, $extra = []) => $this->api('/isp/connection', array_merge(['customer_id' => $customerId, 'package_id' => $packageId, 'area_id' => $areaId,
             'connection_type' => 'pppoe', 'pppoe_username' => $user, 'router_id' => $router->id, 'activate_now' => true], $extra))->assertOk()->json('id');
         $status = fn ($id) => DB::table('connections')->where('id', $id)->value('network_sync_status');

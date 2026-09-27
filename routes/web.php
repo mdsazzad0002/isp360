@@ -349,9 +349,12 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/get-connection-secret', [Isp\ConnectionController::class, 'secret'])->name('isp.connection.secret');
     Route::post('/connection', [Isp\ConnectionController::class, 'store'])->name('isp.connection.store');
     Route::post('/connection-action', [Isp\ConnectionController::class, 'action'])->name('isp.connection.action');
+    Route::post('/connection-pay-quote', [Isp\ConnectionController::class, 'payQuote'])->name('isp.connection.payQuote');
+    Route::post('/connection-pay', [Isp\ConnectionController::class, 'pay'])->name('isp.connection.pay');
     Route::post('/connection-change-package', [Isp\ConnectionController::class, 'changePackage'])->name('isp.connection.package');
     Route::post('/connection-sync', [Isp\ConnectionController::class, 'sync'])->name('isp.connection.sync');
     Route::post('/connection-online', [Isp\ConnectionController::class, 'online'])->name('isp.connection.online');
+    Route::post('/connection-traffic', [Isp\ConnectionController::class, 'traffic'])->middleware('throttle:90,1')->name('isp.connection.traffic');
     Route::post('/connection-verify', [Isp\ConnectionController::class, 'verify'])->middleware('throttle:30,1')->name('isp.connection.verify');
     Route::post('/connection-terminal', [Isp\ConnectionController::class, 'terminal'])->middleware('throttle:60,1')->name('isp.connection.terminal');
 
@@ -359,6 +362,7 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/get-routers', [Isp\RouterController::class, 'index'])->name('isp.routers.index');
     Route::post('/router', [Isp\RouterController::class, 'store'])->name('isp.router.store');
     Route::post('/router-test', [Isp\RouterController::class, 'test'])->name('isp.router.test');
+    Route::post('/router-readiness', [Isp\RouterController::class, 'readiness'])->middleware('throttle:30,1')->name('isp.router.readiness');
     Route::post('/router-sessions', [Isp\RouterController::class, 'sessions'])->name('isp.router.sessions');
     Route::post('/router-sync-all', [Isp\RouterController::class, 'syncAll'])->name('isp.router.sync');
     Route::post('/delete-router', [Isp\RouterController::class, 'destroy'])->name('isp.router.delete');
@@ -386,6 +390,14 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/payment-refund', [Isp\PaymentController::class, 'refund'])->name('isp.payment.refund');
 
     Route::post('/get-dashboard', [Isp\ReportController::class, 'dashboard'])->name('isp.dashboard');
+    Route::get('/bandwidth', [Isp\BandwidthController::class, 'create'])->name('isp.bandwidth');
+    Route::post('/get-bandwidth', [Isp\BandwidthController::class, 'index'])->name('isp.bandwidth.index');
+    Route::post('/bandwidth', [Isp\BandwidthController::class, 'store'])->name('isp.bandwidth.store');
+    Route::post('/delete-bandwidth', [Isp\BandwidthController::class, 'destroy'])->name('isp.bandwidth.delete');
+    Route::get('/bandwidth-usage', [Isp\BandwidthController::class, 'usagePage'])->name('isp.bandwidth.usage');
+    Route::post('/get-bandwidth-usage', [Isp\BandwidthController::class, 'usage'])->name('isp.bandwidth.usage.data');
+    Route::get('/bandwidth-profit', [Isp\BandwidthController::class, 'profitPage'])->name('isp.bandwidth.profit');
+    Route::post('/get-bandwidth-profit', [Isp\BandwidthController::class, 'profit'])->name('isp.bandwidth.profit.data');
     Route::get('/due-report', [Isp\ReportController::class, 'dueReport'])->name('isp.due.report');
     Route::post('/get-due-report', [Isp\ReportController::class, 'getDueReport'])->name('isp.due.report.data');
     Route::post('/get-due-summary', [Isp\ReportController::class, 'dueSummary'])->name('isp.due.summary');

@@ -34,7 +34,7 @@ class CustomerPanelController extends Controller
             ],
             'connections' => $customer->connections()->with('package:id,name,download_mbps,upload_mbps,price,billing_cycle')
                 ->where('status', '!=', 'terminated')->latest('id')
-                ->get(['id', 'code', 'package_id', 'connection_type', 'pppoe_username', 'status', 'suspension_reason', 'activation_date', 'next_billing_date', 'discount']),
+                ->get(['id', 'code', 'package_id', 'connection_type', 'pppoe_username', 'status', 'suspension_reason', 'activation_date', 'expire_at', 'discount']),
             'invoices' => Invoice::where('customer_id', $customer->id)->whereNotIn('status', ['draft', 'cancelled'])
                 ->latest('invoice_date')->latest('id')->limit(24)
                 ->get(['id', 'invoice_no', 'invoice_date', 'due_date', 'period_start', 'period_end', 'total', 'paid', 'due', 'status']),
@@ -54,7 +54,7 @@ class CustomerPanelController extends Controller
             ->with('package:id,name,download_mbps,upload_mbps,price,billing_cycle')
             ->latest('id')
             ->get(['id', 'code', 'package_id', 'connection_type', 'pppoe_username', 'static_ip', 'status', 'suspension_reason',
-                'activation_date', 'suspended_at', 'terminated_at', 'next_billing_date', 'discount']);
+                'activation_date', 'suspended_at', 'terminated_at', 'expire_at', 'discount']);
 
         $invoices = Invoice::where('customer_id', $customer->id)->whereNotIn('status', ['draft', 'cancelled', 'void'])
             ->latest('invoice_date')->latest('id')->limit(300)

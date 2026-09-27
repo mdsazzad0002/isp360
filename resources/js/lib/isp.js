@@ -7,9 +7,17 @@ export function money(value) {
 
 export function fmtDate(value) {
     if (!value) return '';
-    const d = new Date(String(value).length === 10 ? value + 'T00:00:00' : value);
+    const d = new Date(String(value).length === 10 ? value + 'T00:00:00' : String(value).replace(' ', 'T'));
     if (Number.isNaN(d.getTime())) return value;
     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+// "05 Nov 2026, 2:30 PM" for server datetimes ("Y-m-d H:i:s", app timezone).
+export function fmtDateTime(value) {
+    if (!value) return '';
+    const d = new Date(String(value).replace(' ', 'T'));
+    if (Number.isNaN(d.getTime())) return value;
+    return `${fmtDate(value)}, ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
 }
 
 export function today() {
@@ -117,4 +125,11 @@ export async function promptReason(title, { text = '', confirmButtonText = 'Conf
         inputValidator: (value) => (!value || value.trim().length < 3 ? 'Please enter a reason (at least 3 characters)' : undefined),
     });
     return result.isConfirmed ? result.value.trim() : null;
+}
+
+// Connection expire time (paid until): red when unpaid or past, amber within 3 days.
+export function expiryClass(value) {
+    if (!value) return 'text-red-600';
+    const ms = new Date(String(value).replace(' ', 'T')) - new Date();
+    return ms <= 0 ? 'text-red-600 font-medium' : ms <= 3 * 86400000 ? 'text-amber-600' : 'text-emerald-700';
 }

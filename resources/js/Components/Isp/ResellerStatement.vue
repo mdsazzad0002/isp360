@@ -16,6 +16,7 @@ const TYPE_LABELS = {
     earning_reversed: 'Earning reversed',
     collection: 'Cash collected',
     collection_reversed: 'Collection reversed',
+    wallet_payment: 'Bill paid from wallet',
     deposit: 'Deposit',
     withdrawal: 'Withdrawal',
 };

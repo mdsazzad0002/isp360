@@ -97,6 +97,13 @@ class MikroTikDriver implements NetworkDriver
         if (! $existing) {
             $data = ['name' => $name, 'rate-limit' => $rate];
             if ($profileMenu === '/ppp/profile') {
+                // new package profiles take the gateway/pool of the router's "default" profile (set once in the setup guide),
+                // so a new package works without touching the router
+                $default = $api->first($profileMenu, ['name' => 'default']) ?? [];
+                $data['local-address'] = $default['local-address'] ?? null;
+                $data['remote-address'] = $default['remote-address'] ?? null;
+            }
+            if ($profileMenu === '/ppp/profile') {
                 $data['comment'] = 'ISP package ' . $package->name; // hotspot user profiles have no comment field
             }
             $api->create($profileMenu, array_filter($data));
@@ -149,6 +156,51 @@ class MikroTikDriver implements NetworkDriver
     {
         $menu = self::SERVICES[$connection->connection_type] ?? null;
         return $menu ? $api->first($menu['active'], [$menu['activeUser'] => $connection->pppoe_username]) : null;
+    }
+
+    // One traffic reading of the live session, null when offline. Directions are the customer's:
+    // download = router tx towards the customer. PPPoE gives a rate (monitor-traffic on the dynamic
+    // <pppoe-user> interface); hotspot only has byte counters, so the caller derives the rate.
+    /** @return array{down_bps?: float, up_bps?: float, down_bytes?: float, up_bytes?: float, address: ?string, uptime: ?string}|null */
+    public static function trafficSample(MikroTikClient $api, Connection $connection): ?array
+    {
+        $session = self::activeSession($api, $connection);
+        if (! $session) {
+            return null;
+        }
+        $base = ['address' => $session['address'] ?? null, 'uptime' => $session['uptime'] ?? null];
+        if ($connection->connection_type === 'hotspot') {
+            return $base + ['down_bytes' => (float) ($session['bytes-out'] ?? 0), 'up_bytes' => (float) ($session['bytes-in'] ?? 0)];
+        }
+        $r = $api->run('/interface/monitor-traffic', ['interface' => "<pppoe-{$connection->pppoe_username}>", 'once' => ''], 10)[0] ?? [];
+        return $base + ['down_bps' => (float) ($r['tx-bits-per-second'] ?? 0), 'up_bps' => (float) ($r['rx-bits-per-second'] ?? 0)];
+    }
+
+    // Why there is no live session, read from the router (read-only), so "offline" always comes with a cause.
+    public static function offlineReason(MikroTikClient $api, Connection $connection): string
+    {
+        $menu = self::SERVICES[$connection->connection_type];
+        $server = $connection->connection_type === 'pppoe' ? '/interface/pppoe-server/server' : '/ip/hotspot';
+        $user = $api->first($menu['user'], ['name' => $connection->pppoe_username]);
+        if (! $user) {
+            return "Account {$connection->pppoe_username} does not exist on the router (run sync).";
+        }
+        if (($user['disabled'] ?? 'false') === 'true') {
+            return "Account {$connection->pppoe_username} is disabled on the router.";
+        }
+        $servers = $api->get($server);
+        if (! $servers) {
+            return 'No ' . ($connection->connection_type === 'pppoe' ? 'PPPoE' : 'hotspot') . ' server on this router: nobody can connect to it.';
+        }
+        if (! collect($servers)->contains(fn ($s) => ($s['disabled'] ?? 'false') !== 'true')) {
+            return 'The ' . ($connection->connection_type === 'pppoe' ? 'PPPoE' : 'hotspot') . ' server on this router is disabled.';
+        }
+        $out = $user['last-logged-out'] ?? null;
+        if ($out === null || str_starts_with($out, '1970')) {
+            return 'Never logged in: check the customer router (username/password, cable, ONU).';
+        }
+        $why = $user['last-disconnect-reason'] ?? null;
+        return "Last logged out {$out}" . ($why ? " ({$why})" : '') . '.';
     }
 
     private function kick(MikroTikClient $api, array $menu, array $names): void

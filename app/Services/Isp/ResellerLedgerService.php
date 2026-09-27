@@ -15,7 +15,8 @@ use Illuminate\Support\Collection;
 //  credit  margin earned when a customer payment is allocated to a reseller-package invoice
 //          (allocation amount x (1 - reseller_cost / invoice total)); a reversed allocation
 //          shows again as a debit on the day it was reversed
-//  debit   cash the reseller collected from a customer (and a credit if that payment is reversed)
+//  debit   cash the reseller collected from a customer, or a customer bill paid from the wallet
+//          (and a credit if that payment is reversed)
 //  credit  cash the reseller deposited with the company
 //  debit   withdrawal paid to the reseller
 class ResellerLedgerService
@@ -85,7 +86,9 @@ class ResellerLedgerService
             ->get(['id', 'receipt_no', 'customer_id', 'payment_date', 'created_at', 'amount', 'method', 'status', 'reversed_at']);
         foreach ($collections as $p) {
             $when = Carbon::parse($p->payment_date->toDateString() . ' ' . $p->created_at->format('H:i:s'));
-            $rows->push(self::row($when, 0, 'collection', "Collected from {$p->customer?->name} ({$p->method}) · {$p->receipt_no}", $p->receipt_no, 0, (float) $p->amount));
+            $rows->push($p->method === 'wallet'
+                ? self::row($when, 0, 'wallet_payment', "Paid {$p->customer?->name}'s bill from wallet · {$p->receipt_no}", $p->receipt_no, 0, (float) $p->amount)
+                : self::row($when, 0, 'collection', "Collected from {$p->customer?->name} ({$p->method}) · {$p->receipt_no}", $p->receipt_no, 0, (float) $p->amount));
             if ($p->status === 'reversed' && $p->reversed_at) {
                 $rows->push(self::row($p->reversed_at, 2, 'collection_reversed', "Collection {$p->receipt_no} reversed", $p->receipt_no, (float) $p->amount, 0));
             }

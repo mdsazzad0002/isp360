@@ -270,6 +270,17 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
                     </div>
                 </div>
 
+                <!-- a normal menu entry that scrolls with the rest (not pinned to the bottom) -->
+                <button
+                    v-if="!menuSearch.trim() || 'license upgrade'.includes(menuSearch.trim().toLowerCase())"
+                    type="button"
+                    class="flex w-full cursor-pointer items-center gap-3 border-l-4 border-transparent px-4 py-3 text-left text-sm font-medium text-brand-100 transition hover:bg-brand-700/60 hover:text-white"
+                    @click="openLicensePanel"
+                >
+                    <i class="bi bi-arrow-repeat text-base"></i>
+                    <span class="flex-1">License &amp; Upgrade</span>
+                </button>
+
                 <div v-if="menuSearch.trim() && filteredGroups.length === 0" class="px-4 py-6 text-center text-sm text-brand-200">
                     {{ t('nav.no_menu_match', { term: menuSearch }) }}
                 </div>
@@ -277,14 +288,6 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
             </nav>
 
             <div class="shrink-0 border-t border-white/10 bg-brand-800">
-                <button
-                    type="button"
-                    class="flex w-full items-center gap-3 border-b border-white/10 px-4 py-2.5 text-left text-sm font-medium text-brand-100 transition hover:bg-brand-700/60 hover:text-white"
-                    @click="openLicensePanel"
-                >
-                    <i class="bi bi-arrow-repeat text-base"></i>
-                    <span>License &amp; Upgrade</span>
-                </button>
                 <div class="flex items-center justify-between px-4 py-2.5">
                     <span class="flex items-center gap-1.5 text-xs font-medium text-brand-100">
                         {{ company.title }} v{{ page.props.appVersion }}

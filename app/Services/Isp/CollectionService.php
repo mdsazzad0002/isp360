@@ -37,7 +37,9 @@ class CollectionService
             // Money a reseller collects stays with the reseller (their own cash / wallet) until
             // they settle with the company, so it has no company account and no cash-book entry.
             $resellerId = $data['collected_by_reseller_id'] ?? null;
-            if ($method !== 'cash' && empty($data['bank_id']) && ! $resellerId) {
+            // referral commission is company credit, not money received: no account, no cash book
+            $noCash = $method === 'referral';
+            if ($method !== 'cash' && empty($data['bank_id']) && ! $resellerId && ! $noCash) {
                 throw new RuntimeException('Select the bank / mobile-banking account this money was received into.');
             }
             if (! empty($data['transaction_id'])) {
@@ -57,7 +59,7 @@ class CollectionService
                 'payment_date' => Carbon::parse($data['payment_date'] ?? now())->toDateString(),
                 'amount' => $amount,
                 'method' => $method,
-                'bank_id' => $method === 'cash' || $resellerId ? null : $data['bank_id'],
+                'bank_id' => $method === 'cash' || $resellerId || $noCash ? null : $data['bank_id'],
                 'collected_by_reseller_id' => $resellerId,
                 'provider' => $data['provider'] ?? null,
                 'transaction_id' => $data['transaction_id'] ?? null,
@@ -75,7 +77,7 @@ class CollectionService
                 "Payment {$payment->receipt_no} ({$method})" . ($payment->transaction_id ? " TrxID {$payment->transaction_id}" : ''),
                 'customer_payment', $payment->id, $payment->payment_date);
 
-            if (! $resellerId) {
+            if (! $resellerId && ! $noCash) {
                 self::mirrorReceive($payment);
             }
 

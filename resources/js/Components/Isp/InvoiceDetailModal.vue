@@ -4,7 +4,7 @@ import axios from 'axios';
 import { usePage } from '@inertiajs/vue3';
 import Modal from '../Modal.vue';
 import StatusBadge from './StatusBadge.vue';
-import { money, fmtDate, today, promptReason, useApiError } from '../../lib/isp';
+import { money, fmtDate, today, promptReason, useApiError, fmtDateTime } from '../../lib/isp';
 import { printInvoice } from '../../lib/ispPrint';
 import { useToast } from '../../lib/toast';
 
@@ -91,7 +91,7 @@ function print() {
                 <div class="text-slate-600 sm:text-right">
                     <div>Invoice date: {{ fmtDate(invoice.invoice_date) }}</div>
                     <div>Due date: <strong>{{ fmtDate(invoice.due_date) }}</strong></div>
-                    <div v-if="invoice.period_start">Period: {{ fmtDate(invoice.period_start) }} – {{ fmtDate(invoice.period_end) }}</div>
+                    <div v-if="invoice.period_start">Period: {{ fmtDateTime(invoice.period_start) }} – {{ fmtDateTime(invoice.period_end) }}</div>
                     <div class="text-xs text-slate-400">{{ invoice.source === 'auto' ? 'Auto generated' : 'Manual' }} · by {{ invoice.created_by?.name || 'System' }}</div>
                 </div>
             </div>

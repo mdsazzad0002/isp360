@@ -14,7 +14,7 @@ import ReceivePaymentForm from '../../Components/Isp/ReceivePaymentForm.vue';
 import LedgerStatement from '../../Components/Isp/LedgerStatement.vue';
 import TerminalOffcanvas from '../../Components/Isp/TerminalOffcanvas.vue';
 import SyncBadge from '../../Components/Isp/SyncBadge.vue';
-import { money, fmtDate, label } from '../../lib/isp';
+import { money, fmtDate, label, expiryClass, fmtDateTime } from '../../lib/isp';
 import { useToast } from '../../lib/toast';
 
 defineOptions({ layout: AppLayout });
@@ -109,7 +109,7 @@ onMounted(load);
                 <div class="overflow-x-auto p-3">
                     <table v-if="tab === 'connections'" class="w-full text-sm">
                         <thead><tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
-                            <th class="px-2 py-2 font-medium">Code</th><th class="px-2 py-2 font-medium">Package</th><th class="px-2 py-2 font-medium">Type / User</th><th class="px-2 py-2 font-medium">Box</th><th class="px-2 py-2 font-medium">Next bill</th><th class="px-2 py-2 font-medium">Status</th><th class="px-2 py-2 font-medium">Router sync</th><th v-if="can.connection" class="px-2 py-2"></th>
+                            <th class="px-2 py-2 font-medium">Code</th><th class="px-2 py-2 font-medium">Package</th><th class="px-2 py-2 font-medium">Type / User</th><th class="px-2 py-2 font-medium">Box</th><th class="px-2 py-2 font-medium">Expire date</th><th class="px-2 py-2 font-medium">Status</th><th class="px-2 py-2 font-medium">Router sync</th><th v-if="can.connection" class="px-2 py-2"></th>
                         </tr></thead>
                         <tbody>
                             <tr v-for="c in data.connections" :key="c.id" class="cursor-pointer border-b border-slate-100 hover:bg-slate-50" @click="Object.assign(connPanel, { show: true, id: c.id })">
@@ -120,7 +120,7 @@ onMounted(load);
                                     <button v-if="c.pppoe_username || c.static_ip" type="button" class="ml-1 text-slate-400 hover:text-brand-600" title="Copy" @click.stop="copyText(c.pppoe_username || c.static_ip)"><i class="bi bi-copy text-xs"></i></button>
                                 </td>
                                 <td class="px-2 py-2">{{ c.box?.name || '—' }}</td>
-                                <td class="px-2 py-2">{{ fmtDate(c.next_billing_date) || '—' }}</td>
+                                <td class="px-2 py-2" :class="expiryClass(c.expire_at)">{{ fmtDateTime(c.expire_at) || 'Unpaid' }}</td>
                                 <td class="px-2 py-2"><StatusBadge :status="c.status" /> <span v-if="c.suspension_reason" class="text-xs text-amber-700">{{ c.suspension_reason }}</span></td>
                                 <td class="px-2 py-2"><SyncBadge :connection="c" /></td>
                                 <td v-if="can.connection" class="px-2 py-2 text-right">
@@ -138,7 +138,7 @@ onMounted(load);
                         <tbody>
                             <tr v-for="i in data.invoices" :key="i.id" class="cursor-pointer border-b border-slate-100 hover:bg-slate-50" @click="Object.assign(invDetail, { show: true, id: i.id })">
                                 <td class="px-2 py-2 font-medium text-brand-600">{{ i.invoice_no }}</td>
-                                <td class="px-2 py-2 text-xs">{{ i.period_start ? `${fmtDate(i.period_start)} – ${fmtDate(i.period_end)}` : fmtDate(i.invoice_date) }}</td>
+                                <td class="px-2 py-2 text-xs">{{ i.period_start ? `${fmtDateTime(i.period_start)} – ${fmtDateTime(i.period_end)}` : fmtDate(i.invoice_date) }}</td>
                                 <td class="px-2 py-2">{{ fmtDate(i.due_date) }}</td>
                                 <td class="px-2 py-2 text-right">{{ money(i.total) }}</td>
                                 <td class="px-2 py-2 text-right text-emerald-700">{{ money(i.paid) }}</td>

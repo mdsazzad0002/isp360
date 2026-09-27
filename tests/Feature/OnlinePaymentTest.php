@@ -293,7 +293,7 @@ class OnlinePaymentTest extends TestCase
         $this->assertEquals(500, $page->json('props.summary.balance'));
         $this->assertIsArray($page->json('props.connections'));
 
-        // one running and one terminated connection, each billed; a payment is collected
+        // one running and one terminated connection, each billed when created; a payment is collected
         $this->admin('/isp/package', ['name' => 'T Portal 10', 'download_mbps' => 10, 'upload_mbps' => 10, 'price' => 600, 'billing_cycle' => 'monthly'])->assertOk();
         $packageId = DB::table('packages')->where('name', 'T Portal 10')->value('id');
         $areaId = $this->admin('/area', ['name' => 'T Portal Area'])->assertOk()->json('id'); // a connection needs an area
@@ -301,7 +301,6 @@ class OnlinePaymentTest extends TestCase
             $this->admin('/isp/connection', ['customer_id' => $this->customer->id, 'package_id' => $packageId, 'connection_type' => 'pppoe', 'area_id' => $areaId,
                 'pppoe_username' => $user, 'activate_now' => true, 'activation_date' => now()->startOfMonth()->toDateString()])->assertOk();
         }
-        \App\Services\Isp\BillingService::generateForBranch($this->branch->id, now());
         [$a, $b] = \App\Models\Connection::where('customer_id', $this->customer->id)->orderBy('id')->get()->all();
         \App\Services\Isp\ConnectionService::terminate($b, 'moved away');
         CollectionService::receive($this->customer, ['amount' => 500, 'method' => 'cash']);
@@ -310,13 +309,13 @@ class OnlinePaymentTest extends TestCase
             ->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => (string) $version])
             ->get('/customer-portal/connections')->assertOk()->json('props');
         $byId = collect($props['connections'])->keyBy('id');
-        $this->assertSame('active', $byId[$a->id]['status']);
+        $this->assertSame('suspended', $byId[$a->id]['status']); // billed at once, no paid time yet
         $this->assertSame('terminated', $byId[$b->id]['status']);
         $this->assertEquals(600, $byId[$a->id]['billed']);
         $this->assertEquals(600, $byId[$b->id]['billed']);
-        // 500 went to the oldest bill (the opening due), so both connection bills are still fully due
-        $this->assertEquals(0, $byId[$a->id]['collected'] + $byId[$b->id]['collected']);
-        $this->assertEquals(1200, $byId[$a->id]['due'] + $byId[$b->id]['due']);
+        // 500 went to the earliest due bill (a connection bill, due the day it is issued)
+        $this->assertEquals(500, $byId[$a->id]['collected'] + $byId[$b->id]['collected']);
+        $this->assertEquals(700, $byId[$a->id]['due'] + $byId[$b->id]['due']);
         $this->assertCount(1, $props['payments']);
     }
 }

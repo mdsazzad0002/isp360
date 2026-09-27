@@ -22,33 +22,31 @@ use RuntimeException;
 class BillingService
 {
     /**
-     * Bill every billable connection of a branch up to the end of the target month.
-     * Idempotent: each connection's next_billing_date advances in the same transaction
-     * as its invoice, and the unique period_key blocks any duplicate period.
+     * Renewal invoices: every switched-on connection whose paid time ends within
+     * renewal_invoice_days (or has already ended) and has no open service invoice gets one.
+     * Idempotent — a connection never has two open service invoices, so dues don't pile up.
      *
      * @return array{created:int, skipped:int, failed:int, errors:array}
      */
-    public static function generateForBranch(int $branchId, ?Carbon $runDate = null, ?array $connectionIds = null): array
+    public static function generateForBranch(int $branchId, ?array $connectionIds = null): array
     {
         $settings = IspSettings::all($branchId);
-        $runDate = ($runDate ?? now())->copy()->startOfDay();
-        $targetMonth = $settings['billing_month'] === 'previous' ? $runDate->copy()->subMonthNoOverflow() : $runDate->copy();
-        $targetEnd = $targetMonth->copy()->endOfMonth()->startOfDay();
-
-        $statuses = $settings['bill_suspended'] ? ['active', 'suspended'] : ['active'];
+        $horizon = now()->addDays($settings['renewal_invoice_days']);
         $stats = ['created' => 0, 'skipped' => 0, 'failed' => 0, 'errors' => []];
 
         Connection::where('branch_id', $branchId)
-            ->whereIn('status', $statuses)
-            ->whereNotNull('next_billing_date')
-            ->where('next_billing_date', '<=', $targetEnd->toDateString())
+            // A line cut off for expiry is still billed, so there is always an invoice to pay to get it back.
+            ->where(fn ($q) => $q->where('status', 'active')
+                ->orWhere(fn ($w) => $w->where('status', 'suspended')->whereIn('suspension_reason', OverdueService::SUSPEND_REASONS)))
+            ->whereNotNull('activated_at')
+            ->where(fn ($q) => $q->whereNull('expire_at')->orWhere('expire_at', '<=', $horizon))
+            ->whereNotExists(fn ($q) => self::openServiceInvoice($q))
             ->when($connectionIds, fn ($q) => $q->whereIn('id', $connectionIds))
             ->orderBy('id')
-            ->chunkById(200, function ($connections) use ($targetEnd, $runDate, $settings, &$stats) {
+            ->chunkById(200, function ($connections) use (&$stats) {
                 foreach ($connections as $connection) {
                     try {
-                        $created = self::billConnection($connection->id, $targetEnd, $runDate, $settings);
-                        $created > 0 ? $stats['created'] += $created : $stats['skipped']++;
+                        self::billNow($connection) ? $stats['created']++ : $stats['skipped']++;
                     } catch (\Throwable $e) {
                         $stats['failed']++;
                         $stats['errors'][] = "{$connection->code}: {$e->getMessage()}";
@@ -57,101 +55,164 @@ class BillingService
                 }
             });
 
-        AuditLogger::log('billing.generated', null, null, [
-            'target_month' => $targetEnd->format('Y-m'), 'created' => $stats['created'], 'failed' => $stats['failed'],
-        ], null, $branchId);
-
+        if ($stats['created'] || $stats['failed']) {
+            AuditLogger::log('billing.generated', null, null, ['created' => $stats['created'], 'failed' => $stats['failed']], null, $branchId);
+        }
         return $stats;
     }
 
-    // Creates every missing period invoice for one connection up to $targetEnd. Returns count.
-    private static function billConnection(int $connectionId, Carbon $targetEnd, Carbon $invoiceDate, array $settings): int
+    /**
+     * One service invoice for the connection's package cycle, unless one is already open.
+     * The customer's advance credit pays it at once; otherwise it stays due. Its internet time
+     * starts when it is paid (ConnectionService::refreshExpiry), not when it is issued.
+     */
+    public static function billNow(Connection $connection, bool $extra = false): ?Invoice
     {
-        $invoices = DB::transaction(function () use ($connectionId, $targetEnd, $invoiceDate, $settings) {
-            $connection = Connection::with('package', 'customer')->lockForUpdate()->find($connectionId);
-            if (! $connection || ! $connection->package || empty($connection->next_billing_date)) {
-                return [];
+        $invoice = DB::transaction(function () use ($connection, $extra) {
+            $connection = Connection::with('package', 'customer')->lockForUpdate()->find($connection->id);
+            if (! $connection || ! $connection->package) {
+                return null;
+            }
+            $open = Invoice::where('connection_id', $connection->id)->whereNotNull('service_months')
+                ->whereIn('status', array_merge(Invoice::OPEN_STATUSES, ['draft']))->exists();
+            if ($open && ! $extra) { // $extra: an advance cycle bought on top, paid right away
+                return null;
             }
 
-            $created = [];
-            $guard = 0;
-            while ($connection->next_billing_date->lte($targetEnd) && $guard++ < 24) {
-                [$start, $end, $amount, $label, $share] = self::nextPeriod($connection);
+            $package = $connection->package;
+            $months = $package->cycleMonths();
+            $amount = $connection->monthlyCharge(); // package price is per billing cycle, minus discount
+            $speed = $package->download_mbps ? " ({$package->download_mbps} Mbps)" : '';
+            $length = $months === 1 ? '1 month' : "{$months} months";
+            $today = now()->startOfDay();
+            $dueDate = $connection->expire_at && $connection->expire_at->isFuture() ? $connection->expire_at->copy()->startOfDay() : $today;
 
-                $invoice = self::createInvoiceRecord($connection->customer, $connection->branch_id, [
-                    'connection_id' => $connection->id,
-                    'period_start' => $start,
-                    'period_end' => $end,
-                    'period_key' => $connection->id . ':' . $start->toDateString(),
-                    'invoice_date' => $invoiceDate,
-                    'due_date' => $invoiceDate->copy()->addDays($settings['due_days']),
-                    'source' => 'auto',
-                ] + self::resellerCost($connection, $amount, $share), [[
-                    'package_id' => $connection->package_id,
-                    'description' => $label,
-                    'unit_price' => $amount,
-                    'quantity' => 1,
-                    'discount' => 0,
-                    'period_start' => $start,
-                    'period_end' => $end,
-                ]], true);
+            $invoice = self::createInvoiceRecord($connection->customer, $connection->branch_id, [
+                'connection_id' => $connection->id,
+                'service_months' => $months,
+                'invoice_date' => $today,
+                'due_date' => $dueDate,
+                'source' => 'auto',
+            ] + self::resellerCost($connection, $amount), [[
+                'package_id' => $connection->package_id,
+                'description' => "{$package->name}{$speed} — {$length} internet",
+                'unit_price' => $amount,
+                'quantity' => 1,
+                'discount' => 0,
+            ]], true);
 
-                $connection->next_billing_date = $end->copy()->addDay();
-                $connection->save();
-                $created[] = $invoice;
-            }
-            if ($created) {
-                CollectionService::autoAllocate($connection->customer_id);
-            }
-            return $created;
+            CollectionService::autoAllocate($connection->customer_id);
+            return $invoice->fresh();
         });
 
-        foreach ($invoices as $invoice) {
-            IspNotifier::send($invoice->branch_id, $invoice->customer, 'invoice', [
+        if ($invoice) {
+            // Inside a larger transaction (connection create), notify only once it commits.
+            DB::afterCommit(fn () => IspNotifier::send($invoice->branch_id, $invoice->customer, 'invoice', [
                 'invoice' => $invoice->invoice_no,
                 'amount' => number_format((float) $invoice->total, 2),
                 'due_date' => $invoice->due_date->format('d-m-Y'),
-            ]);
+            ]));
         }
-        return count($invoices);
+        return $invoice;
     }
 
-    // A reseller package invoice records the company's share for the period: the company price
-    // the reseller last accepted (base_price), so a company price change counts only once the
-    // reseller has reviewed it. A reseller package with no base package has no known share:
-    // the whole amount is the company's.
-    private static function resellerCost(Connection $connection, float $amount, float $share): array
+    /**
+     * What paying 1..12 cycles for a connection would cost and until when it would run. Open
+     * service bills count first; each further cycle is one more bill at the current price.
+     */
+    public static function payQuote(Connection $connection): array
+    {
+        $connection->loadMissing('package', 'customer');
+        $open = self::openServiceInvoices($connection->id);
+        $cycleMonths = $connection->package->cycleMonths();
+        $charge = $connection->monthlyCharge();
+        $advance = CollectionService::advanceCredit($connection->customer_id);
+        $firstTime = ! Invoice::where('connection_id', $connection->id)->whereNotNull('service_months')->where('status', 'paid')->exists();
+        // new time stacks on the time left, never starts before now or before activation
+        $start = $connection->activated_at ? collect([now(), $connection->activated_at, $connection->expire_at])->filter()->max()->copy() : null;
+
+        $options = [];
+        for ($cycles = max(1, $open->count()); $cycles <= 12; $cycles++) {
+            $extra = $cycles - $open->count();
+            $months = (int) $open->sum('service_months') + $extra * $cycleMonths;
+            $until = $start?->copy()->addMonthsNoOverflow($months);
+            if ($until && $firstTime && $connection->bonus_days) {
+                $until->addDays($connection->bonus_days);
+            }
+            $options[] = [
+                'cycles' => $cycles,
+                'months' => $months,
+                'amount' => round(max(0, (float) $open->sum('due') + $extra * $charge - $advance), 2),
+                'until' => $until?->toDateTimeString(),
+            ];
+        }
+        return [
+            'cycle_months' => $cycleMonths,
+            'charge' => $charge,
+            'advance' => $advance,
+            'bonus_days' => $firstTime ? (int) $connection->bonus_days : 0,
+            'open' => $open->map->only(['id', 'invoice_no', 'due', 'service_months', 'status'])->values(),
+            'options' => $options,
+        ];
+    }
+
+    /**
+     * Pays $cycles of service for a connection in one payment: the open service bill(s) first,
+     * then extra cycle bills created now. Pay first, service after: the time starts only when
+     * the bills are fully paid. Returns the payment (null when advance credit covered it all).
+     */
+    public static function payConnection(Connection $connection, int $cycles, array $paymentData): ?\App\Models\CustomerPayment
+    {
+        return DB::transaction(function () use ($connection, $cycles, $paymentData) {
+            $connection = Connection::with('package', 'customer')->lockForUpdate()->findOrFail($connection->id);
+            if (in_array($connection->status, ['terminated', 'inactive'], true)) {
+                throw new RuntimeException("A {$connection->status} connection can't be paid for.");
+            }
+            $open = self::openServiceInvoices($connection->id);
+            if ($cycles < max(1, $open->count()) || $cycles > 12) {
+                throw new RuntimeException('Choose between ' . max(1, $open->count()) . ' and 12 cycles.');
+            }
+            for ($i = $open->count(); $i < $cycles; $i++) {
+                self::billNow($connection, true);
+            }
+            $targets = self::openServiceInvoices($connection->id);
+            $amount = round((float) $targets->sum('due'), 2);
+            if ($amount <= 0) {
+                return null; // advance credit paid it
+            }
+            return CollectionService::receive($connection->customer, $paymentData + ['amount' => $amount, 'source' => 'admin'],
+                $targets->mapWithKeys(fn ($inv) => [$inv->id => (float) $inv->due])->all(), false);
+        });
+    }
+
+    private static function openServiceInvoices(int $connectionId)
+    {
+        return Invoice::where('connection_id', $connectionId)->whereNotNull('service_months')
+            ->whereIn('status', Invoice::OPEN_STATUSES)->where('due', '>', 0)
+            ->orderBy('id')->get(['id', 'invoice_no', 'due', 'service_months', 'status']);
+    }
+
+    private static function openServiceInvoice($query)
+    {
+        return $query->selectRaw(1)->from('invoices')
+            ->whereColumn('invoices.connection_id', 'connections.id')
+            ->whereNotNull('invoices.service_months')
+            ->whereIn('invoices.status', array_merge(Invoice::OPEN_STATUSES, ['draft']));
+    }
+
+    // A reseller package invoice records the company's share: the company price the reseller
+    // last accepted (base_price), so a company price change counts only once the reseller has
+    // reviewed it. A reseller package with no base package has no known share: the whole
+    // amount is the company's.
+    private static function resellerCost(Connection $connection, float $amount): array
     {
         $package = $connection->package;
         if (! $package->reseller_id) {
             return [];
         }
         $basePrice = $package->base_price ?? ($package->base_package_id ? $package->basePackage?->price : null);
-        $cost = $basePrice !== null ? round((float) $basePrice * $share, 2) : $amount;
+        $cost = $basePrice !== null ? round((float) $basePrice, 2) : $amount;
         return ['reseller_id' => $package->reseller_id, 'reseller_cost' => $cost];
-    }
-
-    // [start, end, amount, description, share of a full cycle] for the connection's next unbilled period.
-    private static function nextPeriod(Connection $connection): array
-    {
-        $package = $connection->package;
-        $months = $package->cycleMonths();
-        $charge = $connection->monthlyCharge(); // package price is per billing cycle, minus discount
-        $start = $connection->next_billing_date->copy()->startOfDay();
-        $speed = $package->download_mbps ? " ({$package->download_mbps} Mbps)" : '';
-
-        if ($start->day !== 1) {
-            // First, partial month of a mid-month activation: prorate by days used.
-            $end = $start->copy()->endOfMonth()->startOfDay();
-            $days = $start->diffInDays($end) + 1;
-            $amount = round($charge / $months * $days / $start->daysInMonth, 2);
-            $label = "{$package->name}{$speed} — {$start->format('d M')} to {$end->format('d M Y')} (prorated {$days} days)";
-            return [$start, $end, $amount, $label, $days / $start->daysInMonth / $months];
-        }
-
-        $end = $start->copy()->addMonthsNoOverflow($months)->subDay()->startOfDay();
-        $period = $months === 1 ? $start->format('F Y') : "{$start->format('M Y')} – {$end->format('M Y')}";
-        return [$start, $end, $charge, "{$package->name}{$speed} — {$period}", 1.0];
     }
 
     /**
@@ -252,15 +313,6 @@ class BillingService
             }
             $invoice->refresh();
 
-            // For a connection's latest period, rewind its billing pointer so the period can be reissued.
-            if ($invoice->connection_id && $invoice->period_start) {
-                $connection = Connection::lockForUpdate()->find($invoice->connection_id);
-                if ($connection && $connection->next_billing_date && $connection->next_billing_date->eq($invoice->period_end->copy()->addDay())) {
-                    $connection->next_billing_date = $invoice->period_start;
-                    $connection->save();
-                }
-            }
-
             LedgerService::post($invoice->customer_id, $invoice->branch_id, 'invoice_void', 0, (float) $invoice->total,
                 "Invoice {$invoice->invoice_no} voided: {$reason}", 'invoice', $invoice->id);
 
@@ -272,6 +324,7 @@ class BillingService
             $invoice->void_reason = $reason;
             $invoice->save();
 
+            self::refreshExpiry($invoice);
             AuditLogger::log('invoice.voided', $invoice, $old, ['status' => 'void'], $reason);
             CollectionService::autoAllocate($invoice->customer_id);
             return $invoice;
@@ -344,6 +397,9 @@ class BillingService
         }
 
         $invoice->due = max(0, round($total - $paid, 2));
+        $wasPaid = (bool) $invoice->paid_at;
+        // the moment it became fully paid: a service invoice's internet time starts from here
+        $invoice->paid_at = $invoice->due <= 0 ? ($invoice->paid_at ?? now()) : null;
         if ($invoice->due <= 0) {
             $invoice->status = 'paid';
         } elseif ($invoice->due_date->lt(now()->startOfDay())) {
@@ -354,7 +410,19 @@ class BillingService
             $invoice->status = 'issued';
         }
         $invoice->save();
+        self::refreshExpiry($invoice);
+        if (! $wasPaid && $invoice->paid_at) {
+            ReferralService::rewardIfDue($invoice);
+        }
         return $invoice;
+    }
+
+    // A service invoice paid (or unpaid again) moves its connection's expire time.
+    private static function refreshExpiry(Invoice $invoice): void
+    {
+        if ($invoice->connection_id && $invoice->service_months) {
+            ConnectionService::refreshExpiry($invoice->connection_id);
+        }
     }
 
     private static function createInvoiceRecord(Customer $customer, int $branchId, array $data, array $items, bool $issue): Invoice

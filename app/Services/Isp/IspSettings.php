@@ -14,18 +14,17 @@ class IspSettings
         'debit_note_prefix' => 'DN',
         'refund_prefix' => 'RF',
         'connection_prefix' => 'CON',
-        // days after the invoice date the invoice falls due
+        // manual invoices: days after the invoice date they fall due
         'due_days' => 10,
-        // days after the due date before an overdue connection is auto-suspended
-        'grace_days' => 5,
+        // days before the paid time ends that the renewal invoice is issued
+        'renewal_invoice_days' => 3,
         'auto_invoice' => true,
-        // day of month the scheduler generates invoices
-        'invoice_generate_day' => 1,
-        // 'current' = bill the running month (prepaid style), 'previous' = bill the month just ended (postpaid)
-        'billing_month' => 'current',
-        // first period when a connection is activated mid-month: prorate | full | next_month
-        'first_month_billing' => 'prorate',
-        'bill_suspended' => false,
+        // free days added once to a new connection's first paid time (editable per connection)
+        'init_bonus_days' => 0,
+        // referral commission to the existing customer who referred a new one, as wallet credit
+        'referral_enabled' => false,
+        'referral_commission_type' => 'fixed', // fixed Tk | percent of the first bill
+        'referral_commission' => '0',
         'auto_suspend' => true,
         'auto_reactivate' => true,
         'sms_invoice' => false,
@@ -69,6 +68,12 @@ class IspSettings
             IspSetting::updateOrCreate(['branch_id' => $branchId, 'key' => $key], ['value' => $stored]);
         }
         unset(self::$cache[$branchId]);
+    }
+
+    // Drops the per-request cache (tests that change settings inside a rolled-back transaction).
+    public static function flush(): void
+    {
+        self::$cache = [];
     }
 
     private static function cast($value, $default)
