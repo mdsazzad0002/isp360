@@ -136,6 +136,7 @@ export const GATEWAY_STYLES = {
     nagad: { label: 'Nagad', initial: 'N', badge: 'bg-orange-500', ring: 'ring-orange-500', text: 'text-orange-600', soft: 'bg-orange-50' },
     rocket: { label: 'Rocket', initial: 'R', badge: 'bg-purple-700', ring: 'ring-purple-600', text: 'text-purple-700', soft: 'bg-purple-50' },
     sslcommerz: { label: 'SSLCommerz', initial: 'S', badge: 'bg-sky-700', ring: 'ring-sky-600', text: 'text-sky-700', soft: 'bg-sky-50' },
+    stripe: { label: 'Stripe', initial: 'S', badge: 'bg-indigo-600', ring: 'ring-indigo-500', text: 'text-indigo-600', soft: 'bg-indigo-50' },
 };
 
 export const PAYMENT_METHODS = [

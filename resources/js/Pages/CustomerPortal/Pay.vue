@@ -188,6 +188,7 @@ const RESULT = {
                             <span class="flex h-10 w-10 items-center justify-center rounded-xl text-lg font-bold text-white" :class="GATEWAY_STYLES[g.gateway].badge">{{ GATEWAY_STYLES[g.gateway].initial }}</span>
                             <span class="text-sm font-medium text-slate-800">{{ g.label }}</span>
                             <span v-if="g.gateway === 'sslcommerz'" class="text-[10px] text-slate-400">Card / bank / wallet</span>
+                            <span v-else-if="g.gateway === 'stripe'" class="text-[10px] text-slate-400">Card</span>
                         </button>
                     </div>
                 </div>

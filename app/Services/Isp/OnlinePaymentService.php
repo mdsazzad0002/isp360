@@ -11,6 +11,8 @@ use App\Services\Isp\Payments\BkashDriver;
 use App\Services\Isp\Payments\GatewayDriver;
 use App\Services\Isp\Payments\NagadDriver;
 use App\Services\Isp\Payments\SslcommerzDriver;
+use App\Services\Isp\Payments\StripeDriver;
+use App\Models\GatewayEvent;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +20,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 
-// Customer self-service payments (bKash, Nagad, Rocket, SSLCommerz).
+// Customer self-service payments (bKash, Nagad, Rocket, SSLCommerz, Stripe).
 //
 //  API mode     start() -> gateway checkout -> handleCallback() verifies server to server -> complete()
 //  manual mode  submitManual() -> admin checks the TrxID in their wallet app -> approve() / reject()
@@ -32,6 +34,7 @@ class OnlinePaymentService
         'bkash' => BkashDriver::class,
         'nagad' => NagadDriver::class,
         'sslcommerz' => SslcommerzDriver::class,
+        'stripe' => StripeDriver::class,
     ];
 
     // Gateways a customer of this branch can use right now, in display order.
@@ -148,6 +151,11 @@ class OnlinePaymentService
             }
             $payment->logPayload('verify', $result->raw);
 
+            if ($result->status === 'pending') {
+                // not paid yet (still on the checkout page, or settling later): stays open
+                $payment->save();
+                return $payment;
+            }
             if ($result->status !== 'completed') {
                 $payment->status = $result->status === 'cancelled' ? 'cancelled' : 'failed';
                 $payment->failure_reason = mb_substr((string) $result->reason, 0, 255);
@@ -166,6 +174,50 @@ class OnlinePaymentService
             $payment->save();
             return self::complete($payment);
         });
+    }
+
+    /**
+     * A webhook / IPN event from a gateway, already authenticated by the caller. The provider's
+     * event id is stored (gateway_events): an event that was processed before is acknowledged and
+     * skipped, so a repeated delivery can never record the money twice. The event body is only
+     * used to find the payment; handleCallback() asks the gateway for the real state.
+     *
+     * @return bool true when the event is done (answer 2xx), false to ask the provider to resend it
+     */
+    public static function handleEvent(string $key, string $eventId, ?string $type, ?string $ref, array $payload = []): bool
+    {
+        $event = GatewayEvent::firstOrCreate(['gateway' => $key, 'event_id' => $eventId], ['type' => $type, 'payload' => $payload]);
+        if ($event->processed_at) {
+            return true; // duplicate delivery
+        }
+        $event->increment('attempts');
+
+        $payment = $ref ? OnlinePayment::where('ref', $ref)->where('gateway', $key)->where('mode', 'api')->first() : null;
+        if (! $payment) {
+            // not one of ours (another app on the same account, or a deleted attempt): nothing to do
+            $event->update(['processed_at' => now(), 'result' => 'No matching payment']);
+            return true;
+        }
+        $payment = self::handleCallback($key, $ref, ['webhook' => $type]);
+        $done = $payment->status !== 'initiated' || ! self::expectsFinalState($key, $type, $payload);
+        $event->update([
+            'online_payment_id' => $payment->id,
+            'processed_at' => $done ? now() : null,
+            'result' => mb_substr($payment->status . ($payment->failure_reason ? ": {$payment->failure_reason}" : ''), 0, 255),
+        ]);
+        return $done;
+    }
+
+    // Events after which the payment must have left 'initiated'; if it hasn't (the gateway could
+    // not be reached to confirm), the provider is asked to send the event again.
+    private static function expectsFinalState(string $key, ?string $type, array $payload): bool
+    {
+        return match ($key) {
+            // "completed" with payment_status unpaid = a method that settles later (async_payment_* follows)
+            'stripe' => ($type === 'checkout.session.completed' && data_get($payload, 'data.object.payment_status') !== 'unpaid')
+                || in_array($type, ['checkout.session.async_payment_succeeded', 'checkout.session.async_payment_failed', 'checkout.session.expired'], true),
+            default => true,
+        };
     }
 
     // Manual mode: the customer already sent money to our number and reports the TrxID.

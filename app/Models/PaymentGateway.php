@@ -21,7 +21,7 @@ class PaymentGateway extends Model
     protected $hidden = ['credentials'];
 
     // gateway => [label, modes it supports, credential fields for API mode, customer_payments.method,
-    // currencies it can take — a gateway is usable only when the company bills in one of them]
+    // currencies it can take ('*' = any) — a gateway is usable only when the company bills in one of them]
     public const GATEWAYS = [
         'bkash' => [
             'label' => 'bKash',
@@ -55,11 +55,21 @@ class PaymentGateway extends Model
             'method' => 'gateway',
             'currencies' => ['BDT'],
         ],
+        // Stripe Checkout (hosted page: card data never reaches this server). Any company currency.
+        'stripe' => [
+            'label' => 'Stripe',
+            'modes' => ['api'],
+            'fields' => ['secret_key' => 'Secret key (sk_… or restricted rk_…)', 'webhook_secret' => 'Webhook signing secret (whsec_…)'],
+            'secret' => ['secret_key', 'webhook_secret'],
+            'method' => 'card',
+            'currencies' => ['*'],
+        ],
     ];
 
     public static function supportsCurrency(string $gateway, string $currency): bool
     {
-        return in_array($currency, self::GATEWAYS[$gateway]['currencies'] ?? [], true);
+        $currencies = self::GATEWAYS[$gateway]['currencies'] ?? [];
+        return $currencies === ['*'] || in_array($currency, $currencies, true);
     }
 
     public function bank()

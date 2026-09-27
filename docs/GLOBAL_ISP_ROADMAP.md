@@ -95,11 +95,12 @@ Built 2026-09-27. With no rates set, nothing changes.
 - [ ] P2: withholding tax on corporate customers' payments.
 - [ ] P2: e-invoicing connectors per country (see 4.14).
 
-### 2.4 Payment gateways are BD-only — P0, M
+### 2.4 Payment gateways are BD-only — P0, M — **Stripe done**
 `GatewayDriver` is already pluggable; only drivers are missing.
 
 **Tasks**
-- [ ] Global: Stripe, PayPal. (Hosted checkout only, so card data never touches our server: no PCI scope.)
+- [x] Stripe Checkout (`StripeDriver`, no SDK): hosted page, any company currency (Stripe minor units incl. IDR 2-dp, KWD/BHD/OMR/JOD 3-dp in steps of 0.010), idempotent session create (`Idempotency-Key`), result always re-read from Stripe's API, cancel expires the session, bank debits stay open until `async_payment_succeeded`, test/live key must match sandbox mode, recorded as a `card` payment.
+- [ ] PayPal (hosted checkout, same pattern).
 - [ ] Regional driver list (build per market demand):
   - India: Razorpay, PayU, UPI (Cashfree/PhonePe)
   - Pakistan: JazzCash, Easypaisa
@@ -108,8 +109,8 @@ Built 2026-09-27. With no rates set, nothing changes.
   - SE Asia: Xendit, Midtrans, GCash/PayMongo, 2C2P
   - LatAm: Mercado Pago, PIX (Brazil), OXXO
   - Middle East: Tap, PayTabs, HyperPay
-- [ ] Gateway currency check: refuse to start a payment when gateway currency ≠ branch currency.
-- [ ] Webhook idempotency: store the provider event id; a repeated webhook must not create a second payment.
+- [x] Gateway currency check: a gateway is hidden and can't be switched on unless it takes the company currency (2.1); Stripe also refuses a session charged in another currency.
+- [x] Webhook idempotency: `gateway_events` stores the provider event id (unique per gateway); a processed event is acknowledged and skipped. Stripe webhooks are signature-checked (HMAC-SHA256, 5-minute tolerance), one URL per gateway row; an event that can't be confirmed yet answers 500 so Stripe resends it. SSLCommerz IPNs are deduplicated by `val_id`.
 - [ ] Refund through the gateway API (today refunds are only recorded).
 - [ ] Saved card / auto-debit (Stripe customer + mandate) for auto-renewal — P1.
 - [ ] Chargeback/dispute handling: reverse the payment through `CollectionService`, keep the audit trail — P1.
@@ -374,7 +375,7 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 4. ~~Country packs, BD first (2.8)~~ — done 2026-09-27
 5. ~~Tax engine on invoices (2.3)~~ — done 2026-09-27
 6. Configurable billing rules: grace, notice, late fee, postpaid option (2.7)
-7. Stripe + PayPal drivers, webhook idempotency (2.4)
+7. ~~Stripe driver, webhook idempotency (2.4)~~ — done 2026-09-28 (PayPal still open)
 8. ~~Security basics: 2FA, rate limit, secret encryption (4.12)~~ — done 2026-09-28
 9. ~~Redis + queue + Horizon, incremental scheduler (4.13)~~ — done 2026-09-28
 10. i18n cleanup, RTL, E.164 phones, generic address (2.9)
@@ -436,6 +437,6 @@ These protect what already works:
 | 5 | ~~Country pack structure + BD pack~~ (done) | P0 | M |
 | 6 | ~~2FA + rate limiting + encrypted router/gateway secrets~~ (done) | P0 | M |
 | 7 | ~~Redis queue + Horizon; move SMS/router sync to jobs~~ (done) | P0 | M |
-| 8 | Stripe driver + webhook idempotency | P0 | M |
+| 8 | ~~Stripe driver + webhook idempotency~~ (done) | P0 | M |
 | 9 | Grace/notice/late-fee settings (default off) | P0 | M |
 | 10 | RADIUS driver (FreeRADIUS SQL + CoA) | P0 | L |

@@ -136,6 +136,14 @@ onMounted(load);
                         <p v-if="g.gateway === 'sslcommerz'" class="text-xs text-slate-500 md:col-span-2">
                             IPN URL for the SSLCommerz merchant panel: <code class="rounded bg-slate-100 px-1.5 py-0.5">{{ ipnUrl }}</code>
                         </p>
+                        <p v-if="g.gateway === 'stripe'" class="text-xs text-slate-500 md:col-span-2">
+                            <template v-if="g.webhook_url">
+                                In the Stripe dashboard (Developers → Webhooks) add the endpoint <code class="break-all rounded bg-slate-100 px-1.5 py-0.5">{{ g.webhook_url }}</code>
+                                with the events <code>checkout.session.completed</code>, <code>checkout.session.async_payment_succeeded</code>, <code>checkout.session.async_payment_failed</code> and <code>checkout.session.expired</code>, then paste its signing secret above.
+                            </template>
+                            <template v-else>Save once to get the webhook URL for the Stripe dashboard.</template>
+                            Use test keys (sk_test_…) in sandbox mode and live keys (sk_live_…) otherwise. Customers pay on Stripe's own page; card details never reach this server.
+                        </p>
                     </div>
 
                     <!-- Manual mode -->
