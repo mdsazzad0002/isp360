@@ -193,6 +193,7 @@ function appMenuGroups()
             'icon' => 'bi-shield-check',
             'items' => [
                 ['access' => 'auditLog', 'uri' => '/isp/audit-log', 'match' => 'isp/audit-log', 'icon' => 'bi-shield-check', 'label' => 'Audit Log'],
+                ['access' => 'queueMonitor', 'uri' => '/isp/queue', 'match' => 'isp/queue', 'icon' => 'bi-hourglass-split', 'label' => 'Background Jobs'],
                 ['access' => null, 'uri' => '/notifications', 'match' => 'notifications', 'icon' => 'bi-bell', 'label' => 'Notifications'],
             ],
         ],
@@ -545,7 +546,7 @@ function clearCompanyCache()
 // gateways, trying the default one first, and records the attempt in sms_logs. No-op
 // (returns false) if no active gateway is configured — callers should treat that as
 // "notification skipped", not an error.
-function sendTransactionalSms($branchId, $userId, $phone, string $message, $customerId = null, string $purpose = 'transactional')
+function sendTransactionalSms($branchId, $userId, $phone, string $message, $customerId = null, string $purpose = 'transactional', ?string $ipAddress = null)
 {
     if (empty($phone)) {
         return false;
@@ -585,7 +586,7 @@ function sendTransactionalSms($branchId, $userId, $phone, string $message, $cust
         'response' => $response,
         'created_by' => $userId,
         'created_at' => \Illuminate\Support\Carbon::now(),
-        'ipAddress' => request()->ip() ?? '127.0.0.1',
+        'ipAddress' => $ipAddress ?? request()->ip() ?? '127.0.0.1',
         'branch_id' => $branchId,
     ]);
 

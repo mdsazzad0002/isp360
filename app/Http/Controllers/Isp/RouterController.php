@@ -141,6 +141,11 @@ class RouterController extends IspController
         foreach ($ids as $id) {
             SyncConnectionToNetwork::dispatch($id);
         }
+        if (config('queue.default') !== 'sync') {
+            // a queue worker pushes them; each connection's sync status shows the result
+            AuditLogger::log('router.sync_all', $router, null, ['connections' => $ids->count(), 'queued' => true]);
+            return $this->ok("{$ids->count()} connection(s) queued for {$router->name}. Each connection's sync status updates as they are pushed.");
+        }
         $failed = Connection::whereIn('id', $ids)->whereNotNull('network_sync_error')->count();
         AuditLogger::log('router.sync_all', $router, null, ['connections' => $ids->count(), 'failed' => $failed]);
         return $this->ok("{$ids->count()} connection(s) pushed to {$router->name}" . ($failed ? ", {$failed} failed — see connection sync errors" : ''));

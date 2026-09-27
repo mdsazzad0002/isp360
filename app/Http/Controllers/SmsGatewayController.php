@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendSmsBatch;
 use App\Models\Customer;
 use App\Models\SmsGateway;
 use App\Models\SmsLog;
@@ -236,11 +237,6 @@ class SmsGatewayController extends Controller
 
         $customers = Customer::where('branch_id', $this->branchId)->whereIn('id', $request->customerIds)->get();
         $validCustomers = $customers->filter(fn ($c) => !empty($c->phone))->values();
-
-        $sent = 0;
-        $failed = $customers->count() - $validCustomers->count();
-        $lastError = null;
-        $now = Carbon::now();
         $ip = request()->ip();
 
         foreach ($customers as $customer) {
@@ -255,7 +251,7 @@ class SmsGatewayController extends Controller
                     'is_success' => false,
                     'response' => 'Customer has no phone number',
                     'created_by' => $this->userId,
-                    'created_at' => $now,
+                    'created_at' => Carbon::now(),
                     'ipAddress' => $ip,
                     'branch_id' => $this->branchId,
                 ]);
@@ -264,47 +260,32 @@ class SmsGatewayController extends Controller
 
         // Sent in batches (one API call reaches many numbers at once) rather than one call per
         // customer — cheaper and faster, and matches how gateways like MRAM's "many-to-many" API work.
-        foreach ($validCustomers->chunk(100) as $batch) {
-            $numbers = $batch->pluck('phone')->all();
-            $delivered = false;
-            $usedGateway = null;
-            $response = null;
-
-            foreach ($gateways as $gateway) {
-                $result = sendSmsViaGateway($gateway, $numbers, $request->message);
-                $usedGateway = $gateway;
-                $response = $result['response'];
-                if ($result['status']) {
-                    $delivered = true;
-                    break;
-                }
-                $lastError = $result['response'];
+        // With a queue worker the batches go to the "sms" queue and the page returns at once;
+        // without one (QUEUE_CONNECTION=sync) they are sent here and counted.
+        $queued = config('queue.default') !== 'sync';
+        $sent = 0;
+        $failed = $customers->count() - $validCustomers->count();
+        $lastError = null;
+        foreach ($validCustomers->chunk(SendSmsBatch::SIZE) as $batch) {
+            $job = new SendSmsBatch($this->branchId, $batch->pluck('id')->all(), $request->message, $gateways->pluck('id')->all(), $this->userId, $ip);
+            if ($queued) {
+                dispatch($job);
+                continue;
             }
-
-            foreach ($batch as $customer) {
-                SmsLog::create([
-                    'customer_id' => $customer->id,
-                    'sms_gateway_id' => $usedGateway?->id,
-                    'gateway_name' => $usedGateway?->name,
-                    'phone' => $customer->phone,
-                    'message' => $request->message,
-                    'purpose' => 'promotional',
-                    'is_success' => $delivered,
-                    'response' => $response,
-                    'created_by' => $this->userId,
-                    'created_at' => $now,
-                    'ipAddress' => $ip,
-                    'branch_id' => $this->branchId,
-                ]);
-            }
-
-            if ($delivered) {
-                $sent += count($numbers);
-            } else {
-                $failed += count($numbers);
-            }
+            $result = $job->handle();
+            $sent += $result['sent'];
+            $failed += $result['failed'];
+            $lastError = $result['error'] ?? $lastError;
         }
 
+        if ($queued) {
+            return response()->json([
+                'status' => true,
+                'message' => "SMS queued for {$validCustomers->count()} customer(s)" . ($failed ? ", {$failed} without a phone number" : '') . '. Results appear in the SMS log.',
+                'queued' => $validCustomers->count(),
+                'failed' => $failed,
+            ]);
+        }
         return response()->json([
             'status' => true,
             'message' => "SMS sent to {$sent} customer(s)" . ($failed ? ", {$failed} failed" . ($lastError ? " ({$lastError})" : '') : ''),

@@ -29,6 +29,7 @@ export const accessGroups = [
             { value: 'ispSettings', label: 'ISP Billing Settings' },
             { value: 'ticket', label: 'Support Tickets (view / reply / assign)' },
             { value: 'auditLog', label: 'Audit Log' },
+            { value: 'queueMonitor', label: 'Background Jobs (router pushes, SMS) and Horizon' },
         ],
     },
     {

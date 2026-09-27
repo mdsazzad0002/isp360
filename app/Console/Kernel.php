@@ -19,6 +19,17 @@ class Kernel extends ConsoleKernel
         // Both are idempotent, so a missed or repeated run is harmless.
         $schedule->command('isp:generate-invoices')->everyMinute()->withoutOverlapping();
         $schedule->command('isp:process-overdue')->everyMinute()->withoutOverlapping();
+
+        // Queues (see config/isp.php). Without a dedicated worker the scheduler works the database
+        // queue every minute until it is empty.
+        if (config('isp.queue_in_scheduler') && config('queue.default') !== 'sync') {
+            $schedule->command('queue:work --queue=network,sms,default --stop-when-empty --max-time=55 --tries=3')
+                ->everyMinute()->withoutOverlapping(5)->runInBackground();
+        }
+        if (config('queue.default') === 'redis') {
+            $schedule->command('horizon:snapshot')->everyFiveMinutes();
+        }
+        $schedule->command('queue:prune-failed --hours=720')->daily();
     }
 
     /**

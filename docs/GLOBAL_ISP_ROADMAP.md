@@ -325,11 +325,15 @@ Today: SMS only, 4 events.
 - [ ] Security headers (CSP, HSTS), dependency scanning (`composer audit`, `npm audit`) in CI.
 - [ ] External penetration test before the first large installation.
 
-### 4.13 Platform, scale and operations — P0/P1, L
-Today: `QUEUE_CONNECTION=sync`, `CACHE_DRIVER=file`, two every-minute commands that scan the whole branch.
-- [ ] Redis for cache, session and queue; Laravel Horizon for workers. SMS, e-mail, router sync, gateway calls must run in the queue, never in the web request.
-- [ ] Make the every-minute jobs incremental: index on `expire_at`, pick only connections that crossed a boundary since the last run; chunk and dispatch per branch. Target: 500k connections per installation.
-- [ ] Idempotent jobs + locks (router push, invoice generation) so retries are safe.
+### 4.13 Platform, scale and operations — P0/P1, L — **queues done**
+Before: `QUEUE_CONNECTION=sync`, `CACHE_DRIVER=file`, two every-minute commands that scan the whole branch.
+- [x] Queues `network` (router pushes), `sms`, `default`, with three setups (`config/isp.php`, `.env.example`): **Redis + Laravel Horizon** (own server; `/horizon` dashboard, gated by the `queueMonitor` access), **database queue worked by the scheduler** (`ISP_QUEUE_IN_SCHEDULER=true`: shared hosting with only the cron entry, jobs start within a minute), or **sync** (unchanged default, runs in the request).
+- [x] SMS off the web request: billing SMS (`IspNotifier` → `SendSms`, after commit, text built at the event) and promotions (`SendSmsBatch`, 100 numbers per gateway call). SMS jobs are never retried (a gateway may have delivered before failing; every attempt is in the SMS log).
+- [x] Router sync (`SyncConnectionToNetwork`, already a job) on the `network` queue, unique per connection while waiting (it pushes the state at run time) and locked per connection so two pushes never interleave; "Sync all" answers at once when queued.
+- [x] ISP → Logs & Audits → **Background Jobs**: waiting jobs per queue, failed jobs with retry/delete (every driver); failed jobs pruned after 30 days.
+- [x] Composite indexes for the every-minute jobs: `connections(branch_id, status, expire_at)`, `invoices(branch_id, status, due_date)`, `invoices(connection_id, status)`. The jobs already select only rows that crossed a boundary and work in chunks of 200.
+- [ ] Redis for cache and session (config only; `CACHE_DRIVER`/`SESSION_DRIVER=redis`), and dispatching the every-minute billing work per branch as jobs for very large installations.
+- [ ] Idempotency for the remaining jobs added later (invoice generation already skips connections with an open invoice; `invoices.period_key` is unique).
 - [ ] Docker images, CI/CD (tests on every push), zero-downtime deploys, migrations tested for big tables.
 - [ ] Error tracking (Sentry), metrics and uptime monitoring, structured logs.
 - [ ] Automated offsite backups with restore tests (today: `mysqldump` feature); point-in-time recovery for the database.
@@ -372,7 +376,7 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 6. Configurable billing rules: grace, notice, late fee, postpaid option (2.7)
 7. Stripe + PayPal drivers, webhook idempotency (2.4)
 8. ~~Security basics: 2FA, rate limit, secret encryption (4.12)~~ — done 2026-09-28
-9. Redis + queue + Horizon, incremental scheduler (4.13)
+9. ~~Redis + queue + Horizon, incremental scheduler (4.13)~~ — done 2026-09-28
 10. i18n cleanup, RTL, E.164 phones, generic address (2.9)
 
 **Exit check:** a test installation in USD/America/New_York with 8% sales tax and Stripe passes the full billing test suite and `isp:ledger-check`.
@@ -431,7 +435,7 @@ These protect what already works:
 | 4 | ~~Tax rates on invoice items + tax report~~ (done) | P0 | L |
 | 5 | ~~Country pack structure + BD pack~~ (done) | P0 | M |
 | 6 | ~~2FA + rate limiting + encrypted router/gateway secrets~~ (done) | P0 | M |
-| 7 | Redis queue + Horizon; move SMS/router sync to jobs | P0 | M |
+| 7 | ~~Redis queue + Horizon; move SMS/router sync to jobs~~ (done) | P0 | M |
 | 8 | Stripe driver + webhook idempotency | P0 | M |
 | 9 | Grace/notice/late-fee settings (default off) | P0 | M |
 | 10 | RADIUS driver (FreeRADIUS SQL + CoA) | P0 | L |
