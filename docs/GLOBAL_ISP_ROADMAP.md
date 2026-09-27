@@ -165,7 +165,8 @@ A country pack holds: currency, timezone(s), language, date/number format, phone
 - [ ] Check each pack's suggested tax rates with a local accountant before the first customer in that country.
 
 ### 2.9 Internationalisation of the UI — P0, M
-- [ ] Move every visible string to the lang files (check pages and PHP validation/flash messages; `resources/lang` has only `en`).
+- [x] Customer-facing first: portal menu/header, customer dashboard and Pay page in en / bn / hi / ar (`portal.*`), status and method labels everywhere (`labels.*` via `label()`), language switcher in the portals, the customer's language as the portal default.
+- [ ] The rest of the UI: customer portal Connections / Profile / Tickets, reseller portal pages, admin pages (about 85 pages still hold English text), and PHP validation / flash messages (`resources/lang` has only `en`). Translations by a native speaker before shipping.
 - [x] RTL layout for Arabic: every physical left/right Tailwind utility in the UI converted to its logical form (ms/me, ps/pe, start/end, text-start/end, border-s/e, rounded-s/e; 737 class tokens), `lang`/`dir` set at load for the language in use, sidebars and slide-in panels mirrored, centered badges kept physical. Checked with screenshots in both directions.
 - [x] Per-user language (switcher, stored per browser; company default from the country pack) and per-customer SMS language (`customers.language` + `sms_tpl_translations` per branch: each event's template in bn / hi / ar / en, falling back to the default). E-mail templates follow once e-mail exists (4.8).
 - [x] Locale-aware numbers and dates: the country pack's `number_locale` groups amounts in the UI (`Intl`) and on the server (`Money`, PHP intl): "1,00,000.00" in India, "1.234,50" in Brazil, unchanged in BD; dates read day-first or month-first per the pack's date format. Old POS report pages still use their own formatting.

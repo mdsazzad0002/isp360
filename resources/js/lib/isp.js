@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/vue3';
 import { useToast } from './toast';
+import { i18n } from './i18n';
 
 // Billing currency of the branch in view, shared by HandleInertiaRequests.
 export function currency() {
@@ -168,7 +169,10 @@ export const PAYMENT_METHODS = [
     { value: 'other', label: 'Other' },
 ];
 
+// "partially_paid" -> "Partially Paid", or its translation (lang "labels") in the language in use.
 export function label(value) {
+    const key = `labels.${value}`;
+    if (value && i18n.global.te(key)) return i18n.global.t(key);
     return String(value || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 

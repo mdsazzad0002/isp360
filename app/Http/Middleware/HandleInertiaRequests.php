@@ -93,7 +93,8 @@ class HandleInertiaRequests extends Middleware
                 ];
             },
             // default UI language from the country pack; a user's own pick in the switcher wins
-            'defaultLocale' => fn () => company()?->language ?? 'en',
+            // (in the customer portal: the customer's own language, when set)
+            'defaultLocale' => fn () => ($request->is('customer-portal/*') ? Auth::guard('customer')->user()?->language : null) ?: (company()?->language ?? 'en'),
             'portalUser' => function () use ($request) {
                 // pick the guard from the URL, since one browser can hold both portal sessions
                 $guard = $request->is('customer-portal/*') ? 'customer' : ($request->is('reseller/*') ? 'reseller' : null);
