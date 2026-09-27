@@ -4,7 +4,7 @@ import axios from 'axios';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import { useToast } from '../../lib/toast';
-import { useApiError, cur } from '../../lib/isp';
+import { useApiError, cur, fmtDate } from '../../lib/isp';
 
 defineOptions({ layout: AppLayout });
 const toast = useToast();
@@ -77,6 +77,18 @@ async function applyPack() {
         showError(err);
     } finally {
         applying.value = false;
+    }
+}
+// terms of service / privacy notice: publishing makes a new version customers accept in the portal
+const legal = ref([]);
+const loadLegal = () => axios.post('/isp/get-legal').then((r) => (legal.value = r.data.map((l) => ({ ...l, draft: l.current?.body || '' }))));
+onMounted(loadLegal);
+async function publishLegal(l) {
+    try {
+        toast.success((await axios.post('/isp/legal-publish', { type: l.type, body: l.draft })).data.message);
+        loadLegal();
+    } catch (err) {
+        showError(err);
     }
 }
 // tax rates are saved one by one, apart from the settings form
@@ -224,6 +236,17 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                         <p v-if="s.log_retention_minimum" class="mt-1 text-[11px] text-slate-400">Legal minimum in this country: {{ s.log_retention_minimum }} days</p>
                     </div>
                     <label class="flex items-center gap-2 pt-5 text-sm"><input v-model="s.session_log_mikrotik" type="checkbox" /> Record sessions from this branch's MikroTik routers (polled every 5 min)</label>
+                    <label class="flex items-center gap-2 pt-5 text-sm"><input v-model="s.kyc_required" type="checkbox" /> Verified ID (KYC) required before a connection is switched on</label>
+                </div>
+                <div class="mt-4 space-y-3 border-t border-slate-200 pt-3">
+                    <div v-for="l in legal" :key="l.type">
+                        <div class="mb-1 flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-600">{{ l.title }} <span class="text-slate-400">{{ l.current ? `v${l.current.version}, published ${fmtDate(l.current.published_at)}` : 'none yet' }}</span></span>
+                            <button type="button" class="rounded border border-brand-500 px-2 py-0.5 text-xs text-brand-600" @click="publishLegal(l)">Publish as new version</button>
+                        </div>
+                        <textarea v-model="l.draft" rows="3" :class="input" placeholder="Text customers accept in the portal"></textarea>
+                    </div>
+                    <p class="text-xs text-slate-500">A new version is shown to every customer at their next portal visit; each acceptance is recorded with time, IP and browser. Versions are never edited.</p>
                 </div>
                 <p class="mt-2 text-xs text-slate-500">
                     Anyone who must use it and hasn't set it up is sent to set it up at their next page. Everyone can turn it on for themselves under My profile.

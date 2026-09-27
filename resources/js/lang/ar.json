@@ -668,7 +668,12 @@
         "recent_online": "المدفوعات الإلكترونية الأخيرة",
         "for": "مقابل",
         "wallet": "المحفظة",
-        "portal_badge": "بوابة {role}"
+        "portal_badge": "بوابة {role}",
+        "legal_review": "يرجى قراءة شروطنا المحدثة والموافقة عليها",
+        "legal_version": "{title}، الإصدار {version}",
+        "i_accept": "لقد قرأت وأوافق",
+        "marketing_sms": "أرسل لي العروض والأخبار عبر الرسائل القصيرة",
+        "saved": "تم الحفظ"
     },
     "labels": {
         "active": "نشط",

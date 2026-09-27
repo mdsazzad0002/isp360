@@ -33,6 +33,8 @@ class IspSettings
         'bill_day' => 0,
         // termination gives the unused paid days back to the customer's balance (day-wise)
         'terminate_credit_unused' => false,
+        // KYC: a connection can't be switched on until an identity document of the customer is verified
+        'kyc_required' => false,
         // session log: poll this branch's MikroTik API routers for sessions every 5 minutes (RADIUS NAS
         // sessions come from accounting either way)
         'session_log_mikrotik' => false,

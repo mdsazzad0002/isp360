@@ -668,7 +668,12 @@
         "recent_online": "সাম্প্রতিক অনলাইন পেমেন্ট",
         "for": "কীসের জন্য",
         "wallet": "ওয়ালেট",
-        "portal_badge": "{role} পোর্টাল"
+        "portal_badge": "{role} পোর্টাল",
+        "legal_review": "অনুগ্রহ করে আমাদের হালনাগাদ শর্তাবলি পড়ে গ্রহণ করুন",
+        "legal_version": "{title}, সংস্করণ {version}",
+        "i_accept": "আমি পড়েছি এবং গ্রহণ করছি",
+        "marketing_sms": "অফার ও খবর SMS-এ পাঠান",
+        "saved": "সংরক্ষিত"
     },
     "labels": {
         "active": "সক্রিয়",

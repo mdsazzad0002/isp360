@@ -129,9 +129,9 @@ Most ISPs outside small BD markets use **RADIUS** (FreeRADIUS) with Cisco/Junipe
 
 ### 2.6 Legal compliance (data and logs) — P0, M
 - [x] **Lawful session log** (`session_logs`, `SessionLogService`, `isp:session-logs` every 5 min): username, customer, private/IPv6 IP, NAT IP + port block (filled by IPAM/CGNAT, 4.6), MAC, NAS, start/stop, data, from RADIUS accounting (incremental) and optional MikroTik polling per branch. Retention per company (`log_retention_days`, the country pack's legal minimum or a year, can't be set lower; 0 = forever), pruned nightly. ISP → Logs → Session Log: search by IP (+ NAT port) and time window, user, MAC; CSV export needs filters and a reason, audited as `session_log.exported`.
-- [ ] **Data protection (GDPR, India DPDP, Brazil LGPD, etc.)**: consent record, privacy notice, data export for a customer, and erasure. The ledger is append-only, so erasure must **pseudonymise** the customer (name/phone/address replaced) while keeping the money rows.
-- [ ] **KYC**: ID type per country (NID, Aadhaar, passport, CNIC, SSN-last-4…), document upload, verification status; block activation until verified where the law requires it.
-- [ ] Customer contract / terms acceptance with version and timestamp (e-signature in the portal).
+- [x] **Data protection (GDPR, India DPDP, Brazil LGPD, etc.)**: versioned terms / privacy notice (`legal_documents`, published from Settings), acceptance in the customer portal recorded with time, IP and browser (`customer_consents`, append-only), marketing SMS opt-in/out (promotions skip opted-out customers), customer data export (JSON), and erasure that **pseudonymises** the customer (name, phone, e-mail, ID, address, logins, KYC files, device MACs) once no line is in service and nothing is owed, while invoices, payments, ledger and legally kept session logs stay.
+- [x] **KYC**: document types from the country pack's ID types (+ contract, photo, proof of address), upload to the private disk (served only to branch staff), verify / reject (`kycVerify` access, audited); `kyc_required` blocks switching a connection on until an ID is verified. Customer profile → Compliance tab.
+- [x] Terms acceptance with version and timestamp in the portal (see data protection); a signed contract can be kept as a KYC document.
 - [ ] Data residency: host the installation in the country (or region) its law requires.
 
 ### 2.7 Configurable billing rules per market — P0, M — **done**

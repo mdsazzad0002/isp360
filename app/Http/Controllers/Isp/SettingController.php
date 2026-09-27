@@ -80,6 +80,7 @@ class SettingController extends IspController
             'postpaid_due_days' => 'nullable|integer|min:0|max:60',
             'bill_day' => 'nullable|integer|min:0|max:28',
             'session_log_mikrotik' => 'boolean',
+            'kyc_required' => 'boolean',
             'log_retention_days' => 'nullable|integer|min:0|max:3650',
             'terminate_credit_unused' => 'boolean',
             'notice_days' => 'nullable|integer|min:0|max:30',

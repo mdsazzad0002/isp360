@@ -17,7 +17,14 @@ const props = defineProps({
     connections: { type: Array, default: () => [] },
     invoices: { type: Array, default: () => [] },
     payments: { type: Array, default: () => [] },
+    pendingLegal: { type: Array, default: () => [] },
 });
+// terms / privacy to accept (recorded with time, IP and browser)
+const legalOpen = ref(true);
+async function acceptLegal() {
+    await axios.post('/customer-portal/accept-legal');
+    legalOpen.value = false;
+}
 const page = usePage();
 const tab = ref('invoices');
 
@@ -34,6 +41,15 @@ async function printInv(inv) {
                 <h1 class="text-lg font-semibold text-slate-800">{{ t('welcome', { name: customer.name }) }}</h1>
                 <p class="text-sm text-slate-500">{{ t('account_no', { code: customer.code }) }}<span v-if="customer.area"> · {{ customer.area.name }}</span></p>
             </div>
+        </div>
+
+        <div v-if="pendingLegal.length && legalOpen" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <h2 class="mb-2 text-sm font-semibold text-amber-900">{{ t('legal_review') }}</h2>
+            <details v-for="d in pendingLegal" :key="d.id" class="mb-2 rounded border border-amber-200 bg-white p-2 text-sm">
+                <summary class="cursor-pointer font-medium text-slate-700">{{ t('legal_version', { title: d.title, version: d.version }) }}</summary>
+                <div class="mt-2 max-h-64 overflow-y-auto whitespace-pre-line text-slate-600">{{ d.body }}</div>
+            </details>
+            <button type="button" class="rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700" @click="acceptLegal">{{ t('i_accept') }}</button>
         </div>
 
         <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

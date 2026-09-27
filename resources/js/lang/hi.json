@@ -668,7 +668,12 @@
         "recent_online": "हाल के ऑनलाइन भुगतान",
         "for": "किसके लिए",
         "wallet": "वॉलेट",
-        "portal_badge": "{role} पोर्टल"
+        "portal_badge": "{role} पोर्टल",
+        "legal_review": "कृपया हमारी अद्यतन शर्तें पढ़ें और स्वीकार करें",
+        "legal_version": "{title}, संस्करण {version}",
+        "i_accept": "मैंने पढ़ लिया है और स्वीकार करता/करती हूँ",
+        "marketing_sms": "ऑफ़र और समाचार SMS से भेजें",
+        "saved": "सहेजा गया"
     },
     "labels": {
         "active": "सक्रिय",

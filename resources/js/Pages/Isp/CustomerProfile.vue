@@ -12,6 +12,7 @@ import ManualInvoiceModal from '../../Components/Isp/ManualInvoiceModal.vue';
 import PaymentDetailModal from '../../Components/Isp/PaymentDetailModal.vue';
 import ReceivePaymentForm from '../../Components/Isp/ReceivePaymentForm.vue';
 import LedgerStatement from '../../Components/Isp/LedgerStatement.vue';
+import CompliancePanel from '../../Components/Isp/CompliancePanel.vue';
 import TerminalOffcanvas from '../../Components/Isp/TerminalOffcanvas.vue';
 import SyncBadge from '../../Components/Isp/SyncBadge.vue';
 import { money, fmtDate, label, expiryClass, fmtDateTime, fmtMoney, moneyStep, PAYMENT_METHODS, promptReason, useApiError } from '../../lib/isp';
@@ -128,7 +129,7 @@ onMounted(() => {
 
             <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
                 <div class="flex gap-1 overflow-x-auto border-b border-slate-200 px-2">
-                    <button v-for="t in [['connections', 'Connections', data.connections.length], ['invoices', 'Invoices', data.invoices.length], ['payments', 'Payments', data.payments.length], ['deposits', 'Deposits', data.deposits.length], ['ledger', 'Ledger', null]]" :key="t[0]" type="button"
+                    <button v-for="t in [['connections', 'Connections', data.connections.length], ['invoices', 'Invoices', data.invoices.length], ['payments', 'Payments', data.payments.length], ['deposits', 'Deposits', data.deposits.length], ['compliance', 'Compliance', null], ['ledger', 'Ledger', null]]" :key="t[0]" type="button"
                         class="whitespace-nowrap border-b-2 px-3 py-2.5 text-sm" :class="tab === t[0] ? 'border-brand-500 font-medium text-brand-600' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="tab = t[0]">
                         {{ t[1] }} <span v-if="t[2] !== null" class="text-xs text-slate-400">({{ t[2] }})</span>
                     </button>
@@ -234,6 +235,8 @@ onMounted(() => {
                             </tbody>
                         </table>
                     </div>
+
+                    <CompliancePanel v-if="tab === 'compliance'" :customer-id="customerId" @changed="load" />
 
                     <LedgerStatement v-if="tab === 'ledger'" ref="ledgerRef" :customer="data.customer" />
                 </div>

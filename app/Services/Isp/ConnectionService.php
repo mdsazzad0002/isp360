@@ -154,6 +154,7 @@ class ConnectionService
             if ($connection->status !== 'pending' && $connection->status !== 'inactive') {
                 throw new RuntimeException("Only a pending or inactive connection can be activated (current: {$connection->status}).");
             }
+            ComplianceService::assertCanActivate($connection); // KYC first, where the branch requires it
             $date = Carbon::parse($date ?? now())->startOfDay();
 
             $connection->status = 'active';

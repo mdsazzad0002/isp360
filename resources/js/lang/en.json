@@ -673,6 +673,11 @@
         "recent_online": "Recent online payments",
         "for": "For",
         "wallet": "Wallet",
-        "portal_badge": "{role} Portal"
+        "portal_badge": "{role} Portal",
+        "legal_review": "Please read and accept our updated terms",
+        "legal_version": "{title}, version {version}",
+        "i_accept": "I have read and accept",
+        "marketing_sms": "Send me offers and news by SMS",
+        "saved": "Saved"
     }
 }

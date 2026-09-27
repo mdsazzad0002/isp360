@@ -131,6 +131,8 @@ Route::group(['prefix' => 'customer-portal', 'middleware' => 'auth:customer'], f
     Route::post('/invoice', [CustomerPanelController::class, 'invoice'])->name('customerPortal.invoice');
     Route::post('/statement', [CustomerPanelController::class, 'statement'])->name('customerPortal.statement');
     Route::post('/update-profile', [CustomerPanelController::class, 'updateProfile'])->name('customerPortal.profile.update');
+    Route::post('/accept-legal', [CustomerPanelController::class, 'acceptLegal'])->name('customerPortal.legal.accept');
+    Route::post('/marketing', [CustomerPanelController::class, 'marketing'])->name('customerPortal.marketing');
     Route::get('/logout', [CustomerPanelController::class, 'logout'])->name('customerPortal.logout');
     Route::get('/pay', [\App\Http\Controllers\CustomerPortalPaymentController::class, 'page'])->name('customerPortal.pay');
     Route::post('/pay/start', [\App\Http\Controllers\CustomerPortalPaymentController::class, 'start'])->middleware('throttle:10,1')->name('customerPortal.pay.start');
@@ -369,6 +371,15 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/get-connection-secret', [Isp\ConnectionController::class, 'secret'])->name('isp.connection.secret');
     Route::post('/connection', [Isp\ConnectionController::class, 'store'])->name('isp.connection.store');
     Route::post('/connection-action', [Isp\ConnectionController::class, 'action'])->name('isp.connection.action');
+    Route::post('/get-compliance', [Isp\ComplianceController::class, 'data'])->name('isp.compliance.data');
+    Route::post('/kyc-document', [Isp\ComplianceController::class, 'upload'])->name('isp.kyc.upload');
+    Route::post('/kyc-review', [Isp\ComplianceController::class, 'review'])->name('isp.kyc.review');
+    Route::get('/kyc-file/{id}', [Isp\ComplianceController::class, 'file'])->whereNumber('id')->name('isp.kyc.file');
+    Route::post('/customer-marketing', [Isp\ComplianceController::class, 'marketing'])->name('isp.customer.marketing');
+    Route::post('/customer-data-export', [Isp\ComplianceController::class, 'export'])->name('isp.customer.export');
+    Route::post('/customer-erase', [Isp\ComplianceController::class, 'erase'])->name('isp.customer.erase');
+    Route::post('/get-legal', [Isp\ComplianceController::class, 'legal'])->name('isp.legal');
+    Route::post('/legal-publish', [Isp\ComplianceController::class, 'publish'])->name('isp.legal.publish');
     Route::post('/deposit', [Isp\DepositController::class, 'store'])->name('isp.deposit.store');
     Route::post('/deposit-refund', [Isp\DepositController::class, 'refund'])->name('isp.deposit.refund');
     Route::post('/deposit-apply', [Isp\DepositController::class, 'apply'])->name('isp.deposit.apply');

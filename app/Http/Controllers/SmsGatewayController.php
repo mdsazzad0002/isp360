@@ -235,7 +235,8 @@ class SmsGatewayController extends Controller
             return send_error('No active SMS gateway is configured', null, 422);
         }
 
-        $customers = Customer::where('branch_id', $this->branchId)->whereIn('id', $request->customerIds)->get();
+        // customers who opted out of marketing SMS (or were erased) never get promotions
+        $customers = Customer::where('branch_id', $this->branchId)->whereIn('id', $request->customerIds)->where('marketing_opt_out', false)->get();
         $validCustomers = $customers->filter(fn ($c) => !empty($c->phone))->values();
         $ip = request()->ip();
 
