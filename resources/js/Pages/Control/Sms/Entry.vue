@@ -141,6 +141,9 @@ onMounted(load);
                             <option value="custom">Custom URL Template</option>
                             <option value="mram">MRAM (sms.mram.com.bd)</option>
                             <option value="gennet">GenNet (isms.gennet.com.bd)</option>
+                            <option value="twilio">Twilio</option>
+                            <option value="vonage">Vonage (Nexmo)</option>
+                            <option value="infobip">Infobip</option>
                         </select>
                     </div>
                     <div v-if="form.provider_type === 'custom'">
@@ -192,6 +195,21 @@ onMounted(load);
                             <input type="text" autocomplete="off" v-model="form.sender_id" placeholder="e.g. BDSNONMASK" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                         </div>
                     </template>
+                    <template v-else-if="['twilio', 'vonage', 'infobip'].includes(form.provider_type)">
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-slate-600">{{ { twilio: 'Account SID:Auth Token', vonage: 'API key:API secret', infobip: 'API key' }[form.provider_type] }}</label>
+                            <input type="text" autocomplete="off" v-model="form.api_key" :placeholder="form.id && form.has_api_key ? 'Saved (hidden). Leave blank to keep it' : form.provider_type === 'infobip' ? 'App key' : 'id:secret'" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-mono" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-slate-600">From (number or sender name{{ form.provider_type === 'twilio' ? ', or Messaging Service SID MG…' : '' }})</label>
+                            <input type="text" autocomplete="off" v-model="form.sender_id" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
+                        <div v-if="form.provider_type === 'infobip'">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Base URL of your Infobip account</label>
+                            <input type="url" autocomplete="off" v-model="form.url_template" placeholder="https://xxxxx.api.infobip.com" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
+                        <p class="text-xs text-slate-500">Numbers are sent in international form (+country code), converted from the stored ones.</p>
+                    </template>
                     <div v-else>
                         <label class="mb-1 block text-xs font-medium text-slate-600">URL Template</label>
                         <textarea
@@ -227,7 +245,7 @@ onMounted(load);
                     <tbody>
                         <tr v-for="row in rows" :key="row.id" class="border-b border-slate-100 hover:bg-slate-50">
                             <td class="px-2 py-1.5">{{ row.name }}</td>
-                            <td class="px-2 py-1.5">{{ row.provider_type === 'mram' ? 'MRAM' : row.provider_type === 'gennet' ? 'GenNet' : 'Custom (' + row.method + ')' }}</td>
+                            <td class="px-2 py-1.5">{{ { mram: 'MRAM', gennet: 'GenNet', twilio: 'Twilio', vonage: 'Vonage', infobip: 'Infobip' }[row.provider_type] || 'Custom (' + row.method + ')' }}</td>
                             <td
                                 class="max-w-xs truncate px-2 py-1.5 font-mono text-xs"
                                 :title="row.provider_type === 'mram' ? 'Sender: ' + row.sender_id : row.provider_type === 'gennet' ? 'SID: ' + row.sender_id : row.url_template"

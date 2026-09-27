@@ -17,6 +17,12 @@ const toast = useToast();
 const page = usePage();
 // country pack: address labels and the phone example (HandleInertiaRequests "region")
 const region = computed(() => page.props.region || {});
+// channels the customer gets billing messages on (comma list)
+function toggleChannel(ch, on) {
+    const set = new Set(form.notify_channels.split(',').filter(Boolean));
+    on ? set.add(ch) : set.delete(ch);
+    form.notify_channels = [...set].join(',');
+}
 
 function emptyForm() {
     return {
@@ -31,6 +37,7 @@ function emptyForm() {
         state: '',
         postcode: '',
         language: '',
+        notify_channels: 'sms',
         previous_due: 0,
         credit_limit: 0,
         is_membership: 'no',
@@ -388,6 +395,7 @@ function editRow(row) {
         state: row.state ?? '',
         postcode: row.postcode ?? '',
         language: row.language ?? '',
+        notify_channels: row.notify_channels || 'sms',
         previous_due: row.previous_due,
         credit_limit: row.credit_limit,
         is_membership: row.is_membership,
@@ -492,7 +500,13 @@ onMounted(() => {
                         <SearchSelect :options="boxes" v-model="selectedBox" label="display_name" placeholder="Select box" @update:model-value="onBoxChange" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-slate-600">Mobile <span class="font-normal text-slate-400">· SMS language</span></label>
+                        <div class="mb-1 flex flex-wrap gap-3 text-xs text-slate-600">
+                            <span class="font-medium">Notify by</span>
+                            <label v-for="ch in ['sms', 'email', 'whatsapp']" :key="ch" class="flex items-center gap-1">
+                                <input type="checkbox" :checked="form.notify_channels.split(',').includes(ch)" @change="toggleChannel(ch, $event.target.checked)" /> {{ { sms: 'SMS', email: 'E-mail', whatsapp: 'WhatsApp' }[ch] }}
+                            </label>
+                        </div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Mobile <span class="font-normal text-slate-400">· message language</span></label>
                         <select v-model="form.language" class="mb-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm">
                             <option value="">Default templates</option>
                             <option value="en">English</option>

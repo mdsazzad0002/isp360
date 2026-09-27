@@ -75,6 +75,8 @@ class SettingController extends IspController
             'sms_tpl_suspend' => 'nullable|max:320',
             'sms_tpl_reactivate' => 'nullable|max:320',
             'sms_tpl_notice' => 'nullable|max:320',
+            'sms_tpl_reminder' => 'nullable|max:320',
+            'reminder_days' => 'nullable|integer|min:0|max:30',
             'sms_tpl_translations' => 'nullable|json|max:20000',
             'grace_days' => 'nullable|integer|min:0|max:60',
             'postpaid_due_days' => 'nullable|integer|min:0|max:60',

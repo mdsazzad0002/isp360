@@ -554,6 +554,51 @@ function clearCompanyCache()
     \App\Support\Money::flush();
 }
 
+// Twilio, Vonage and Infobip (global SMS). The gateway's api_key holds "account:secret" (Twilio
+// Account SID:Auth Token, Vonage key:secret) or the Infobip API key; sender_id is the "from" number /
+// sender name (a Twilio Messaging Service SID "MG…" works too); Infobip's account base URL is in url_template.
+function sendSmsInternational(\App\Models\SmsGateway $gateway, array $numbers, string $message): array
+{
+    $to = array_values(array_filter(array_map(fn ($n) => \App\Support\Phone::e164($n), $numbers)));
+    if (! $to) {
+        return ['status' => false, 'response' => 'No valid phone number'];
+    }
+    $http = \Illuminate\Support\Facades\Http::timeout(20);
+    switch ($gateway->provider_type) {
+        case 'twilio':
+            [$sid, $token] = array_pad(explode(':', (string) $gateway->api_key, 2), 2, '');
+            $ok = 0;
+            $last = null;
+            foreach ($to as $number) {
+                $from = str_starts_with((string) $gateway->sender_id, 'MG') ? ['MessagingServiceSid' => $gateway->sender_id] : ['From' => $gateway->sender_id];
+                $res = $http->asForm()->withBasicAuth($sid, $token)->post("https://api.twilio.com/2010-04-01/Accounts/{$sid}/Messages.json", ['To' => $number, 'Body' => $message] + $from);
+                $last = $res->body();
+                $ok += $res->successful() ? 1 : 0;
+            }
+            return ['status' => $ok > 0, 'response' => $last];
+        case 'vonage':
+            [$key, $secret] = array_pad(explode(':', (string) $gateway->api_key, 2), 2, '');
+            $ok = 0;
+            $last = null;
+            foreach ($to as $number) {
+                $res = $http->asForm()->post('https://rest.nexmo.com/sms/json', [
+                    'api_key' => $key, 'api_secret' => $secret, 'from' => $gateway->sender_id, 'to' => ltrim($number, '+'), 'text' => $message,
+                ] + (preg_match('/[^\x00-\x7F]/', $message) ? ['type' => 'unicode'] : []));
+                $last = $res->body();
+                $ok += ($res->json('messages.0.status') === '0') ? 1 : 0;
+            }
+            return ['status' => $ok > 0, 'response' => $last];
+        default: // infobip
+            $res = $http->withHeaders(['Authorization' => 'App ' . $gateway->api_key])->acceptJson()
+                ->post(rtrim((string) $gateway->url_template, '/') . '/sms/2/text/advanced', ['messages' => [[
+                    'destinations' => array_map(fn ($n) => ['to' => ltrim($n, '+')], $to),
+                    'from' => $gateway->sender_id,
+                    'text' => $message,
+                ]]]);
+            return ['status' => $res->successful(), 'response' => $res->body()];
+    }
+}
+
 // Sends a single transactional SMS (e.g. sale confirmation) through the branch's active
 // gateways, trying the default one first, and records the attempt in sms_logs. No-op
 // (returns false) if no active gateway is configured — callers should treat that as
@@ -642,6 +687,10 @@ function mramErrorCodes()
 function sendSmsViaGateway(\App\Models\SmsGateway $gateway, array $numbers, string $message)
 {
     try {
+        // international providers: numbers in E.164, one request per provider batch rules
+        if (in_array($gateway->provider_type, ['twilio', 'vonage', 'infobip'], true)) {
+            return sendSmsInternational($gateway, $numbers, $message);
+        }
         if ($gateway->provider_type === 'mram') {
             $url = 'https://sms.mram.com.bd/smsapi'
                 . '?api_key=' . rawurlencode($gateway->api_key)

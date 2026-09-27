@@ -47,7 +47,7 @@ class SmsGatewayController extends Controller
     {
         $rules = [
             'name' => 'required|string|max:255',
-            'provider_type' => 'required|in:custom,mram,gennet',
+            'provider_type' => 'required|in:custom,mram,gennet,twilio,vonage,infobip',
         ];
         // on edit an empty key keeps the saved one (the key is never sent back to the browser)
         $key = $keySaved ? 'nullable|string' : 'required|string';
@@ -63,6 +63,13 @@ class SmsGatewayController extends Controller
             // fixed in code, same as mram, so no url_template is needed here.
             $rules['api_key'] = $key;
             $rules['sender_id'] = 'required|string';
+        } elseif (in_array($request->provider_type, ['twilio', 'vonage', 'infobip'], true)) {
+            // api_key = "account:secret" (Twilio SID:token, Vonage key:secret) or the Infobip API key
+            $rules['api_key'] = $key;
+            $rules['sender_id'] = 'required|string|max:100';
+            if ($request->provider_type === 'infobip') {
+                $rules['url_template'] = 'required|url'; // the account's base URL, e.g. https://xxxxx.api.infobip.com
+            }
         } else {
             $rules['method'] = 'required|in:GET,POST';
             $rules['url_template'] = 'required|string';
@@ -81,10 +88,10 @@ class SmsGatewayController extends Controller
             $data->provider_type = $request->provider_type;
             $data->method = match ($request->provider_type) {
                 'mram' => 'GET',
-                'gennet' => 'POST',
+                'gennet', 'twilio', 'vonage', 'infobip' => 'POST',
                 default => $request->method,
             };
-            $data->url_template = in_array($request->provider_type, ['mram', 'gennet']) ? null : $request->url_template;
+            $data->url_template = in_array($request->provider_type, ['mram', 'gennet', 'twilio', 'vonage']) ? null : $request->url_template;
             $data->api_key = $request->api_key;
             $data->sender_id = $request->sender_id;
             $data->sms_type = $request->sms_type ?? 'text';
@@ -120,10 +127,10 @@ class SmsGatewayController extends Controller
             $data->provider_type = $request->provider_type;
             $data->method = match ($request->provider_type) {
                 'mram' => 'GET',
-                'gennet' => 'POST',
+                'gennet', 'twilio', 'vonage', 'infobip' => 'POST',
                 default => $request->method,
             };
-            $data->url_template = in_array($request->provider_type, ['mram', 'gennet']) ? null : $request->url_template;
+            $data->url_template = in_array($request->provider_type, ['mram', 'gennet', 'twilio', 'vonage']) ? null : $request->url_template;
             if ($request->filled('api_key') || $request->provider_type === 'custom') {
                 $data->api_key = $request->api_key;
             }

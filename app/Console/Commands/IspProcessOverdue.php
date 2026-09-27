@@ -17,11 +17,11 @@ class IspProcessOverdue extends Command
         $branches = Branch::query()->when($this->option('branch'), fn ($q, $id) => $q->where('id', $id))->pluck('id');
         foreach ($branches as $branchId) {
             $overdue = OverdueService::markOverdue($branchId);
-            $notices = OverdueService::sendNotices($branchId);
+            $notices = OverdueService::sendNotices($branchId) + OverdueService::sendReminders($branchId);
             $fees = OverdueService::applyLateFees($branchId);
             $suspended = OverdueService::autoSuspend($branchId);
             if ($overdue || $notices || $fees || $suspended) {
-                $this->info("Branch {$branchId}: {$overdue} invoices marked overdue, {$notices} notices sent, {$fees} late fees, {$suspended} connections suspended");
+                $this->info("Branch {$branchId}: {$overdue} invoices marked overdue, {$notices} reminders / notices sent, {$fees} late fees, {$suspended} connections suspended");
             }
         }
         return self::SUCCESS;

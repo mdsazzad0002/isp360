@@ -102,6 +102,7 @@ class CustomerController extends Controller
             'postcode' => (\App\Support\CountryPack::current()['address']['postcode_required'] ? 'required' : 'nullable') . '|max:20',
             'city' => 'nullable|max:100',
             'language' => 'nullable|in:en,bn,hi,ar',
+            'notify_channels' => ['nullable', 'regex:/^(sms|email|whatsapp)(,(sms|email|whatsapp))*$/'],
             'state' => 'nullable|max:100',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);

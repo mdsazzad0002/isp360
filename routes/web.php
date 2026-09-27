@@ -378,6 +378,9 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/customer-marketing', [Isp\ComplianceController::class, 'marketing'])->name('isp.customer.marketing');
     Route::post('/customer-data-export', [Isp\ComplianceController::class, 'export'])->name('isp.customer.export');
     Route::post('/customer-erase', [Isp\ComplianceController::class, 'erase'])->name('isp.customer.erase');
+    Route::post('/get-messaging', [Isp\MessagingController::class, 'index'])->name('isp.messaging');
+    Route::post('/messaging', [Isp\MessagingController::class, 'store'])->name('isp.messaging.store');
+    Route::post('/get-notification-log', [Isp\MessagingController::class, 'log'])->name('isp.notification_log');
     Route::post('/get-legal', [Isp\ComplianceController::class, 'legal'])->name('isp.legal');
     Route::post('/legal-publish', [Isp\ComplianceController::class, 'publish'])->name('isp.legal.publish');
     Route::post('/deposit', [Isp\DepositController::class, 'store'])->name('isp.deposit.store');

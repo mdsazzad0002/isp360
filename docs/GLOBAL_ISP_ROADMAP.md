@@ -285,13 +285,13 @@ No technician module exists today.
 - [ ] Knowledge base / FAQ in the customer portal (multi-language).
 
 ### 4.8 Notifications and communication — P0/P1, M
-Today: SMS only, 4 events.
-- [ ] Channels: e-mail (queued), WhatsApp Business API, Telegram, web push (PWA exists).
-- [ ] Global SMS providers: Twilio, Vonage, Infobip, MessageBird + local ones per country pack.
-- [ ] More events: renewal reminder (X days before expiry), expiry today, ticket updates, work order visit time, outage, OTP.
-- [ ] Templates per language per channel; customer's preferred channel and opt-out (legal in many countries).
+Done 2026-09-29: SMS, e-mail and WhatsApp channels; renewal reminder; per-customer channels.
+- [x] Channels: e-mail (queued, `SendChannelMessage`, per-branch from address) and WhatsApp Business Cloud API (approved template with the message as its one body parameter), set up per branch under Settings → Channels (`messaging_channels`, credentials encrypted, token never sent back to the browser). Telegram and web push still open.
+- [x] Global SMS providers: Twilio (Account SID:token, From number or Messaging Service SID), Vonage (key:secret, unicode for non-Latin text) and Infobip (App key + account base URL), numbers sent in E.164 via the country pack. MessageBird and more local providers still open.
+- [x] Renewal reminder: `reminder_days` before a prepaid line expires, sent once per paid period by `isp:process-overdue` (`connections.reminder_for`), own template `sms_tpl_reminder`. Expiry today, ticket updates, visit time, outage, OTP still open.
+- [x] Customer's channels (`customers.notify_channels`: any of sms / email / whatsapp, e.g. e-mail only = SMS opt-out); every channel uses the customer's language template (4.4 translations), e-mail gets a subject per event. Separate per-channel template text still open.
 - [ ] Sender ID / DLT registration support (India needs DLT template IDs).
-- [ ] Notification log with delivery status and cost.
+- [x] Notification log for e-mail / WhatsApp (`notification_logs`: channel, event, recipient, body, success, provider response) next to the SMS log. Delivery receipts (DLR webhooks) and cost still open.
 
 ### 4.9 Customer self-service — P1, M
 - [ ] Mobile app (or polished PWA): pay, renew, upgrade/downgrade (with the day-wise quote you already have), tickets, usage graph, speed test, Wi-Fi password change (TR-069).
@@ -393,7 +393,7 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 2. ~~Session/NAT log retention and export (2.6)~~ — done 2026-09-29
 3. ~~KYC, consent, pseudonymised erasure, terms acceptance (2.6)~~ — done 2026-09-29
 4. ~~IPAM + CGNAT port blocks (4.6)~~ — done 2026-09-29
-5. Notifications: e-mail, WhatsApp, reminders, templates per language (4.8)
+5. ~~Notifications: e-mail, WhatsApp, reminders, templates per language (4.8)~~ — done 2026-09-29
 
 ### Phase C — Higher-level management (P1) ≈ 6–8 weeks
 1. Company owner dashboard + region level (3.1, 3.2)

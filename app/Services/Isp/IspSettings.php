@@ -57,12 +57,16 @@ class IspSettings
         'sms_suspend' => true,
         'sms_reactivate' => true,
         'sms_notice' => true,
+        // renewal reminder this many days before a prepaid line's paid time ends (0 = none)
+        'reminder_days' => 0,
+        'sms_reminder' => true,
         'sms_tpl_invoice' => 'Dear {name}, your internet bill {invoice} of {currency} {amount} is due on {due_date}. Total due: {currency} {balance}.',
         'sms_tpl_payment' => 'Dear {name}, we received {currency} {amount} (receipt {receipt}). Current due: {currency} {balance}. Thank you.',
         'sms_tpl_suspend' => 'Dear {name}, your internet connection {connection} is suspended for unpaid bills. Due: {currency} {balance}.',
         'sms_tpl_reactivate' => 'Dear {name}, your internet connection {connection} is active again. Thank you.',
         // the same templates in other languages, for customers with a language set: {"bn": {"invoice": "..."}}
         'sms_tpl_translations' => '',
+        'sms_tpl_reminder' => 'Dear {name}, your internet {connection} expires on {expire_date}. Renew now to stay connected. Due: {currency} {balance}.',
         'sms_tpl_notice' => 'Dear {name}, your internet connection {connection} will be suspended on {suspend_date} unless paid. Due: {currency} {balance}.',
     ];
 

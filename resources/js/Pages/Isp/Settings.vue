@@ -13,7 +13,19 @@ const s = ref(null);
 const saving = ref(false);
 
 // SMS templates in other languages, for customers who have one set: { bn: { invoice: '...' } }
-const smsEvents = [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension']];
+const smsEvents = [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension'], ['reminder', 'Renewal reminder']];
+// e-mail / WhatsApp channels of the branch (same templates as SMS)
+const channels = ref([]);
+const loadChannels = () => axios.post('/isp/get-messaging').then((r) => (channels.value = r.data));
+onMounted(loadChannels);
+async function saveChannel(c) {
+    try {
+        toast.success((await axios.post('/isp/messaging', { channel: c.channel, is_active: c.is_active, values: c.values })).data.message);
+        loadChannels();
+    } catch (err) {
+        showError(err);
+    }
+}
 const smsLangs = [['bn', 'বাংলা'], ['hi', 'हिन्दी'], ['ar', 'العربية'], ['en', 'English']];
 const trLang = ref('bn');
 const translations = ref({});
@@ -379,7 +391,7 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                 <h2 class="mb-1 text-sm font-semibold text-slate-700">Customer SMS</h2>
                 <p class="mb-3 text-xs text-slate-500">Sent through the active SMS gateway. Placeholders: {name} {code} {currency} {balance} {invoice} {amount} {due_date} {receipt} {connection} {expire_date} {suspend_date}</p>
                 <div class="space-y-3">
-                    <div v-for="k in [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension']]" :key="k[0]" class="grid grid-cols-1 gap-2 md:grid-cols-5">
+                    <div v-for="k in [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension'], ['reminder', 'Renewal reminder']]" :key="k[0]" class="grid grid-cols-1 gap-2 md:grid-cols-5">
                         <label class="flex items-center gap-2 text-sm"><input v-model="s['sms_' + k[0]]" type="checkbox" /> {{ k[1] }}</label>
                         <textarea v-model="s['sms_tpl_' + k[0]]" rows="2" maxlength="320" class="md:col-span-4" :class="input"></textarea>
                     </div>
@@ -396,6 +408,29 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                         <div v-for="k in smsEvents" :key="k[0]" class="grid grid-cols-1 gap-2 md:grid-cols-5">
                             <span class="text-xs text-slate-600">{{ k[1] }}</span>
                             <textarea v-model="translations[trLang][k[0]]" rows="2" maxlength="320" :dir="trLang === 'ar' ? 'rtl' : 'auto'" class="md:col-span-4" :class="input"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 class="mb-1 text-sm font-semibold text-slate-700">Notification channels <span class="font-normal text-slate-400">(this branch)</span></h2>
+                <p class="mb-3 text-xs text-slate-500">SMS is always there. E-mail and WhatsApp send the same messages as the SMS templates to customers who have that channel ticked (customer form). E-mail uses the server's mail settings (MAIL_* in .env).</p>
+                <div class="mb-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Renewal reminder, days before expiry <span class="text-slate-400">(0 = none)</span></label>
+                        <input v-model="s.reminder_days" type="number" min="0" max="30" :class="input" />
+                    </div>
+                </div>
+                <div v-for="c in channels" :key="c.channel" class="mb-3 rounded-md border border-slate-200 p-3">
+                    <div class="mb-2 flex items-center justify-between">
+                        <label class="flex items-center gap-2 text-sm font-medium"><input v-model="c.is_active" type="checkbox" /> {{ c.label }}</label>
+                        <button type="button" class="rounded border border-brand-500 px-2 py-0.5 text-xs text-brand-600" @click="saveChannel(c)">Save {{ c.label }}</button>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+                        <div v-for="(labelText, field) in c.fields" :key="field">
+                            <label class="mb-1 block text-xs text-slate-600">{{ labelText }}</label>
+                            <input v-model="c.values[field]" :type="c.secret.includes(field) ? 'password' : 'text'" autocomplete="new-password" :placeholder="c.secret.includes(field) && c.values['has_' + field] ? 'Saved. Leave blank to keep it.' : ''" :class="input" />
                         </div>
                     </div>
                 </div>

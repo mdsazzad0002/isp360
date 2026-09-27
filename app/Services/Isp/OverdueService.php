@@ -184,6 +184,33 @@ class OverdueService
         return $count;
     }
 
+    // Renewal reminder: one message per paid time, reminder_days before a prepaid line's time ends.
+    public static function sendReminders(int $branchId): int
+    {
+        $days = (int) IspSettings::get($branchId, 'reminder_days');
+        if ($days <= 0) {
+            return 0;
+        }
+        $count = 0;
+        Connection::with('customer')->where('branch_id', $branchId)->where('status', 'active')
+            ->whereNotNull('expire_at')->where('expire_at', '>', now())->where('expire_at', '<=', now()->addDays($days))
+            ->where(fn ($x) => $x->whereNull('package_id')->orWhereNotIn('package_id', fn ($q) => $q->select('id')->from('packages')->where('billing_mode', 'postpaid')))
+            ->where(fn ($q) => $q->whereNull('reminder_for')->orWhereColumn('reminder_for', '!=', 'expire_at'))
+            ->chunkById(200, function ($connections) use (&$count) {
+                foreach ($connections as $c) {
+                    // claimed first, so two runs never remind twice
+                    if (! Connection::whereKey($c->id)->where(fn ($q) => $q->whereNull('reminder_for')->orWhereColumn('reminder_for', '!=', 'expire_at'))->update(['reminder_for' => $c->expire_at])) {
+                        continue;
+                    }
+                    if ($c->customer) {
+                        IspNotifier::send($c->branch_id, $c->customer, 'reminder', ['connection' => $c->code, 'expire_date' => $c->expire_at->format('d M Y h:i A')]);
+                    }
+                    $count++;
+                }
+            });
+        return $count;
+    }
+
     /**
      * Late fees: a debit note on each invoice still unpaid late_fee_after_days after its due date,
      * once or every 30 days up to late_fee_max. Percent fees are on the unpaid amount before any
