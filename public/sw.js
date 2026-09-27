@@ -3,7 +3,7 @@
 // the app shell available offline. Everything else is network-first —
 // this is a live POS app, so cached/stale data is worse than a failed
 // request. Bump CACHE_NAME whenever the shell list changes to bust old caches.
-const CACHE_NAME = 'bmspos-shell-v1';
+const CACHE_NAME = 'isp360-shell-v1';
 const SHELL_URLS = ['/offline.html'];
 
 self.addEventListener('install', (event) => {

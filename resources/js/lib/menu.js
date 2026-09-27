@@ -7,6 +7,7 @@ export function translateMenuGroups(groups, t, te) {
     return groups.map((group) => ({
         ...group,
         label: te(`menu.groups.${group.key}`) ? t(`menu.groups.${group.key}`) : group.label,
+        sectionLabel: group.section && te(`menu.sections.${group.section}`) ? t(`menu.sections.${group.section}`) : group.sectionLabel,
         items: group.items.map((item) => ({
             ...item,
             label: te(`menu.items.${item.match}`) ? t(`menu.items.${item.match}`) : item.label,

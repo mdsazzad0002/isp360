@@ -16,7 +16,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        $this->app->bind(\App\Services\Network\NetworkDriver::class, fn ($app) => $app->make(config('isp.network_driver')));
     }
 
     /**

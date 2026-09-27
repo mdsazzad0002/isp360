@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use App\Services\Isp\AuditLogger;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -104,7 +106,7 @@ class CustomerController extends Controller
             } else {
                 $data = new Customer();
                 $data->code = generateCode('Customer', 'CI');
-                $dataKey = $request->except('id', 'image', 'password');
+                $dataKey = $request->except('id', 'image', 'password', 'ledger_balance');
                 foreach ($dataKey as $key => $value) {
                     $data[$key] = $value;
                 }
@@ -118,6 +120,16 @@ class CustomerController extends Controller
                 $data->ipAddress = request()->ip();
                 $data->branch_id = $this->branchId;
                 $data->save();
+
+                // An opening due becomes an "opening balance" invoice so payments can settle it
+                // like any other bill and the ledger stays consistent with invoices.
+                if ((float) $data->previous_due > 0) {
+                    \App\Services\Isp\BillingService::createManual($data, ['ledger_type' => 'opening'], [[
+                        'description' => 'Opening balance (previous due)',
+                        'unit_price' => (float) $data->previous_due,
+                        'quantity' => 1,
+                    ]]);
+                }
             }
 
             return response()->json(['status' => true, 'message' => "Customer has created successfully"]);
@@ -148,7 +160,7 @@ class CustomerController extends Controller
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
             $data = Customer::find($request->id);
-            $dataKey = $request->except('id', 'image', 'password');
+            $dataKey = $request->except('id', 'image', 'password', 'ledger_balance');
             foreach ($dataKey as $key => $value) {
                 $data[$key] = $value;
             }
@@ -445,7 +457,8 @@ class CustomerController extends Controller
 
     public function getCustomerLedger(Request $request)
     {
-        $branchId = $this->branchId;
+        $branchId = (int) $this->branchId;
+        $request->merge(['customerId' => empty($request->customerId) ? null : (int) $request->customerId]);
         $query = "select
                 'c' as sequence,
                 cp.id,
@@ -463,6 +476,7 @@ class CustomerController extends Controller
                 left join customers c on c.id = cp.customer_id
                 where cp.status = 'a'
                 and cp.type = 'customer'
+                and cp.refund_id is null
                 " . (empty($request->customerId) ? "" : " and cp.customer_id = '$request->customerId'") . "
                 " . ($branchId == null ? "" : " and cp.branch_id = '$branchId'") . "
 
@@ -484,6 +498,7 @@ class CustomerController extends Controller
                 left join customers c on c.id = cp.customer_id
                 where cp.status = 'a'
                 and cp.type = 'customer'
+                and cp.customer_payment_id is null
                 " . (empty($request->customerId) ? "" : " and cp.customer_id = '$request->customerId'") . "
                 " . ($branchId == null ? "" : " and cp.branch_id = '$branchId'") . "
 
@@ -515,5 +530,25 @@ class CustomerController extends Controller
 
 
         return response()->json(['previousBalance' => $previousBalance, 'ledgers' => $ledgers]);
+    }
+
+    // Opens the customer portal as this customer (no password needed). The admin's own
+    // session stays logged in; the customer portal shows a banner to go back.
+    public function loginAs(Request $request, $id)
+    {
+        if (!checkAccess('customerLoginAs')) {
+            return \Inertia\Inertia::render('Error/Forbidden');
+        }
+
+        $customer = Customer::where('branch_id', $this->branchId)->find($id);
+        if (empty($customer)) {
+            return redirect('/customer')->with('error', 'Customer not found');
+        }
+
+        Auth::guard('customer')->login($customer);
+        $request->session()->put('customer_impersonator_id', $this->userId);
+        AuditLogger::log('customer.login_as', $customer, null, ['code' => $customer->code, 'name' => $customer->name]);
+
+        return redirect('/customer-portal/dashboard');
     }
 }

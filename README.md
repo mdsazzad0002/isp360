@@ -1,26 +1,8 @@
-# Business Management Software
-
-A Laravel + Inertia (Vue 3) business management system covering sales, purchases, accounts, HR, inventory, and reporting — with built-in license verification, automatic updates, and database backup.
-
-## Tech Stack
-
-- **Backend:** Laravel 11 (PHP 8.2+)
-- **Frontend:** Vue 3 + Inertia.js
-- **Styling:** Tailwind CSS 4
-- **Build tool:** Vite
-- **Database:** MySQL
-
-## Features
-
-- **Sales & Purchases** — sale/purchase entry, returns, quotations, and record listings
-- **Accounts** — expenses, income, receive/payment, bank transactions, account heads, investments
-- **HR** — employee management, salary generation
-- **Control Panel** — products, customers, suppliers, users & access, company profile
-- **Dashboard & Reports** — daily reports, profit/loss, current stock, ledgers
-- **Licensing** — license key activation, periodic verification, and a gated verification-required screen when the license is invalid
-- **Auto Update** — scheduled update checks against the provider, with automatic download & apply
-- **Backup** — automatic/manual database backups uploaded to the provider, with backup history tracking
-
+14. OLT
+15. ONU
+16. Network topology
+17. Bandwidth monitoring
+18. Advanced automation
 ## Requirements
 
 - PHP >= 8.2

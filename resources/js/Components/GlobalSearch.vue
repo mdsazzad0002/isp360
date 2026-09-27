@@ -74,7 +74,7 @@ function mapResults(data) {
         id: item.id,
         title: item.name,
         subtitle: [item.phone, item.code].filter(Boolean).join(' · '),
-        url: '/customer',
+        url: `/isp/customer/${item.id}`,
     }));
     const products = (data.products || []).map((item) => ({
         type: 'Product',

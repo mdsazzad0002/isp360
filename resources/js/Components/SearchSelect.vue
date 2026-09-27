@@ -200,7 +200,7 @@ onBeforeUnmount(() => {
                 v-show="open"
                 ref="panelEl"
                 :style="panelStyle"
-                class="z-[2000] flex flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg"
+                class="z-[2150] flex flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg"
                 @click.stop
             >
                 <div class="border-b border-slate-200 p-1.5">

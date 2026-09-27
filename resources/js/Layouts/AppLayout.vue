@@ -35,6 +35,10 @@ function handleResize() {
     sidebarOpen.value = isDesktop();
 }
 
+function openLicensePanel() {
+    window.SUBandLWidget?.open('update');
+}
+
 onMounted(() => {
     window.addEventListener('resize', handleResize);
     darkMode.value = initTheme();
@@ -233,7 +237,14 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
                     <span>{{ t('nav.dashboard') }}</span>
                 </Link>
 
-                <div v-for="group in filteredGroups" :key="group.key">
+                <div v-for="(group, index) in filteredGroups" :key="group.key">
+                    <div
+                        v-if="group.section && group.section !== filteredGroups[index - 1]?.section"
+                        class="flex items-center gap-2 px-4 pb-1.5 pt-4 text-[11px] font-semibold uppercase tracking-wider text-brand-200/80"
+                    >
+                        <span>{{ group.sectionLabel }}</span>
+                        <span class="h-px flex-1 bg-white/15"></span>
+                    </div>
                     <button
                         type="button"
                         class="flex w-full cursor-pointer items-center gap-3 border-l-4 px-4 py-3 text-left text-sm font-medium transition"
@@ -266,9 +277,17 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
             </nav>
 
             <div class="shrink-0 border-t border-white/10 bg-brand-800">
+                <button
+                    type="button"
+                    class="flex w-full items-center gap-3 border-b border-white/10 px-4 py-2.5 text-left text-sm font-medium text-brand-100 transition hover:bg-brand-700/60 hover:text-white"
+                    @click="openLicensePanel"
+                >
+                    <i class="bi bi-arrow-repeat text-base"></i>
+                    <span>License &amp; Upgrade</span>
+                </button>
                 <div class="flex items-center justify-between px-4 py-2.5">
                     <span class="flex items-center gap-1.5 text-xs font-medium text-brand-100">
-                        bMS v{{ page.props.appVersion }}
+                        {{ company.title }} v{{ page.props.appVersion }}
                     </span>
                     <button
                         type="button"
@@ -292,7 +311,7 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
                 <a :href="footerCreditUrl" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-700">
                     <span v-for="(ch, i) in footerCreditChars" :key="i">{{ ch }}</span>
                 </a>
-                <span v-if="page.props.appVersion" class="ml-1">| bMS {{ page.props.appVersion }}</span>
+                <span v-if="page.props.appVersion" class="ml-1">| {{ company.title }} {{ page.props.appVersion }}</span>
             </footer>
         </main>
     </div>

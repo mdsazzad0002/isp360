@@ -33,10 +33,11 @@ class Bank extends Model
     public static function getBankBalance($request, $date = null)
     {
         $request = (object)$request;
-        $branchId = !empty($request->branchId) ? $request->branchId : session('branch')->id;
+        $branchId = (int) session('branch')->id;
+        $date = sqlDate($date);
         $clauses = "";
         if(!empty($request->bankId)){
-            $clauses .= " and ba.id = '$request->bankId'";
+            $clauses .= " and ba.id = '" . (int) $request->bankId . "'";
         }
 
         $query = "select ba.id, ba.name, ba.number, ba.type, ba.bank_name,

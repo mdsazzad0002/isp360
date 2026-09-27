@@ -83,10 +83,19 @@
             "production": "الإنتاج",
             "accounts": "الحسابات",
             "hr": "الموارد البشرية",
-            "reports": "التقارير",
+            "reports": "تقارير الحسابات",
             "control": "لوحة التحكم",
             "userManage": "إدارة المستخدمين",
-            "setting": "الإعدادات"
+            "setting": "الإعدادات",
+            "ispCustomers": "العملاء",
+            "ispBilling": "الفواتير والتحصيل",
+            "ispNetwork": "مايكروتيك والباقات",
+            "ispLocation": "إعداد العناوين",
+            "banking": "البنوك",
+            "billingReports": "تقارير الفواتير",
+            "sms": "إدارة الرسائل",
+            "logs": "السجلات والتدقيق",
+            "recycleBin": "سلة المحذوفات"
         },
         "items": {
             "sale": "إدخال بيع",
@@ -159,6 +168,13 @@
             "advanceSetting": "إعدادات متقدمة",
             "bankLedger": "دفتر البنك",
             "cashBankLedger": "دفتر النقدية والبنك"
+        },
+        "sections": {
+            "customers": "العملاء",
+            "network": "الشبكة",
+            "finance": "المالية",
+            "reports": "التقارير",
+            "admin": "الإدارة"
         }
     },
     "pos": {

@@ -251,6 +251,8 @@ class BankController extends Controller
 
     private function bankLedgerRows($branchId, $bankId)
     {
+        $branchId = $branchId === null ? null : (int) $branchId;
+        $bankId = empty($bankId) ? null : (int) $bankId;
         $query = "
                 select
                 'a' as sequence,

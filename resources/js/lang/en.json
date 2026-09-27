@@ -83,10 +83,19 @@
             "production": "Production",
             "accounts": "Accounts",
             "hr": "HR",
-            "reports": "Reports",
+            "reports": "Account Reports",
             "control": "Control Panel",
             "userManage": "User Manage",
-            "setting": "Setting"
+            "setting": "Setting",
+            "ispCustomers": "Customers",
+            "ispBilling": "Billing & Collection",
+            "ispNetwork": "MikroTik & Packages",
+            "ispLocation": "Address Setup",
+            "banking": "Banking",
+            "billingReports": "Billing Reports",
+            "sms": "SMS Management",
+            "logs": "Logs & Audits",
+            "recycleBin": "Recycle Bin"
         },
         "items": {
             "sale": "Sale Entry",
@@ -159,6 +168,13 @@
             "advanceSetting": "Advance Setting",
             "bankLedger": "Bank Ledger",
             "cashBankLedger": "Cash & Bank Ledger"
+        },
+        "sections": {
+            "customers": "Customers",
+            "network": "Network",
+            "finance": "Finance",
+            "reports": "Reports",
+            "admin": "Admin"
         }
     },
     "pos": {

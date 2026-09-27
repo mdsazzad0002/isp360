@@ -148,7 +148,7 @@ class ReceiveController extends Controller
             }
             $data = new Receive();
             $data->invoice = $invoice;
-            $dataKey = $request->except('id');
+            $dataKey = $request->except('id', 'customer_payment_id');
             foreach ($dataKey as $key => $value) {
                 $data[$key] = $value;
             }
@@ -169,7 +169,10 @@ class ReceiveController extends Controller
         if (!$request->validated()) return send_error("Validation Error", $request->validated(), 422);
         try {
             $data = Receive::find($request->id);
-            $dataKey = $request->except('id');
+            if ($data && $data->customer_payment_id) {
+                return send_error('This entry is an ISP bill collection. Reverse it from ISP Billing > Payments instead.', null, 422);
+            }
+            $dataKey = $request->except('id', 'customer_payment_id');
             foreach ($dataKey as $key => $value) {
                 $data[$key] = $value;
             }
@@ -193,6 +196,9 @@ class ReceiveController extends Controller
     {
         try {
             $data = Receive::find($request->id);
+            if ($data && $data->customer_payment_id) {
+                return send_error('This entry is an ISP bill collection. Reverse it from ISP Billing > Payments instead.', null, 422);
+            }
             $data->deleted_by = $this->userId;
             $data->status = 'd';
             $data->ipAddress = request()->ip();

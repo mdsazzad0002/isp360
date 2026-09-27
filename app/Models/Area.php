@@ -22,6 +22,21 @@ class Area extends Model
     {
         return $this->belongsTo(User::class, 'updated_by', 'id')->select('id', 'name', 'username')->withTrashed();
     }
+    public function zone()
+    {
+        return $this->belongsTo(Zone::class)->select('id', 'name')->withTrashed();
+    }
+
+    public function customers()
+    {
+        return $this->hasMany(Customer::class);
+    }
+
+    public function boxes()
+    {
+        return $this->hasMany(Box::class);
+    }
+
     public function deUser()
     {
         return $this->belongsTo(User::class, 'deleted_by', 'id')->select('id', 'name', 'username')->withTrashed();

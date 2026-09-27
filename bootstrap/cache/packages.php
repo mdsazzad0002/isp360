@@ -34,4 +34,15 @@
       0 => 'Termwind\\Laravel\\TermwindServiceProvider',
     ),
   ),
+  'subandl/subandl' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'SUBandL\\SUBandLServiceProvider',
+    ),
+    'aliases' => 
+    array (
+      'SUBandL' => 'SUBandL\\Facades\\SUBandL',
+    ),
+  ),
 );

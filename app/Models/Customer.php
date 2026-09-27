@@ -43,6 +43,36 @@ class Customer extends Authenticatable
         return $this->belongsTo(Area::class, 'area_id', 'id')->select('id', 'name')->withTrashed();
     }
 
+    public function zone()
+    {
+        return $this->belongsTo(Zone::class)->select('id', 'name')->withTrashed();
+    }
+
+    public function box()
+    {
+        return $this->belongsTo(Box::class)->select('id', 'name', 'code')->withTrashed();
+    }
+
+    public function connections()
+    {
+        return $this->hasMany(Connection::class);
+    }
+
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function customerPayments()
+    {
+        return $this->hasMany(CustomerPayment::class);
+    }
+
+    public function ledgerEntries()
+    {
+        return $this->hasMany(LedgerEntry::class);
+    }
+
     // customer due
     public static function customerDue($request, $date = null)
     {
@@ -88,16 +118,17 @@ class Customer extends Authenticatable
     private static function customerDueBaseQuery($request, $date = null)
     {
         $request = (object)$request;
-        $branchId = $request->branchId ?? session('branch')->id;
+        $branchId = (int) session('branch')->id;
+        $date = sqlDate($date);
         $clauses = "";
         if (!empty($request->customerId)) {
-            $clauses .= " and c.id = '$request->customerId'";
+            $clauses .= " and c.id = '" . (int) $request->customerId . "'";
         }
         if (!empty($request->areaId)) {
-            $clauses .= " and c.area_id = '$request->areaId'";
+            $clauses .= " and c.area_id = '" . (int) $request->areaId . "'";
         }
 
-        if (!empty($request->customer_type)) {
+        if (!empty($request->customer_type) && in_array($request->customer_type, ['retail', 'wholesale'], true)) {
             $clauses .= " and c.type = '$request->customer_type'";
         }
 
@@ -107,6 +138,7 @@ class Customer extends Authenticatable
                     (select ifnull(sum(cr.amount), 0) from receives cr
                     where cr.status = 'a'
                     and cr.type = 'customer'
+                    and cr.customer_payment_id is null
                     " . ($date == null ? "" : " and cr.date <= '$date'") . "
                     " . ($branchId == null ? "" : " and cr.branch_id = '$branchId'") . "
                     and cr.customer_id = c.id) as received_amount,
@@ -114,6 +146,7 @@ class Customer extends Authenticatable
                     (select ifnull(sum(cp.amount), 0) from payments cp
                     where cp.status = 'a'
                     and cp.type = 'customer'
+                    and cp.refund_id is null
                     " . ($date == null ? "" : " and cp.date <= '$date'") . "
                     " . ($branchId == null ? "" : " and cp.branch_id = '$branchId'") . "
                     and cp.customer_id = c.id) as payment_amount,

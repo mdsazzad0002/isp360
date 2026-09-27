@@ -9,56 +9,135 @@ use Illuminate\Support\Facades\Auth;
 // the app's sidebar navigation, grouped; shared by the sidebar and the global quick-search
 function appMenuGroups()
 {
+    // Groups are rendered in order; a group's 'section' prints a heading in the
+    // sidebar whenever it differs from the previous visible group's section.
     return [
+        // ── Customers ──
         [
-            'key' => 'accounts',
-            'label' => 'Accounts',
-            'icon' => 'bi-cash',
+            'section' => 'customers',
+            'sectionLabel' => 'Customers',
+            'key' => 'ispCustomers',
+            'label' => 'Customers',
+            'icon' => 'bi-people',
             'items' => [
-                ['access' => 'expense', 'uri' => '/expense', 'match' => 'expense', 'icon' => 'bi-clipboard-minus', 'label' => 'Expense Entry'],
-                ['access' => 'income', 'uri' => '/income', 'match' => 'income', 'icon' => 'bi-duffle', 'label' => 'Income Entry'],
-                ['access' => 'receive', 'uri' => '/receive', 'match' => 'receive', 'icon' => 'bi-cash-stack', 'label' => 'Receive'],
-                ['access' => 'payment', 'uri' => '/payment', 'match' => 'payment', 'icon' => 'bi-person-workspace', 'label' => 'Payment'],
-                ['access' => 'paymentRestore', 'uri' => '/deleted-payment-record', 'match' => 'deleted-payment-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Payment Record'],
-                ['access' => 'bankTransaction', 'uri' => '/bankTransaction', 'match' => 'bankTransaction', 'icon' => 'bi-bank', 'label' => 'Bank Transaction'],
-                ['access' => 'bankTransactionRestore', 'uri' => '/deleted-bankTransaction-record', 'match' => 'deleted-bankTransaction-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Bank Transaction Record'],
-                ['access' => 'accounthead', 'uri' => '/accounthead', 'match' => 'accounthead', 'icon' => 'bi-plus-circle', 'label' => 'AccountHead Entry'],
-                ['access' => 'accountheadRestore', 'uri' => '/deleted-accounthead-record', 'match' => 'deleted-accounthead-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted AccountHead Record'],
-                ['access' => 'bank', 'uri' => '/bank', 'match' => 'bank', 'icon' => 'bi-plus-circle', 'label' => 'Bank Entry'],
-                ['access' => 'bankRestore', 'uri' => '/deleted-bank-record', 'match' => 'deleted-bank-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Bank Record'],
+                ['access' => 'customer', 'uri' => '/customer', 'match' => 'customer', 'icon' => 'bi-people', 'label' => 'Customers'],
+                ['access' => 'connection', 'uri' => '/isp/connections', 'match' => 'isp/connections', 'icon' => 'bi-ethernet', 'label' => 'Connections'],
+                ['access' => 'ticket', 'uri' => '/isp/tickets', 'match' => 'isp/tickets', 'icon' => 'bi-life-preserver', 'label' => 'Support Tickets'],
             ],
         ],
         [
+            'section' => 'customers',
+            'sectionLabel' => 'Customers',
+            'key' => 'ispReseller',
+            'label' => 'Reseller',
+            'icon' => 'bi-person-badge',
+            'items' => [
+                ['access' => 'reseller', 'uri' => '/reseller', 'match' => 'reseller', 'icon' => 'bi-person-badge', 'label' => 'Reseller List'],
+                ['access' => 'resellerRequest', 'uri' => '/isp/reseller-packages', 'match' => 'isp/reseller-packages', 'icon' => 'bi-speedometer2', 'label' => 'Reseller Packages'],
+                ['access' => 'resellerRequest', 'uri' => '/isp/reseller-ledger', 'match' => 'isp/reseller-ledger', 'icon' => 'bi-journal-text', 'label' => 'Reseller Ledger'],
+                ['access' => 'resellerRequest', 'uri' => '/isp/reseller-requests', 'match' => 'isp/reseller-requests', 'icon' => 'bi-cash-coin', 'label' => 'Withdrawals & Wallets'],
+            ],
+        ],
+        [
+            'section' => 'customers',
+            'sectionLabel' => 'Customers',
+            'key' => 'ispBilling',
+            'label' => 'Billing & Collection',
+            'icon' => 'bi-receipt',
+            'items' => [
+                ['access' => 'invoice', 'uri' => '/isp/invoices', 'match' => 'isp/invoices', 'icon' => 'bi-receipt', 'label' => 'Invoices'],
+                ['access' => 'ispPayment', 'uri' => '/isp/payments', 'match' => 'isp/payments', 'icon' => 'bi-wallet2', 'label' => 'Bill Collection'],
+                ['access' => 'onlinePayment', 'uri' => '/isp/online-payments', 'match' => 'isp/online-payments', 'icon' => 'bi-phone', 'label' => 'Online Payments'],
+            ],
+        ],
+
+        // ── Network / MikroTik ──
+        [
+            'section' => 'network',
+            'sectionLabel' => 'Network',
+            'key' => 'ispNetwork',
+            'label' => 'MikroTik & Packages',
+            'icon' => 'bi-router',
+            'items' => [
+                ['access' => 'router', 'uri' => '/isp/routers', 'match' => 'isp/routers', 'icon' => 'bi-router', 'label' => 'Routers (MikroTik)'],
+                ['access' => 'package', 'uri' => '/isp/packages', 'match' => 'isp/packages', 'icon' => 'bi-speedometer2', 'label' => 'Packages'],
+            ],
+        ],
+        [
+            'section' => 'network',
+            'sectionLabel' => 'Network',
+            'key' => 'ispLocation',
+            'label' => 'Address Setup',
+            'icon' => 'bi-geo-alt',
+            'items' => [
+                ['access' => 'zone', 'uri' => '/isp/zones', 'match' => 'isp/zones', 'icon' => 'bi-globe-asia-australia', 'label' => 'Zone'],
+                ['access' => 'area', 'uri' => '/isp/areas', 'match' => 'isp/areas', 'icon' => 'bi-geo-alt', 'label' => 'Area'],
+                ['access' => 'box', 'uri' => '/isp/boxes', 'match' => 'isp/boxes', 'icon' => 'bi-hdd-network', 'label' => 'Box'],
+            ],
+        ],
+
+        // ── Finance ──
+        [
+            'section' => 'finance',
+            'sectionLabel' => 'Finance',
+            'key' => 'accounts',
+            'label' => 'Accounts',
+            'icon' => 'bi-cash-coin',
+            'items' => [
+                ['access' => 'income', 'uri' => '/income', 'match' => 'income', 'icon' => 'bi-duffle', 'label' => 'Income Entry'],
+                ['access' => 'expense', 'uri' => '/expense', 'match' => 'expense', 'icon' => 'bi-clipboard-minus', 'label' => 'Expense Entry'],
+                ['access' => 'receive', 'uri' => '/receive', 'match' => 'receive', 'icon' => 'bi-cash-stack', 'label' => 'Receive'],
+                ['access' => 'payment', 'uri' => '/payment', 'match' => 'payment', 'icon' => 'bi-person-workspace', 'label' => 'Payment'],
+                ['access' => 'accounthead', 'uri' => '/accounthead', 'match' => 'accounthead', 'icon' => 'bi-plus-circle', 'label' => 'AccountHead Entry'],
+            ],
+        ],
+        [
+            'section' => 'finance',
+            'sectionLabel' => 'Finance',
+            'key' => 'banking',
+            'label' => 'Banking',
+            'icon' => 'bi-bank',
+            'items' => [
+                ['access' => 'bank', 'uri' => '/bank', 'match' => 'bank', 'icon' => 'bi-plus-circle', 'label' => 'Bank Entry'],
+                ['access' => 'bankTransaction', 'uri' => '/bankTransaction', 'match' => 'bankTransaction', 'icon' => 'bi-bank', 'label' => 'Bank Transaction'],
+            ],
+        ],
+
+        // ── Reports ──
+        [
+            'section' => 'reports',
+            'sectionLabel' => 'Reports',
+            'key' => 'billingReports',
+            'label' => 'Billing Reports',
+            'icon' => 'bi-graph-up',
+            'items' => [
+                ['access' => 'ispReport', 'uri' => '/isp/due-report', 'match' => 'isp/due-report', 'icon' => 'bi-exclamation-triangle', 'label' => 'Due & Overdue'],
+                ['access' => 'ispReport', 'uri' => '/isp/collection-report', 'match' => 'isp/collection-report', 'icon' => 'bi-graph-up', 'label' => 'Collection Report'],
+                ['access' => 'customerDue', 'uri' => '/customerDue', 'match' => 'customerDue', 'icon' => 'bi-cash', 'label' => 'Customer Due'],
+                ['access' => 'customerLedger', 'uri' => '/customerLedger', 'match' => 'customerLedger', 'icon' => 'bi-list', 'label' => 'Customer Ledger'],
+            ],
+        ],
+        [
+            'section' => 'reports',
+            'sectionLabel' => 'Reports',
             'key' => 'reports',
-            'label' => 'Reports',
-            'icon' => 'bi-calendar-check',
+            'label' => 'Account Reports',
+            'icon' => 'bi-journal-text',
             'items' => [
                 ['access' => 'cashLedger', 'uri' => '/cashLedger', 'match' => 'cashLedger', 'icon' => 'bi-list', 'label' => 'Cash Ledger'],
                 ['access' => 'bankLedger', 'uri' => '/bankLedger', 'match' => 'bankLedger', 'icon' => 'bi-list', 'label' => 'Bank Ledger'],
                 ['access' => 'cashLedger', 'uri' => '/cashBankLedger', 'match' => 'cashBankLedger', 'icon' => 'bi-list-columns', 'label' => 'Cash & Bank Ledger'],
-                ['access' => 'customerDue', 'uri' => '/customerDue', 'match' => 'customerDue', 'icon' => 'bi-cash', 'label' => 'Customer Due'],
-                ['access' => 'customerLedger', 'uri' => '/customerLedger', 'match' => 'customerLedger', 'icon' => 'bi-list', 'label' => 'Customer Ledger'],
                 ['access' => 'dayBook', 'uri' => '/dayBook', 'match' => 'dayBook', 'icon' => 'bi-journal-check', 'label' => 'Day Book'],
                 ['access' => 'balanceSheet', 'uri' => '/balanceSheet', 'match' => 'balanceSheet', 'icon' => 'bi-clipboard-data', 'label' => 'Balance Sheet'],
             ],
         ],
+
+        // ── Admin ──
         [
-            'key' => 'control',
-            'label' => 'Control Panel',
-            'icon' => 'bi-bank2',
-            'items' => [
-                ['access' => 'customer', 'uri' => '/customer', 'match' => 'customer', 'icon' => 'bi-person', 'label' => 'Customer'],
-                ['access' => 'customerRestore', 'uri' => '/deleted-customer-record', 'match' => 'deleted-customer-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Customer Record'],
-                ['access' => 'reseller', 'uri' => '/reseller', 'match' => 'reseller', 'icon' => 'bi-people', 'label' => 'Reseller'],
-                ['access' => 'area', 'uri' => '/area', 'match' => 'area', 'icon' => 'bi-globe', 'label' => 'Area Entry'],
-                ['access' => 'areaRestore', 'uri' => '/deleted-area-record', 'match' => 'deleted-area-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Area Record'],
-                ['access' => 'company', 'uri' => '/company', 'match' => 'company', 'icon' => 'bi-plus-circle', 'label' => 'Company Entry'],
-                ['access' => 'companyRestore', 'uri' => '/deleted-company-record', 'match' => 'deleted-company-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Company Record'],
-            ],
-        ],
-        [
+            'section' => 'admin',
+            'sectionLabel' => 'Admin',
             'key' => 'sms',
-            'label' => 'SMS',
+            'label' => 'SMS Management',
             'icon' => 'bi-chat-dots',
             'items' => [
                 ['access' => 'smsSetting', 'uri' => '/sms-gateway', 'match' => 'sms-gateway', 'icon' => 'bi-hdd-network', 'label' => 'SMS Gateway Setting'],
@@ -67,6 +146,8 @@ function appMenuGroups()
             ],
         ],
         [
+            'section' => 'admin',
+            'sectionLabel' => 'Admin',
             'key' => 'userManage',
             'label' => 'User Manage',
             'icon' => 'bi-person-fill-gear',
@@ -76,13 +157,45 @@ function appMenuGroups()
             ],
         ],
         [
+            'section' => 'admin',
+            'sectionLabel' => 'Admin',
             'key' => 'setting',
             'label' => 'Setting',
             'icon' => 'bi-gear',
             'items' => [
                 ['access' => 'companyProfile', 'uri' => '/companyProfile', 'match' => 'companyProfile', 'icon' => 'bi-house-fill', 'label' => 'Company Profile'],
+                ['access' => 'company', 'uri' => '/company', 'match' => 'company', 'icon' => 'bi-plus-circle', 'label' => 'Company Entry'],
                 ['access' => 'branch', 'uri' => '/branch', 'match' => 'branch', 'icon' => 'bi-shop', 'label' => 'Branch'],
                 ['access' => 'branchManage', 'uri' => '/branchManage', 'match' => 'branchManage', 'icon' => 'bi-diagram-3', 'label' => 'Branch Manage'],
+                ['access' => 'ispSettings', 'uri' => '/isp/settings', 'match' => 'isp/settings', 'icon' => 'bi-sliders', 'label' => 'ISP Billing Settings'],
+                ['access' => 'paymentGateway', 'uri' => '/isp/payment-gateways', 'match' => 'isp/payment-gateways', 'icon' => 'bi-credit-card', 'label' => 'Payment Gateways'],
+            ],
+        ],
+        [
+            'section' => 'admin',
+            'sectionLabel' => 'Admin',
+            'key' => 'logs',
+            'label' => 'Logs & Audits',
+            'icon' => 'bi-shield-check',
+            'items' => [
+                ['access' => 'auditLog', 'uri' => '/isp/audit-log', 'match' => 'isp/audit-log', 'icon' => 'bi-shield-check', 'label' => 'Audit Log'],
+                ['access' => null, 'uri' => '/notifications', 'match' => 'notifications', 'icon' => 'bi-bell', 'label' => 'Notifications'],
+            ],
+        ],
+        [
+            'section' => 'admin',
+            'sectionLabel' => 'Admin',
+            'key' => 'recycleBin',
+            'label' => 'Recycle Bin',
+            'icon' => 'bi-trash3',
+            'items' => [
+                ['access' => 'customerRestore', 'uri' => '/deleted-customer-record', 'match' => 'deleted-customer-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Customer Record'],
+                ['access' => 'areaRestore', 'uri' => '/deleted-area-record', 'match' => 'deleted-area-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Area Record'],
+                ['access' => 'paymentRestore', 'uri' => '/deleted-payment-record', 'match' => 'deleted-payment-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Payment Record'],
+                ['access' => 'accountheadRestore', 'uri' => '/deleted-accounthead-record', 'match' => 'deleted-accounthead-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted AccountHead Record'],
+                ['access' => 'bankRestore', 'uri' => '/deleted-bank-record', 'match' => 'deleted-bank-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Bank Record'],
+                ['access' => 'bankTransactionRestore', 'uri' => '/deleted-bankTransaction-record', 'match' => 'deleted-bankTransaction-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Bank Transaction Record'],
+                ['access' => 'companyRestore', 'uri' => '/deleted-company-record', 'match' => 'deleted-company-record', 'icon' => 'bi-arrow-counterclockwise', 'label' => 'Deleted Company Record'],
             ],
         ],
     ];
@@ -97,7 +210,7 @@ function appMenuSearchIndex()
 
     foreach (appMenuGroups() as $group) {
         foreach ($group['items'] as $item) {
-            if (checkAccess($item['access'])) {
+            if (empty($item['access']) || checkAccess($item['access'])) {
                 $items[] = [
                     'label' => $item['label'],
                     'uri' => $item['uri'],
@@ -223,6 +336,17 @@ function generateCode($model, $prefix = '', $branch_id = null, $column = 'code')
 
     return $prefix . $code;
 }
+// Normalises a user-supplied date to Y-m-d (or null) so it is safe to embed in the
+// hand-built report SQL; anything that is not a real calendar date is dropped.
+function sqlDate($value)
+{
+    if (empty($value) || !is_string($value) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+        return null;
+    }
+    [$y, $m, $d] = array_map('intval', explode('-', $value));
+    return checkdate($m, $d, $y) ? $value : null;
+}
+
 // make slug
 function make_slug($string)
 {
@@ -446,7 +570,7 @@ function sendTransactionalSms($branchId, $userId, $phone, string $message, $cust
         'response' => $response,
         'created_by' => $userId,
         'created_at' => \Illuminate\Support\Carbon::now(),
-        'ipAddress' => request()->ip(),
+        'ipAddress' => request()->ip() ?? '127.0.0.1',
         'branch_id' => $branchId,
     ]);
 

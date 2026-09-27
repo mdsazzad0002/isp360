@@ -21,6 +21,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SmsGatewayController;
+use App\Http\Controllers\Isp;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Session;
 
@@ -77,15 +78,50 @@ Route::group(['prefix' => 'reseller', 'middleware' => 'auth:reseller'], function
     Route::get('/dashboard', [ResellerPanelController::class, 'dashboard'])->name('reseller.dashboard');
     Route::get('/profile', [ResellerPanelController::class, 'profile'])->name('reseller.profile');
     Route::post('/update-profile', [ResellerPanelController::class, 'updateProfile'])->name('reseller.profile.update');
+    Route::get('/packages', [ResellerPanelController::class, 'packages'])->name('reseller.packages');
+    Route::post('/get-packages', [ResellerPanelController::class, 'getPackages'])->name('reseller.packages.index');
+    Route::post('/package', [ResellerPanelController::class, 'storePackage'])->name('reseller.package.store');
+    Route::post('/delete-package', [ResellerPanelController::class, 'destroyPackage'])->name('reseller.package.delete');
+    Route::get('/connections', [ResellerPanelController::class, 'connections'])->name('reseller.connections');
+    Route::get('/payments', [ResellerPanelController::class, 'payments'])->name('reseller.payments');
+    Route::post('/get-payments', [ResellerPanelController::class, 'getPayments'])->name('reseller.payments.index');
+    Route::post('/get-customer-dues', [ResellerPanelController::class, 'customerDues'])->name('reseller.customer.dues');
+    Route::post('/payment', [ResellerPanelController::class, 'storePayment'])->name('reseller.payment.store');
+    Route::get('/withdrawals', [ResellerPanelController::class, 'withdrawals'])->name('reseller.withdrawals');
+    Route::post('/get-withdrawals', [ResellerPanelController::class, 'getWithdrawals'])->name('reseller.withdrawals.index');
+    Route::post('/withdrawal', [ResellerPanelController::class, 'storeWithdrawal'])->name('reseller.withdrawal.store');
+    Route::post('/withdrawal-cancel', [ResellerPanelController::class, 'cancelWithdrawal'])->name('reseller.withdrawal.cancel');
+    Route::get('/ledger', [ResellerPanelController::class, 'ledger'])->name('reseller.ledger');
+    Route::post('/get-ledger', [ResellerPanelController::class, 'getLedger'])->name('reseller.ledger.data');
     Route::get('/logout', [ResellerPanelController::class, 'logout'])->name('reseller.logout');
+
+    Route::get('/tickets', [\App\Http\Controllers\PortalTicketController::class, 'page'])->name('reseller.tickets');
+    Route::post('/get-tickets', [\App\Http\Controllers\PortalTicketController::class, 'index'])->name('reseller.tickets.index');
+    Route::post('/get-ticket', [\App\Http\Controllers\PortalTicketController::class, 'show'])->name('reseller.ticket.show');
+    Route::post('/ticket', [\App\Http\Controllers\PortalTicketController::class, 'store'])->middleware('throttle:20,1')->name('reseller.ticket.store');
+    Route::post('/ticket-reply', [\App\Http\Controllers\PortalTicketController::class, 'reply'])->middleware('throttle:30,1')->name('reseller.ticket.reply');
+    Route::post('/ticket-status', [\App\Http\Controllers\PortalTicketController::class, 'status'])->name('reseller.ticket.status');
 });
 
 // customer portal route (self-service, guarded by the 'customer' auth guard)
 Route::group(['prefix' => 'customer-portal', 'middleware' => 'auth:customer'], function () {
     Route::get('/dashboard', [CustomerPanelController::class, 'dashboard'])->name('customerPortal.dashboard');
     Route::get('/profile', [CustomerPanelController::class, 'profile'])->name('customerPortal.profile');
+    Route::get('/connections', [CustomerPanelController::class, 'connections'])->name('customerPortal.connections');
+    Route::post('/invoice', [CustomerPanelController::class, 'invoice'])->name('customerPortal.invoice');
+    Route::post('/statement', [CustomerPanelController::class, 'statement'])->name('customerPortal.statement');
     Route::post('/update-profile', [CustomerPanelController::class, 'updateProfile'])->name('customerPortal.profile.update');
     Route::get('/logout', [CustomerPanelController::class, 'logout'])->name('customerPortal.logout');
+    Route::get('/pay', [\App\Http\Controllers\CustomerPortalPaymentController::class, 'page'])->name('customerPortal.pay');
+    Route::post('/pay/start', [\App\Http\Controllers\CustomerPortalPaymentController::class, 'start'])->middleware('throttle:10,1')->name('customerPortal.pay.start');
+    Route::post('/pay/manual', [\App\Http\Controllers\CustomerPortalPaymentController::class, 'manual'])->middleware('throttle:10,1')->name('customerPortal.pay.manual');
+
+    Route::get('/tickets', [\App\Http\Controllers\PortalTicketController::class, 'page'])->name('customerPortal.tickets');
+    Route::post('/get-tickets', [\App\Http\Controllers\PortalTicketController::class, 'index'])->name('customerPortal.tickets.index');
+    Route::post('/get-ticket', [\App\Http\Controllers\PortalTicketController::class, 'show'])->name('customerPortal.ticket.show');
+    Route::post('/ticket', [\App\Http\Controllers\PortalTicketController::class, 'store'])->middleware('throttle:10,1')->name('customerPortal.ticket.store');
+    Route::post('/ticket-reply', [\App\Http\Controllers\PortalTicketController::class, 'reply'])->middleware('throttle:30,1')->name('customerPortal.ticket.reply');
+    Route::post('/ticket-status', [\App\Http\Controllers\PortalTicketController::class, 'status'])->name('customerPortal.ticket.status');
 });
 
 // ============================= Control Panel Route ==============================
@@ -107,6 +143,8 @@ Route::post('/delete-user', [UserController::class, 'destroy'])->name('user.dele
 
 // user switch (login as / switch back) route
 Route::get('/user/{id}/login-as', [UserController::class, 'loginAs'])->middleware('auth')->name('user.loginAs');
+Route::get('/customer/{id}/login-as', [CustomerController::class, 'loginAs'])->middleware('auth')->name('customer.loginAs');
+Route::get('/reseller/{id}/login-as', [ResellerController::class, 'loginAs'])->middleware('auth')->whereNumber('id')->name('reseller.loginAs');
 Route::get('/switch-back', [UserController::class, 'switchBack'])->middleware('auth')->name('user.switchBack');
 
 // role route
@@ -165,6 +203,8 @@ Route::match(['get', 'post'], '/get-reseller', [ResellerController::class, 'inde
 Route::post('/reseller', [ResellerController::class, 'store'])->name('reseller.store');
 Route::post('/update-reseller', [ResellerController::class, 'update'])->name('reseller.update');
 Route::post('/delete-reseller', [ResellerController::class, 'destroy'])->name('reseller.delete');
+Route::get('/reseller-export-excel', [ResellerController::class, 'exportExcel'])->name('reseller.export-excel');
+Route::post('/reseller-import-batch', [ResellerController::class, 'importBatch'])->name('reseller.import-batch');
 
 // ============================= Account Panel Route ==============================
 // account head route
@@ -255,3 +295,107 @@ Route::post('/get-dayBook', [ReportController::class, 'getDayBook'])->name('get.
 Route::get('/balanceSheet', [ReportController::class, 'balanceSheet'])->name('balanceSheet');
 Route::post('/get-balanceSheet', [ReportController::class, 'getBalanceSheet'])->name('get.balanceSheet');
 Route::post('/get-balanceSheet-detail', [ReportController::class, 'getBalanceSheetDetail'])->name('get.balanceSheet.detail');
+
+// ============================= ISP Management Route ==============================
+Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
+    // Zone / Area / Box (areas use the existing /area endpoints)
+    Route::redirect('/locations', '/isp/zones');
+    Route::get('/zones', [Isp\LocationController::class, 'zonePage'])->name('isp.zones.page');
+    Route::get('/areas', [Isp\LocationController::class, 'areaPage'])->name('isp.areas.page');
+    Route::get('/boxes', [Isp\LocationController::class, 'boxPage'])->name('isp.boxes.page');
+    Route::post('/get-zones', [Isp\LocationController::class, 'zones'])->name('isp.zones');
+    Route::post('/zone', [Isp\LocationController::class, 'storeZone'])->name('isp.zone.store');
+    Route::post('/delete-zone', [Isp\LocationController::class, 'destroyZone'])->name('isp.zone.delete');
+    Route::post('/get-boxes', [Isp\LocationController::class, 'boxes'])->name('isp.boxes');
+    Route::post('/box', [Isp\LocationController::class, 'storeBox'])->name('isp.box.store');
+    Route::post('/delete-box', [Isp\LocationController::class, 'destroyBox'])->name('isp.box.delete');
+
+    Route::get('/packages', [Isp\PackageController::class, 'create'])->name('isp.packages');
+    Route::post('/get-packages', [Isp\PackageController::class, 'index'])->name('isp.packages.index');
+    Route::post('/get-package-history', [Isp\PackageController::class, 'history'])->name('isp.packages.history');
+    Route::post('/package', [Isp\PackageController::class, 'store'])->name('isp.package.store');
+    Route::post('/delete-package', [Isp\PackageController::class, 'destroy'])->name('isp.package.delete');
+
+    Route::get('/reseller-requests', [Isp\ResellerRequestController::class, 'create'])->name('isp.resellerRequests');
+    Route::get('/reseller-packages', [Isp\ResellerRequestController::class, 'packagesPage'])->name('isp.resellerPackages');
+    Route::get('/reseller-ledger', [Isp\ResellerRequestController::class, 'ledgerPage'])->name('isp.resellerLedger');
+    Route::post('/get-reseller-ledger', [Isp\ResellerRequestController::class, 'ledger'])->name('isp.resellerLedger.data');
+
+    Route::get('/tickets', [Isp\TicketController::class, 'create'])->name('isp.tickets');
+    Route::post('/get-tickets', [Isp\TicketController::class, 'index'])->name('isp.tickets.index');
+    Route::post('/get-ticket', [Isp\TicketController::class, 'show'])->name('isp.ticket.show');
+    Route::post('/ticket', [Isp\TicketController::class, 'store'])->name('isp.ticket.store');
+    Route::post('/ticket-reply', [Isp\TicketController::class, 'reply'])->name('isp.ticket.reply');
+    Route::post('/ticket-status', [Isp\TicketController::class, 'status'])->name('isp.ticket.status');
+    Route::post('/ticket-update', [Isp\TicketController::class, 'update'])->name('isp.ticket.update');
+    Route::post('/get-reseller-package-requests', [Isp\ResellerRequestController::class, 'packages'])->name('isp.resellerRequests.packages');
+    Route::post('/get-reseller-wallets', [Isp\ResellerRequestController::class, 'wallets'])->name('isp.resellerRequests.wallets');
+    Route::post('/get-reseller-transactions', [Isp\ResellerRequestController::class, 'transactions'])->name('isp.resellerRequests.transactions');
+    Route::post('/reseller-withdrawal-pay', [Isp\ResellerRequestController::class, 'pay'])->name('isp.resellerRequests.pay');
+    Route::post('/reseller-withdrawal-reject', [Isp\ResellerRequestController::class, 'reject'])->name('isp.resellerRequests.reject');
+    Route::post('/reseller-deposit', [Isp\ResellerRequestController::class, 'deposit'])->name('isp.resellerRequests.deposit');
+
+    Route::get('/payment-gateways', [Isp\PaymentGatewayController::class, 'create'])->name('isp.paymentGateways');
+    Route::post('/get-payment-gateways', [Isp\PaymentGatewayController::class, 'index'])->name('isp.paymentGateways.index');
+    Route::post('/payment-gateway', [Isp\PaymentGatewayController::class, 'store'])->name('isp.paymentGateway.store');
+    Route::get('/online-payments', [Isp\OnlinePaymentController::class, 'create'])->name('isp.onlinePayments');
+    Route::post('/get-online-payments', [Isp\OnlinePaymentController::class, 'index'])->name('isp.onlinePayments.index');
+    Route::post('/online-payment-approve', [Isp\OnlinePaymentController::class, 'approve'])->name('isp.onlinePayment.approve');
+    Route::post('/online-payment-reject', [Isp\OnlinePaymentController::class, 'reject'])->name('isp.onlinePayment.reject');
+
+    Route::get('/connections', [Isp\ConnectionController::class, 'create'])->name('isp.connections');
+    Route::post('/get-connections', [Isp\ConnectionController::class, 'index'])->name('isp.connections.index');
+    Route::post('/get-connection', [Isp\ConnectionController::class, 'show'])->name('isp.connection.show');
+    Route::post('/get-connection-secret', [Isp\ConnectionController::class, 'secret'])->name('isp.connection.secret');
+    Route::post('/connection', [Isp\ConnectionController::class, 'store'])->name('isp.connection.store');
+    Route::post('/connection-action', [Isp\ConnectionController::class, 'action'])->name('isp.connection.action');
+    Route::post('/connection-change-package', [Isp\ConnectionController::class, 'changePackage'])->name('isp.connection.package');
+    Route::post('/connection-sync', [Isp\ConnectionController::class, 'sync'])->name('isp.connection.sync');
+    Route::post('/connection-online', [Isp\ConnectionController::class, 'online'])->name('isp.connection.online');
+    Route::post('/connection-verify', [Isp\ConnectionController::class, 'verify'])->middleware('throttle:30,1')->name('isp.connection.verify');
+    Route::post('/connection-terminal', [Isp\ConnectionController::class, 'terminal'])->middleware('throttle:60,1')->name('isp.connection.terminal');
+
+    Route::get('/routers', [Isp\RouterController::class, 'create'])->name('isp.routers');
+    Route::post('/get-routers', [Isp\RouterController::class, 'index'])->name('isp.routers.index');
+    Route::post('/router', [Isp\RouterController::class, 'store'])->name('isp.router.store');
+    Route::post('/router-test', [Isp\RouterController::class, 'test'])->name('isp.router.test');
+    Route::post('/router-sessions', [Isp\RouterController::class, 'sessions'])->name('isp.router.sessions');
+    Route::post('/router-sync-all', [Isp\RouterController::class, 'syncAll'])->name('isp.router.sync');
+    Route::post('/delete-router', [Isp\RouterController::class, 'destroy'])->name('isp.router.delete');
+
+    Route::get('/customer/{id}', [Isp\CustomerProfileController::class, 'show'])->whereNumber('id')->name('isp.customer.show');
+    Route::post('/get-customer-profile', [Isp\CustomerProfileController::class, 'data'])->name('isp.customer.data');
+    Route::post('/get-customer-statement', [Isp\CustomerProfileController::class, 'ledger'])->name('isp.customer.ledger');
+
+    Route::get('/invoices', [Isp\InvoiceController::class, 'create'])->name('isp.invoices');
+    Route::post('/get-invoices', [Isp\InvoiceController::class, 'index'])->name('isp.invoices.index');
+    Route::post('/get-invoice', [Isp\InvoiceController::class, 'show'])->name('isp.invoice.show');
+    Route::post('/invoice', [Isp\InvoiceController::class, 'store'])->name('isp.invoice.store');
+    Route::post('/invoice-issue', [Isp\InvoiceController::class, 'issue'])->name('isp.invoice.issue');
+    Route::post('/invoice-void', [Isp\InvoiceController::class, 'void'])->name('isp.invoice.void');
+    Route::post('/invoice-note', [Isp\InvoiceController::class, 'note'])->name('isp.invoice.note');
+    Route::post('/invoice-generate', [Isp\InvoiceController::class, 'generate'])->name('isp.invoice.generate');
+
+    Route::get('/payments', [Isp\PaymentController::class, 'create'])->name('isp.payments');
+    Route::post('/get-payments', [Isp\PaymentController::class, 'index'])->name('isp.payments.index');
+    Route::post('/get-payment', [Isp\PaymentController::class, 'show'])->name('isp.payment.show');
+    Route::post('/get-customer-dues', [Isp\PaymentController::class, 'customerDues'])->name('isp.customer.dues');
+    Route::post('/payment', [Isp\PaymentController::class, 'store'])->name('isp.payment.store');
+    Route::post('/payment-reverse', [Isp\PaymentController::class, 'reverse'])->name('isp.payment.reverse');
+    Route::post('/payment-reallocate', [Isp\PaymentController::class, 'reallocate'])->name('isp.payment.reallocate');
+    Route::post('/payment-refund', [Isp\PaymentController::class, 'refund'])->name('isp.payment.refund');
+
+    Route::post('/get-dashboard', [Isp\ReportController::class, 'dashboard'])->name('isp.dashboard');
+    Route::get('/due-report', [Isp\ReportController::class, 'dueReport'])->name('isp.due.report');
+    Route::post('/get-due-report', [Isp\ReportController::class, 'getDueReport'])->name('isp.due.report.data');
+    Route::post('/get-due-summary', [Isp\ReportController::class, 'dueSummary'])->name('isp.due.summary');
+    Route::get('/collection-report', [Isp\ReportController::class, 'collectionReport'])->name('isp.collection.report');
+    Route::post('/get-collection-report', [Isp\ReportController::class, 'getCollectionReport'])->name('isp.collection.report.data');
+
+    Route::get('/settings', [Isp\SettingController::class, 'create'])->name('isp.settings');
+    Route::post('/get-settings', [Isp\SettingController::class, 'show'])->name('isp.settings.show');
+    Route::post('/settings', [Isp\SettingController::class, 'update'])->name('isp.settings.update');
+
+    Route::get('/audit-log', [Isp\AuditLogController::class, 'create'])->name('isp.audit');
+    Route::post('/get-audit-log', [Isp\AuditLogController::class, 'index'])->name('isp.audit.index');
+});

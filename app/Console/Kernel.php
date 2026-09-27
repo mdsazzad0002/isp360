@@ -15,7 +15,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        //
+        // ISP billing. Both are idempotent, so a missed or repeated run is harmless.
+        $schedule->command('isp:generate-invoices')->dailyAt('00:30')->withoutOverlapping();
+        $schedule->command('isp:process-overdue')->dailyAt('01:00')->withoutOverlapping();
     }
 
     /**

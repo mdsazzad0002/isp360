@@ -33,7 +33,8 @@ class AccountHead extends Model
     public static function getCashBalance($request, $date = null)
     {
         $request = (object)$request;
-        $branchId = !empty($request->branchId) ? $request->branchId : session('branch')->id;
+        $branchId = (int) session('branch')->id;
+        $date = sqlDate($date);
 
         $query = "select
                 /* Received */

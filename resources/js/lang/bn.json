@@ -83,10 +83,19 @@
             "production": "উৎপাদন",
             "accounts": "হিসাব",
             "hr": "এইচআর",
-            "reports": "রিপোর্ট",
+            "reports": "হিসাব রিপোর্ট",
             "control": "কন্ট্রোল প্যানেল",
             "userManage": "ইউজার ম্যানেজ",
-            "setting": "সেটিং"
+            "setting": "সেটিং",
+            "ispCustomers": "গ্রাহক",
+            "ispBilling": "বিলিং ও কালেকশন",
+            "ispNetwork": "মাইক্রোটিক ও প্যাকেজ",
+            "ispLocation": "ঠিকানা সেটআপ",
+            "banking": "ব্যাংকিং",
+            "billingReports": "বিলিং রিপোর্ট",
+            "sms": "এসএমএস ম্যানেজমেন্ট",
+            "logs": "লগ ও অডিট",
+            "recycleBin": "রিসাইকেল বিন"
         },
         "items": {
             "sale": "বিক্রয় এন্ট্রি",
@@ -159,6 +168,13 @@
             "advanceSetting": "অ্যাডভান্স সেটিং",
             "bankLedger": "ব্যাংক খতিয়ান",
             "cashBankLedger": "নগদ ও ব্যাংক খতিয়ান"
+        },
+        "sections": {
+            "customers": "গ্রাহক",
+            "network": "নেটওয়ার্ক",
+            "finance": "ফিন্যান্স",
+            "reports": "রিপোর্ট",
+            "admin": "অ্যাডমিন"
         }
     },
     "pos": {

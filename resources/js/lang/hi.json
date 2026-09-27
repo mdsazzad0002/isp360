@@ -83,10 +83,19 @@
             "production": "उत्पादन",
             "accounts": "खाते",
             "hr": "एचआर",
-            "reports": "रिपोर्ट",
+            "reports": "खाता रिपोर्ट",
             "control": "नियंत्रण पैनल",
             "userManage": "उपयोगकर्ता प्रबंधन",
-            "setting": "सेटिंग"
+            "setting": "सेटिंग",
+            "ispCustomers": "ग्राहक",
+            "ispBilling": "बिलिंग और संग्रह",
+            "ispNetwork": "माइक्रोटिक और पैकेज",
+            "ispLocation": "पता सेटअप",
+            "banking": "बैंकिंग",
+            "billingReports": "बिलिंग रिपोर्ट",
+            "sms": "एसएमएस प्रबंधन",
+            "logs": "लॉग और ऑडिट",
+            "recycleBin": "रीसायकल बिन"
         },
         "items": {
             "sale": "बिक्री एंट्री",
@@ -159,6 +168,13 @@
             "advanceSetting": "एडवांस सेटिंग",
             "bankLedger": "बैंक खाता बही",
             "cashBankLedger": "नकद व बैंक खाता बही"
+        },
+        "sections": {
+            "customers": "ग्राहक",
+            "network": "नेटवर्क",
+            "finance": "वित्त",
+            "reports": "रिपोर्ट",
+            "admin": "एडमिन"
         }
     },
     "pos": {

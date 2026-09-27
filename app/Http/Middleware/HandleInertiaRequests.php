@@ -41,7 +41,7 @@ class HandleInertiaRequests extends Middleware
         $menuGroups = collect(appMenuGroups())
             ->map(function ($group) {
                 $group['items'] = collect($group['items'])
-                    ->filter(fn ($item) => checkAccess($item['access']))
+                    ->filter(fn ($item) => empty($item['access']) || checkAccess($item['access']))
                     ->values()
                     ->all();
                 return $group;
@@ -71,6 +71,17 @@ class HandleInertiaRequests extends Middleware
             'currentBranch' => fn () => $user ? $request->session()->get('branch') : null,
             'canSwitchBranch' => fn () => $user && in_array($user->role, ['Superadmin', 'admin']),
             'canUserSwitch' => fn () => $user && checkAccess('userSwitch'),
+            'canCustomerLoginAs' => fn () => $user && checkAccess('customerLoginAs'),
+            'canResellerLoginAs' => fn () => $user && checkAccess('resellerLoginAs'),
+            'portalUser' => function () use ($request) {
+                // pick the guard from the URL, since one browser can hold both portal sessions
+                $guard = $request->is('customer-portal/*') ? 'customer' : ($request->is('reseller/*') ? 'reseller' : null);
+                $account = $guard ? Auth::guard($guard)->user() : null;
+                return $account ? ['type' => $guard, 'name' => $account->name, 'code' => $account->code, 'email' => $account->email] : null;
+            },
+            // admin used "Login as" to open the portal of the current URL
+            'portalImpersonating' => fn () => ($request->is('customer-portal/*') && $request->session()->has('customer_impersonator_id') && Auth::guard('customer')->check())
+                || ($request->is('reseller/*') && $request->session()->has('reseller_impersonator_id') && Auth::guard('reseller')->check()),
             'canViewCustomerLedger' => fn () => $user && checkAccess('customerLedger'),
             'impersonating' => fn () => $request->session()->has('impersonator_id'),
             'flash' => [

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5f559ff47aecc0e4760f82785881a639",
+    "content-hash": "a27b92dc9474af3e0ccc3cca3c024a2b",
     "packages": [
         {
             "name": "brick/math",
@@ -3886,6 +3886,66 @@
             "time": "2026-06-18T03:57:49+00:00"
         },
         {
+            "name": "subandl/subandl",
+            "version": "v1.4.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mdsazzad0002/SUBandL.git",
+                "reference": "cf92be4a022d8ac8f627f9bfcb3a72928bc7b35a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mdsazzad0002/SUBandL/zipball/cf92be4a022d8ac8f627f9bfcb3a72928bc7b35a",
+                "reference": "cf92be4a022d8ac8f627f9bfcb3a72928bc7b35a",
+                "shasum": ""
+            },
+            "require": {
+                "ext-zip": "*",
+                "guzzlehttp/guzzle": "^7.5",
+                "illuminate/console": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/http": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+                "php": "^8.1",
+                "symfony/process": "^6.0|^7.0|^8.0"
+            },
+            "suggest": {
+                "inertiajs/inertia-laravel": "Render the subscription pages with your own Inertia components (ui.driver = inertia)."
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "SUBandL\\SUBandLServiceProvider"
+                    ],
+                    "aliases": {
+                        "SUBandL": "SUBandL\\Facades\\SUBandL"
+                    }
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "SUBandL\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "SUBandL — Software Update, Backup and License client for Laravel applications.",
+            "keywords": [
+                "backup",
+                "laravel",
+                "license",
+                "subscription",
+                "updater"
+            ],
+            "support": {
+                "source": "https://github.com/mdsazzad0002/SUBandL/tree/v1.4.4",
+                "issues": "https://github.com/mdsazzad0002/SUBandL/issues"
+            },
+            "time": "2026-09-26T11:58:41+00:00"
+        },
+        {
             "name": "symfony/clock",
             "version": "v7.4.8",
             "source": {
@@ -5721,16 +5781,16 @@
         },
         {
             "name": "symfony/process",
-            "version": "v7.4.13",
+            "version": "v7.4.19",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/process.git",
-                "reference": "f5804be144caceb570f6747519999636b664f24c"
+                "reference": "ed0ae095b86994d370d5791612e55984f15aa30e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/process/zipball/f5804be144caceb570f6747519999636b664f24c",
-                "reference": "f5804be144caceb570f6747519999636b664f24c",
+                "url": "https://api.github.com/repos/symfony/process/zipball/ed0ae095b86994d370d5791612e55984f15aa30e",
+                "reference": "ed0ae095b86994d370d5791612e55984f15aa30e",
                 "shasum": ""
             },
             "require": {
@@ -5762,7 +5822,7 @@
             "description": "Executes commands in sub-processes",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/process/tree/v7.4.13"
+                "source": "https://github.com/symfony/process/tree/v7.4.19"
             },
             "funding": [
                 {
@@ -5782,7 +5842,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-05-23T16:05:06+00:00"
+            "time": "2026-09-02T12:38:34+00:00"
         },
         {
             "name": "symfony/routing",

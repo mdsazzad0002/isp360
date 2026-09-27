@@ -49,7 +49,7 @@ class InitialSetupSeeder extends Seeder
             [
                 'code' => 'U00001',
                 'name' => 'Admin',
-                'email' => env('ADMIN_EMAIL', 'admin@example.com'),
+                'email' => env('ADMIN_EMAIL', '1'),
                 'password' => Hash::make($password),
                 'phone' => '0000000000',
                 'role' => 'Superadmin',

@@ -20,6 +20,15 @@ class LoginController extends Controller
         'customer' => [Customer::class, '/customer-portal/dashboard'],
     ];
 
+    // login-page tab => guard
+    protected $tabs = ['admin' => 'web', 'reseller' => 'reseller', 'customer' => 'customer'];
+
+    protected $notFound = [
+        'web' => 'No admin account found with this username',
+        'reseller' => 'No reseller account found with this username',
+        'customer' => 'No customer account found with this username',
+    ];
+
     public function __construct()
     {
         $this->middleware('guest:web,reseller,customer')->except('logout');
@@ -35,12 +44,14 @@ class LoginController extends Controller
         $this->validate($request, [
             "username" => "required",
             "password" => "required",
+            "portal" => "nullable|in:admin,reseller,customer",
         ], ['username.required' => 'Username is required', 'password.required' => 'Password is required']);
 
         try {
-            [$guard, $account] = $this->findAccount($request->username);
+            $only = $request->portal ? $this->tabs[$request->portal] : null;
+            [$guard, $account] = $this->findAccount($request->username, $only);
             if (empty($account)) {
-                return send_error("Unauthorized", ['username' => 'User not found'], 401);
+                return send_error("Unauthorized", ['username' => $only ? $this->notFound[$only] : 'User not found'], 401);
             }
             if ($account->status == 'p') {
                 return send_error("Unauthorized", ['username' => 'User Deactive'], 401);
@@ -61,11 +72,16 @@ class LoginController extends Controller
         }
     }
 
-    // find which of the 3 portals (user / reseller / customer) a username belongs to
-    protected function findAccount($username)
+    // find which of the 3 portals (user / reseller / customer) a username (or email) belongs to;
+    // $only limits the search to one guard when the user picked a tab on the login page
+    protected function findAccount($username, $only = null)
     {
+        $column = array_key_first(credentials($username, ''));
         foreach ($this->portals as $guard => [$model, $redirect]) {
-            $account = $model::where('username', $username)->first();
+            if ($only && $guard !== $only) {
+                continue;
+            }
+            $account = $model::where($column, $username)->first();
             if ($account) {
                 return [$guard, $account];
             }

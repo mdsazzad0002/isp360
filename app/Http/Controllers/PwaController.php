@@ -15,7 +15,7 @@ class PwaController extends Controller
     {
         $company = company();
         $sizes = $company?->favicon_sizes ?? [];
-        $name = $company?->title ?: 'BMS POS';
+        $name = $company?->title ?: 'ISP360';
 
         $fallback = $company?->favicon ? '/' . $company->favicon : ($company?->logo ? '/' . $company->logo : '/favicon.ico');
         $icon192 = isset($sizes['192']) ? '/' . $sizes['192'] : $fallback;

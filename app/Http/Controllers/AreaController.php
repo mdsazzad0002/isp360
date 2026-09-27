@@ -25,7 +25,7 @@ class AreaController extends Controller
 
     public function index(Request $request)
     {
-        $unit = Area::with('adUser', 'upUser', 'deUser')->latest()->get();
+        $unit = Area::with('adUser', 'upUser', 'deUser', 'zone')->withCount(['boxes', 'customers'])->latest()->get();
         return response()->json($unit);
     }
 
@@ -43,6 +43,9 @@ class AreaController extends Controller
 
     public function store(Request $request)
     {
+        if (!checkAccess('area')) {
+            return send_error('You are not authorized for this action', null, 403);
+        }
         $branchId = $this->branchId;
         $validator = Validator::make($request->all(), [
             'name'     => [
@@ -53,15 +56,20 @@ class AreaController extends Controller
                     })
                     ->whereNull('deleted_at'),
             ],
+            'zone_id' => 'nullable|integer|exists:zones,id',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
-            $check = Area::where('name', $request->name)->withTrashed()->first();
+            $check = Area::where('name', $request->name)->where('branch_id', $this->branchId)->withTrashed()->first();
             if (!empty($check) && $check->deleted_at != NULL) {
                 $check->status = 'a';
                 $check->deleted_by = NULL;
                 $check->deleted_at = NULL;
+                if ($request->filled('zone_id')) {
+                    $check->zone_id = $request->zone_id;
+                }
                 $check->update();
+                $data = $check;
             } else {
                 $data = new Area();
                 $dataKey = $request->except('id');
@@ -74,7 +82,7 @@ class AreaController extends Controller
                 $data->save();
             }
 
-            return response()->json(['status' => true, 'message' => "Area has created successfully"]);
+            return response()->json(['status' => true, 'message' => "Area has created successfully", 'id' => $data->id]);
         } catch (\Throwable $th) {
             return send_error('Something went wrong', $th->getMessage());
         }
@@ -82,6 +90,9 @@ class AreaController extends Controller
 
     public function update(Request $request)
     {
+        if (!checkAccess('area')) {
+            return send_error('You are not authorized for this action', null, 403);
+        }
         $branchId = $this->branchId;
         $validator = Validator::make($request->all(), [
             'name'     => [
@@ -115,8 +126,14 @@ class AreaController extends Controller
 
     public function destroy(Request $request)
     {
+        if (!checkAccess('area')) {
+            return send_error('You are not authorized for this action', null, 403);
+        }
         try {
             $data = Area::find($request->id);
+            if ($data && ($data->boxes()->exists() || \App\Models\Customer::where('area_id', $data->id)->exists())) {
+                return send_error('This area still has boxes or customers. Move them first.', null, 422);
+            }
             $data->deleted_by = $this->userId;
             $data->status = 'd';
             $data->ipAddress = request()->ip();

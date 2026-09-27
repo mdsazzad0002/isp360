@@ -166,7 +166,7 @@ class PaymentController extends Controller
             }
             $data = new Payment();
             $data->invoice = $invoice;
-            $dataKey = $request->except('id');
+            $dataKey = $request->except('id', 'refund_id');
             foreach ($dataKey as $key => $value) {
                 $data[$key] = $value;
             }
@@ -187,6 +187,9 @@ class PaymentController extends Controller
         if (!$request->validated()) return send_error("Validation Error", $request->validated(), 422);
         try {
             $data = Payment::find($request->id);
+            if ($data && $data->refund_id) {
+                return send_error('This entry is an ISP refund and cannot be changed here.', null, 422);
+            }
             $amount = (float) ($request->amount ?? 0);
             $previousAmount = (float) ($data->amount ?? 0);
             $sameAccount = $data->payment_method === $request->payment_method
@@ -198,7 +201,7 @@ class PaymentController extends Controller
                     return send_error($balanceError, $balanceError, 422);
                 }
             }
-            $dataKey = $request->except('id');
+            $dataKey = $request->except('id', 'refund_id');
             foreach ($dataKey as $key => $value) {
                 $data[$key] = $value;
             }
@@ -222,6 +225,9 @@ class PaymentController extends Controller
     {
         try {
             $data = Payment::find($request->id);
+            if ($data && $data->refund_id) {
+                return send_error('This entry is an ISP refund and cannot be changed here.', null, 422);
+            }
             $data->deleted_by = $this->userId;
             $data->status = 'd';
             $data->ipAddress = request()->ip();

@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 import SearchSelect from '../../../Components/SearchSelect.vue';
 import Pagination from '../../../Components/Pagination.vue';
 import AppLayout from '../../../Layouts/AppLayout.vue';
-import CustomerLedgerOffcanvas from './CustomerLedgerOffcanvas.vue';
+import CustomerIspLedgerOffcanvas from './CustomerIspLedgerOffcanvas.vue';
 import { useToast } from '../../../lib/toast';
 import { resizeImageFile } from '../../../lib/imageResize';
 import { printDocument } from '../../../lib/print';
@@ -33,12 +33,19 @@ function emptyForm() {
         image: '',
         username: '',
         password: '',
+        nid: '',
+        date_of_birth: '',
+        billing_address: '',
+        notes: '',
+        account_status: 'active',
     };
 }
 
 const form = reactive(emptyForm());
 const areas = ref([]);
 const selectedArea = ref(null);
+const boxes = ref([]);
+const selectedBox = ref(null);
 const resellers = ref([]);
 const selectedReseller = ref(null);
 const rows = ref([]);
@@ -64,6 +71,20 @@ function getAreas() {
     axios.post('/get-area').then((res) => {
         areas.value = res.data;
     });
+}
+
+function getBoxes() {
+    axios.post('/isp/get-boxes').then((res) => {
+        boxes.value = res.data;
+    });
+}
+
+// Picking a box fills its area (and the area's zone) so the location hierarchy stays consistent.
+function onBoxChange(box) {
+    if (box?.area_id) {
+        const area = areas.value.find((a) => a.id === box.area_id);
+        if (area) selectedArea.value = area;
+    }
 }
 
 function getResellers() {
@@ -317,6 +338,7 @@ async function startImport() {
 function resetForm() {
     Object.assign(form, emptyForm());
     selectedArea.value = null;
+    selectedBox.value = null;
     selectedReseller.value = null;
     imageSrc.value = '/noImage.jpg';
     onProgress.value = false;
@@ -329,6 +351,8 @@ async function saveData() {
         const res = await axios.post(url, {
             ...form,
             area_id: selectedArea.value ? selectedArea.value.id : '',
+            zone_id: selectedArea.value ? (areas.value.find((a) => a.id === selectedArea.value.id)?.zone_id ?? null) : null,
+            box_id: selectedBox.value ? selectedBox.value.id : null,
             reseller_id: selectedReseller.value ? selectedReseller.value.id : '',
         });
         toast.success(res.data.message);
@@ -362,7 +386,13 @@ function editRow(row) {
         image: row.image,
         username: row.username ?? '',
         password: '',
+        nid: row.nid ?? '',
+        date_of_birth: row.date_of_birth ?? '',
+        billing_address: row.billing_address ?? '',
+        notes: row.notes ?? '',
+        account_status: row.account_status ?? 'active',
     });
+    selectedBox.value = row.box_id ? boxes.value.find((b) => b.id === row.box_id) || null : null;
     selectedArea.value = { id: row.area_id, name: row.area?.name };
     selectedReseller.value = row.reseller_id ? { id: row.reseller_id, name: row.reseller?.name } : null;
     imageSrc.value = row.image ? '/' + row.image : '/noImage.jpg';
@@ -390,6 +420,7 @@ async function onImageChange(e) {
 
 onMounted(() => {
     getAreas();
+    getBoxes();
     getResellers();
     load();
 });
@@ -405,13 +436,23 @@ onMounted(() => {
                         <label class="mb-1 block text-xs font-medium text-slate-600">Name</label>
                         <input type="text" autocomplete="off" v-model="form.name" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                     </div>
-                    <div>
-                        <label class="mb-1 block text-xs font-medium text-slate-600">Owner</label>
-                        <input type="text" autocomplete="off" v-model="form.owner" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">NID</label>
+                            <input type="text" autocomplete="off" v-model="form.nid" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
+                        <div class="flex-1">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Date of Birth</label>
+                            <input type="date" v-model="form.date_of_birth" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                        </div>
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-slate-600">Address</label>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Service Address</label>
                         <input type="text" autocomplete="off" v-model="form.address" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Billing Address <span class="font-normal text-slate-400">(if different)</span></label>
+                        <input type="text" autocomplete="off" v-model="form.billing_address" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                     </div>
                     <div>
                         <div class="mb-1 flex items-center justify-between">
@@ -421,6 +462,10 @@ onMounted(() => {
                             </button>
                         </div>
                         <SearchSelect :options="areas" v-model="selectedArea" label="name" placeholder="Select area" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Box</label>
+                        <SearchSelect :options="boxes" v-model="selectedBox" label="display_name" placeholder="Select box" @update:model-value="onBoxChange" />
                     </div>
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Mobile</label>
@@ -454,8 +499,8 @@ onMounted(() => {
                     </div>
                     <div class="flex gap-3">
                         <div class="flex-1">
-                            <label class="mb-1 block text-xs font-medium text-slate-600">Prev. Due</label>
-                            <input type="number" min="0" step="any" v-model="form.previous_due" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Opening Due</label>
+                            <input type="number" min="0" step="any" v-model="form.previous_due" :disabled="form.id != ''" :title="form.id != '' ? 'Opening due is billed once on creation. Use a manual invoice or credit note to correct it.' : 'Creates an opening balance invoice'" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm disabled:bg-slate-50" />
                         </div>
                         <div class="flex-1">
                             <label class="mb-1 block text-xs font-medium text-slate-600">Credit Limit</label>
@@ -464,6 +509,11 @@ onMounted(() => {
                     </div>
                     <div class="flex gap-3">
                         <div class="flex-1">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Account Status</label>
+                            <select v-model="form.account_status" class="mb-2 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
                             <label class="mb-1 block text-xs font-medium text-slate-600">Is Member</label>
                             <select v-model="form.is_membership" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm">
                                 <option value="no">No</option>
@@ -474,6 +524,10 @@ onMounted(() => {
                             <label class="mb-1 block text-xs font-medium text-slate-600">Amount</label>
                             <input type="number" min="0" step="any" v-model="form.amount" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                         </div>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Notes</label>
+                        <input type="text" autocomplete="off" v-model="form.notes" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                     </div>
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Customer Type</label>
@@ -550,7 +604,7 @@ onMounted(() => {
                             <th class="px-2 py-2 font-medium">Type</th>
                             <th class="px-2 py-2 font-medium">Mobile</th>
                             <th class="px-2 py-2 font-medium">Area</th>
-                            <th class="px-2 py-2 font-medium">Prev. Due</th>
+                            <th class="px-2 py-2 font-medium">Current Due</th>
                             <th class="px-2 py-2 font-medium">Credit Limit</th>
                             <th class="px-2 py-2 font-medium">Member</th>
                             <th class="px-2 py-2 font-medium">Point</th>
@@ -562,12 +616,14 @@ onMounted(() => {
                         <tr v-for="row in rows" :key="row.id" class="border-b border-slate-100 hover:bg-slate-50">
                             <td class="px-2 py-1.5">{{ row.sl }}</td>
                             <td class="px-2 py-1.5">{{ row.code }}</td>
-                            <td class="px-2 py-1.5">{{ row.name }}</td>
+                            <td class="px-2 py-1.5">
+                                <button type="button" class="text-left font-medium text-brand-600 hover:underline" title="Open ledger" @click="openLedger(row)">{{ row.name }}</button>
+                            </td>
                             <td class="px-2 py-1.5">{{ row.owner }}</td>
                             <td class="px-2 py-1.5 capitalize">{{ row.type }}</td>
                             <td class="px-2 py-1.5">{{ row.phone }}</td>
                             <td class="px-2 py-1.5">{{ row.area?.name }}</td>
-                            <td class="px-2 py-1.5">{{ row.previous_due }}</td>
+                            <td class="px-2 py-1.5"><span :class="Number(row.ledger_balance) > 0 ? 'font-medium text-red-600' : ''">{{ row.ledger_balance }}</span></td>
                             <td class="px-2 py-1.5">{{ row.credit_limit }}</td>
                             <td class="px-2 py-1.5">{{ row.is_membership === 'yes' ? 'Yes' : 'No' }}</td>
                             <td class="px-2 py-1.5">{{ row.point }}</td>
@@ -578,7 +634,17 @@ onMounted(() => {
                             </td>
                             <td class="px-2 py-1.5">
                                 <div class="flex justify-end gap-3">
-                                    <i @click="openLedger(row)" title="Ledger" class="bi bi-journal-text cursor-pointer text-slate-500 hover:text-brand-600"></i>
+                                    <Link :href="`/isp/customer/${row.id}`" title="Customer 360 (connections, invoices, payments, ledger)" class="text-slate-500 hover:text-brand-600"><i class="bi bi-person-lines-fill"></i></Link>
+                                    <a
+                                        v-if="page.props.canCustomerLoginAs"
+                                        :href="`/customer/${row.id}/login-as`"
+                                        target="_blank"
+                                        rel="noopener"
+                                        title="Login to this customer's portal"
+                                        class="text-emerald-600 hover:text-emerald-700"
+                                    >
+                                        <i class="bi bi-box-arrow-in-right"></i>
+                                    </a>
                                     <i @click="editRow(row)" title="edit" class="bi bi-pen cursor-pointer text-brand-500"></i>
                                     <i @click="deleteRow(row.id)" title="delete" class="bi bi-trash cursor-pointer text-red-500"></i>
                                 </div>
@@ -769,7 +835,7 @@ onMounted(() => {
             </div>
         </Teleport>
 
-        <CustomerLedgerOffcanvas v-model="showLedgerOffcanvas" :customer="ledgerCustomer ?? {}" />
+        <CustomerIspLedgerOffcanvas v-model="showLedgerOffcanvas" :customer="ledgerCustomer ?? {}" @changed="load" />
     </div>
 </template>
 

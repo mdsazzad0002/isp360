@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $company->title ?? 'App' }}</title>
 
-    <meta name="description" content="{{ $company->title ?? 'BMS POS' }} — Point of Sale & Business Management System">
+    <meta name="description" content="{{ $company->title ?? 'ISP360' }} — Point of Sale & Business Management System">
     <meta name="theme-color" content="#0ea5e9">
     @php
         $faviconSizes = optional($company)->favicon_sizes ?? [];
@@ -22,7 +22,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="{{ $icon180 }}">
     <link rel="manifest" href="/manifest.webmanifest">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="{{ $company->title ?? 'BMS POS' }}">
+    <meta name="apple-mobile-web-app-title" content="{{ $company->title ?? 'ISP360' }}">
     <meta name="mobile-web-app-capable" content="yes">
     <script>
         (function () {

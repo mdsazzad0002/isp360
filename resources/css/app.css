@@ -493,3 +493,8 @@
 .dark .border-yellow-400 {
     border-color: var(--color-yellow-500);
 }
+
+/* SweetAlert dialogs (confirm / reason prompts) must sit above modals & offcanvases (z 2100–2130). */
+.swal2-container {
+    z-index: 2160 !important;
+}
