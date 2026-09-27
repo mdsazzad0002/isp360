@@ -1,5 +1,7 @@
 # isp306: Global ISP Platform Roadmap and Gap Analysis
 
+> **2026-09-30:** an audit found critical permission, branch-isolation and upload issues in the older modules. See [AUDIT_AND_ROADMAP_V2.md](AUDIT_AND_ROADMAP_V2.md) for the findings and the new priority order (Phase 0 security hardening first).
+
 **Date:** 2026-09-27
 **Branch reviewed:** `multibank`
 **Goal:** run isp306 as an ISP business platform in any country, for any size of ISP, from one codebase.
