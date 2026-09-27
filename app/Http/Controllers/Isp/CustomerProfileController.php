@@ -54,7 +54,9 @@ class CustomerProfileController extends IspController
             'connections' => $connections,
             'invoices' => $invoices,
             'payments' => $payments,
+            'deposits' => \App\Models\CustomerDeposit::with('connection')->where('customer_id', $customer->id)->latest('id')->get(),
             'summary' => [
+                'deposit_held' => \App\Services\Isp\DepositService::held($customer->id),
                 'balance' => LedgerService::balance($customer->id),
                 'advance' => CollectionService::advanceCredit($customer->id),
                 'open_due' => Money::round((float) $invoices->whereIn('status', Invoice::OPEN_STATUSES)->sum('due')),

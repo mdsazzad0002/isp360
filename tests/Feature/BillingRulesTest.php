@@ -284,4 +284,36 @@ class BillingRulesTest extends TestCase
         $this->api('/isp/connection-action', ['id' => $other->id, 'action' => 'terminate', 'reason' => 'Closed'])->assertOk();
         $this->assertEquals(0.0, (float) Customer::find($other->customer_id)->ledger_balance);
     }
+
+    public function test_security_deposit_is_held_apart_then_applied_or_refunded(): void
+    {
+        $connection = $this->paidConnection(pay: false); // bill of 1000 due
+        $customerId = $connection->customer_id;
+        $receives = \Illuminate\Support\Facades\DB::table('receives')->count();
+        $statusBefore = $connection->fresh()->status;
+
+        $this->api('/isp/deposit', ['customer_id' => $customerId, 'amount' => 2000, 'method' => 'bank'])->assertStatus(422); // account needed
+        $id = $this->api('/isp/deposit', ['customer_id' => $customerId, 'connection_id' => $connection->id, 'amount' => 2000, 'method' => 'cash', 'notes' => 'ONU'])->assertOk()->json('id');
+        $deposit = \App\Models\CustomerDeposit::findOrFail($id);
+        // in the cash book, but not in the customer's balance: the bill is still due
+        $this->assertSame($receives + 1, \Illuminate\Support\Facades\DB::table('receives')->count());
+        $this->assertEquals(1000.0, (float) Customer::find($customerId)->ledger_balance);
+        $this->assertSame($statusBefore, $connection->fresh()->status); // a deposit doesn't pay the bill
+        $this->assertEquals(2000.0, $this->api('/isp/get-customer-profile', ['id' => $customerId])->json('summary.deposit_held'));
+
+        // applied to dues: pays the bill, no second cash-book entry
+        $this->api('/isp/deposit-apply', ['id' => $id, 'amount' => 1000, 'reason' => 'Moving out'])->assertOk();
+        $this->assertEquals(0.0, (float) Customer::find($customerId)->ledger_balance);
+        $this->assertSame('paid', Invoice::where('connection_id', $connection->id)->first()->status);
+        $this->assertSame($receives + 1, \Illuminate\Support\Facades\DB::table('receives')->count());
+        $this->assertSame('deposit', \App\Models\CustomerPayment::where('reference', $deposit->deposit_no)->value('method'));
+
+        // the rest is paid back, never more than is held
+        $this->api('/isp/deposit-refund', ['id' => $id, 'amount' => 1500, 'method' => 'cash', 'reason' => 'Returned'])->assertStatus(422);
+        $this->api('/isp/deposit-refund', ['id' => $id, 'amount' => 1000, 'method' => 'cash', 'reason' => 'Returned'])->assertOk();
+        $deposit->refresh();
+        $this->assertSame(['released', 0.0], [$deposit->status, $deposit->held]);
+        $this->assertSame(1, \Illuminate\Support\Facades\DB::table('payments')->where('note', 'Security deposit refund ' . $deposit->deposit_no)->count());
+        $this->artisan('isp:ledger-check')->assertSuccessful();
+    }
 }

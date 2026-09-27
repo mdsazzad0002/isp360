@@ -14,7 +14,7 @@ import ReceivePaymentForm from '../../Components/Isp/ReceivePaymentForm.vue';
 import LedgerStatement from '../../Components/Isp/LedgerStatement.vue';
 import TerminalOffcanvas from '../../Components/Isp/TerminalOffcanvas.vue';
 import SyncBadge from '../../Components/Isp/SyncBadge.vue';
-import { money, fmtDate, label, expiryClass, fmtDateTime, fmtMoney } from '../../lib/isp';
+import { money, fmtDate, label, expiryClass, fmtDateTime, fmtMoney, moneyStep, PAYMENT_METHODS, promptReason, useApiError } from '../../lib/isp';
 import { useToast } from '../../lib/toast';
 
 defineOptions({ layout: AppLayout });
@@ -22,6 +22,7 @@ const props = defineProps({ customerId: { type: Number, required: true }, can: {
 
 const data = ref(null);
 const toast = useToast();
+const showError = useApiError();
 // ?terminal=<connection id> opens the terminal on that connection
 const terminalParam = Number(new URLSearchParams(window.location.search).get('terminal')) || null;
 const tab = ref('connections');
@@ -59,7 +60,33 @@ function openReceive(invoice = null) {
     Object.assign(receive, { show: true, invoiceId: invoice?.id ?? null });
 }
 
-onMounted(load);
+// security deposits
+const depositForm = reactive({ amount: '', method: 'cash', bank_id: null, connection_id: null, notes: '' });
+const banks = ref([]);
+async function depositAction(url, payload) {
+    try {
+        toast.success((await axios.post(url, payload)).data.message);
+        Object.assign(depositForm, { amount: '', notes: '' });
+        load();
+        return true;
+    } catch (err) {
+        showError(err);
+        return false;
+    }
+}
+async function applyDeposit(d) {
+    const reason = await promptReason(`Apply ${money(d.held)} of ${d.deposit_no} to the customer's dues?`, { confirmButtonText: 'Apply', placeholder: 'Note (optional)' });
+    if (reason !== null) depositAction('/isp/deposit-apply', { id: d.id, reason });
+}
+async function refundDeposit(d) {
+    const reason = await promptReason(`Refund ${money(d.held)} of ${d.deposit_no} in cash?`, { confirmButtonText: 'Refund', text: 'Paid back in cash (cash book).', placeholder: 'Reason (required)' });
+    if (reason) depositAction('/isp/deposit-refund', { id: d.id, method: 'cash', reason });
+}
+
+onMounted(() => {
+    load();
+    axios.post('/get-bank').then((r) => (banks.value = Array.isArray(r.data) ? r.data : r.data?.data || [])).catch(() => {});
+});
 </script>
 
 <template>
@@ -94,13 +121,14 @@ onMounted(load);
                     <div class="rounded-md border border-slate-200 p-2"><div class="text-[11px] uppercase text-slate-400">Overdue</div><div class="text-lg font-semibold text-red-600">{{ money(data.summary.overdue) }}</div></div>
                     <div class="rounded-md border border-slate-200 p-2"><div class="text-[11px] uppercase text-slate-400">Advance credit</div><div class="text-lg font-semibold text-emerald-700">{{ money(data.summary.advance) }}</div></div>
                     <div class="rounded-md border border-slate-200 p-2"><div class="text-[11px] uppercase text-slate-400">Total billed</div><div class="text-lg font-semibold text-slate-800">{{ money(data.summary.total_billed) }}</div></div>
+                    <div v-if="data.summary.deposit_held > 0" class="rounded-md border border-slate-200 p-2"><div class="text-[11px] uppercase text-slate-400">Deposit held</div><div class="text-lg font-semibold text-indigo-700">{{ money(data.summary.deposit_held) }}</div></div>
                     <div class="rounded-md border border-slate-200 p-2"><div class="text-[11px] uppercase text-slate-400">Total paid</div><div class="text-lg font-semibold text-slate-800">{{ money(data.summary.total_paid) }}</div></div>
                 </div>
             </div>
 
             <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
                 <div class="flex gap-1 overflow-x-auto border-b border-slate-200 px-2">
-                    <button v-for="t in [['connections', 'Connections', data.connections.length], ['invoices', 'Invoices', data.invoices.length], ['payments', 'Payments', data.payments.length], ['ledger', 'Ledger', null]]" :key="t[0]" type="button"
+                    <button v-for="t in [['connections', 'Connections', data.connections.length], ['invoices', 'Invoices', data.invoices.length], ['payments', 'Payments', data.payments.length], ['deposits', 'Deposits', data.deposits.length], ['ledger', 'Ledger', null]]" :key="t[0]" type="button"
                         class="whitespace-nowrap border-b-2 px-3 py-2.5 text-sm" :class="tab === t[0] ? 'border-brand-500 font-medium text-brand-600' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="tab = t[0]">
                         {{ t[1] }} <span v-if="t[2] !== null" class="text-xs text-slate-400">({{ t[2] }})</span>
                     </button>
@@ -165,6 +193,47 @@ onMounted(load);
                             <tr v-if="!data.payments.length"><td colspan="6" class="px-2 py-6 text-center text-slate-400">No payments yet</td></tr>
                         </tbody>
                     </table>
+
+                    <div v-if="tab === 'deposits'">
+                        <form v-if="can.payment" class="mb-3 grid grid-cols-2 gap-2 rounded-md border border-slate-200 p-2 md:grid-cols-6" @submit.prevent="depositAction('/isp/deposit', { ...depositForm, customer_id: customerId })">
+                            <input v-model="depositForm.amount" type="number" min="0" :step="moneyStep()" required placeholder="Deposit amount" class="rounded-md border border-slate-300 px-2 py-1 text-sm" />
+                            <select v-model="depositForm.method" class="rounded-md border border-slate-300 px-2 py-1 text-sm">
+                                <option v-for="m in PAYMENT_METHODS.filter((x) => ['cash', 'bank', 'bkash', 'nagad', 'rocket', 'card', 'other'].includes(x.value))" :key="m.value" :value="m.value">{{ m.label }}</option>
+                            </select>
+                            <select v-if="depositForm.method !== 'cash'" v-model="depositForm.bank_id" required class="rounded-md border border-slate-300 px-2 py-1 text-sm">
+                                <option :value="null" disabled>Received into…</option>
+                                <option v-for="b in banks" :key="b.id" :value="b.id">{{ b.name }}</option>
+                            </select>
+                            <select v-model="depositForm.connection_id" class="rounded-md border border-slate-300 px-2 py-1 text-sm">
+                                <option :value="null">Any connection</option>
+                                <option v-for="c in data.connections" :key="c.id" :value="c.id">{{ c.code }}</option>
+                            </select>
+                            <input v-model="depositForm.notes" maxlength="255" placeholder="Note (e.g. router)" class="rounded-md border border-slate-300 px-2 py-1 text-sm" />
+                            <button type="submit" class="rounded-md bg-emerald-600 px-3 py-1 text-sm text-white">Receive deposit</button>
+                        </form>
+                        <table class="w-full text-sm">
+                            <thead><tr class="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
+                                <th class="px-2 py-2 font-medium">Deposit</th><th class="px-2 py-2 font-medium">Date</th><th class="px-2 py-2 font-medium">Connection</th><th class="px-2 py-2 text-right font-medium">Amount</th><th class="px-2 py-2 text-right font-medium">Held</th><th class="px-2 py-2 font-medium">Note</th><th class="px-2 py-2"></th>
+                            </tr></thead>
+                            <tbody>
+                                <tr v-for="d in data.deposits" :key="d.id" class="border-b border-slate-100">
+                                    <td class="px-2 py-2 font-medium">{{ d.deposit_no }}</td>
+                                    <td class="px-2 py-2">{{ fmtDate(d.received_date) }}</td>
+                                    <td class="px-2 py-2">{{ d.connection?.code || '—' }}</td>
+                                    <td class="px-2 py-2 text-right">{{ money(d.amount) }}</td>
+                                    <td class="px-2 py-2 text-right font-medium" :class="d.held > 0 ? 'text-indigo-700' : 'text-slate-400'">{{ money(d.held) }}</td>
+                                    <td class="px-2 py-2 text-xs text-slate-500">{{ d.notes }}</td>
+                                    <td class="px-2 py-2 text-right">
+                                        <template v-if="d.held > 0">
+                                            <button v-if="can.payment" type="button" class="mr-1 rounded border border-slate-300 px-2 py-0.5 text-xs" @click="applyDeposit(d)">Apply to dues</button>
+                                            <button v-if="can.refund" type="button" class="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600" @click="refundDeposit(d)">Refund</button>
+                                        </template>
+                                    </td>
+                                </tr>
+                                <tr v-if="!data.deposits.length"><td colspan="7" class="px-2 py-6 text-center text-slate-400">No deposits. A deposit is held for the customer and never pays bills unless applied.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
 
                     <LedgerStatement v-if="tab === 'ledger'" ref="ledgerRef" :customer="data.customer" />
                 </div>

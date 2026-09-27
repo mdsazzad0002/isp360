@@ -13,6 +13,7 @@ class IspSettings
         'credit_note_prefix' => 'CN',
         'debit_note_prefix' => 'DN',
         'refund_prefix' => 'RF',
+        'deposit_prefix' => 'DP',
         'connection_prefix' => 'CON',
         // manual invoices: days after the invoice date they fall due
         'due_days' => 10,

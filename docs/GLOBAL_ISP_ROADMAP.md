@@ -134,7 +134,7 @@ Most ISPs outside small BD markets use **RADIUS** (FreeRADIUS) with Cisco/Junipe
 - [ ] Customer contract / terms acceptance with version and timestamp (e-signature in the portal).
 - [ ] Data residency: host the installation in the country (or region) its law requires.
 
-### 2.7 Configurable billing rules per market — P0, M — **grace, notice, late fee done**
+### 2.7 Configurable billing rules per market — P0, M — **done**
 The current rules (prepaid, no grace, instant suspend) fit BD home broadband. Other markets need other rules, and some are legal limits (for example, some countries forbid disconnecting without notice).
 
 **Tasks**
@@ -145,7 +145,7 @@ The current rules (prepaid, no grace, instant suspend) fit BD home broadband. Ot
 - [x] Notice before suspension (`notice_days` + `sms_tpl_notice` with `{expire_date}` `{suspend_date}`): one SMS per paid time, recorded on the connection and in its history. With `notice_required` a line is never suspended sooner than `notice_days` after its notice (for countries that forbid disconnecting without notice).
 - [x] Late fee (fixed or percent of the unpaid amount before earlier fees, once or every 30 days up to a cap, N days after the due date), posted as an untaxed debit note; charged under a row lock so it can't double; credit notes waive it.
 - [ ] Grace/notice/late-fee defaults in the country packs, once confirmed per country.
-- [ ] Deposit / security deposit (refundable, liability account).
+- [x] Security deposit (`customer_deposits`, `DepositService`): held apart from the customer ledger (never pays a bill by itself), in the cash/bank book when received and refunded, can be applied to dues (a `deposit` payment, no second cash entry) or refunded in part or whole; shown on the customer profile (Deposits tab, deposit held).
 - [ ] Keep all of these as settings, never forks in code. Current BD behaviour = the default "country pack" (see 2.8).
 
 ### 2.8 Country packs — P0, M — **done (structure + packs)**
@@ -379,7 +379,7 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 3. ~~Per-currency rounding for 0/3-decimal currencies (2.1)~~ — done 2026-09-27
 4. ~~Country packs, BD first (2.8)~~ — done 2026-09-27
 5. ~~Tax engine on invoices (2.3)~~ — done 2026-09-27
-6. Configurable billing rules: ~~grace, notice, late fee, postpaid, proration~~ (done 2026-09-28), deposit (2.7)
+6. ~~Configurable billing rules: grace, notice, late fee, postpaid, proration, deposit (2.7)~~ — done 2026-09-28
 7. ~~Stripe + PayPal drivers, webhook idempotency (2.4)~~ — done 2026-09-28
 8. ~~Security basics: 2FA, rate limit, secret encryption (4.12)~~ — done 2026-09-28
 9. ~~Redis + queue + Horizon, incremental scheduler (4.13)~~ — done 2026-09-28

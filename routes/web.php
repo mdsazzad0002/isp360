@@ -369,6 +369,9 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/get-connection-secret', [Isp\ConnectionController::class, 'secret'])->name('isp.connection.secret');
     Route::post('/connection', [Isp\ConnectionController::class, 'store'])->name('isp.connection.store');
     Route::post('/connection-action', [Isp\ConnectionController::class, 'action'])->name('isp.connection.action');
+    Route::post('/deposit', [Isp\DepositController::class, 'store'])->name('isp.deposit.store');
+    Route::post('/deposit-refund', [Isp\DepositController::class, 'refund'])->name('isp.deposit.refund');
+    Route::post('/deposit-apply', [Isp\DepositController::class, 'apply'])->name('isp.deposit.apply');
     Route::post('/connection-pay-quote', [Isp\ConnectionController::class, 'payQuote'])->name('isp.connection.payQuote');
     Route::post('/connection-pay', [Isp\ConnectionController::class, 'pay'])->name('isp.connection.pay');
     Route::post('/connection-credit', [Isp\ConnectionController::class, 'credit'])->name('isp.connection.credit');
