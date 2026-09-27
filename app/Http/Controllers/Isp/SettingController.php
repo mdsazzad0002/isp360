@@ -72,7 +72,19 @@ class SettingController extends IspController
             'sms_tpl_payment' => 'nullable|max:320',
             'sms_tpl_suspend' => 'nullable|max:320',
             'sms_tpl_reactivate' => 'nullable|max:320',
+            'sms_tpl_notice' => 'nullable|max:320',
+            'grace_days' => 'nullable|integer|min:0|max:60',
+            'notice_days' => 'nullable|integer|min:0|max:30',
+            'notice_required' => 'boolean',
+            'late_fee_type' => 'nullable|in:none,fixed,percent',
+            'late_fee_amount' => 'nullable|numeric|min:0|max:1000000' . ($request->late_fee_type === 'percent' ? '|max:100' : ''),
+            'late_fee_after_days' => 'nullable|integer|min:0|max:365',
+            'late_fee_repeat' => 'nullable|in:once,monthly',
+            'late_fee_max' => 'nullable|integer|min:1|max:24',
         ])) return $r;
+        if ($request->boolean('notice_required') && (int) $request->notice_days < 1) {
+            return send_error('Validation Error', ['notice_days' => 'Set how many days before suspension the notice goes out.'], 422);
+        }
 
         $company = CompanyProfile::firstOrFail();
         $region = ['country_code' => Region::countryCode(), 'currency_code' => Money::code(), 'timezone' => Region::timezone()];

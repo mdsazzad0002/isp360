@@ -132,14 +132,16 @@ Most ISPs outside small BD markets use **RADIUS** (FreeRADIUS) with Cisco/Junipe
 - [ ] Customer contract / terms acceptance with version and timestamp (e-signature in the portal).
 - [ ] Data residency: host the installation in the country (or region) its law requires.
 
-### 2.7 Configurable billing rules per market — P0, M
+### 2.7 Configurable billing rules per market — P0, M — **grace, notice, late fee done**
 The current rules (prepaid, no grace, instant suspend) fit BD home broadband. Other markets need other rules, and some are legal limits (for example, some countries forbid disconnecting without notice).
 
 **Tasks**
 - [ ] Billing mode per package or branch: `prepaid` (current) or `postpaid` (bill at the end or the start of a calendar cycle).
 - [ ] Optional proration on start, stop and package change (calendar or day-based).
-- [ ] Optional grace period and a notice-before-suspend rule (days + message), off by default so current behaviour stays.
-- [ ] Late fee (fixed or percent, once or per period), posted as a debit note.
+- [x] Grace period (`grace_days`): the line stays on that many days after its paid time; staff can still switch it on inside the grace.
+- [x] Notice before suspension (`notice_days` + `sms_tpl_notice` with `{expire_date}` `{suspend_date}`): one SMS per paid time, recorded on the connection and in its history. With `notice_required` a line is never suspended sooner than `notice_days` after its notice (for countries that forbid disconnecting without notice).
+- [x] Late fee (fixed or percent of the unpaid amount before earlier fees, once or every 30 days up to a cap, N days after the due date), posted as an untaxed debit note; charged under a row lock so it can't double; credit notes waive it.
+- [ ] Grace/notice/late-fee defaults in the country packs, once confirmed per country.
 - [ ] Deposit / security deposit (refundable, liability account).
 - [ ] Keep all of these as settings, never forks in code. Current BD behaviour = the default "country pack" (see 2.8).
 
@@ -374,7 +376,7 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 3. ~~Per-currency rounding for 0/3-decimal currencies (2.1)~~ — done 2026-09-27
 4. ~~Country packs, BD first (2.8)~~ — done 2026-09-27
 5. ~~Tax engine on invoices (2.3)~~ — done 2026-09-27
-6. Configurable billing rules: grace, notice, late fee, postpaid option (2.7)
+6. Configurable billing rules: ~~grace, notice, late fee~~ (done 2026-09-28), postpaid option (2.7)
 7. ~~Stripe driver, webhook idempotency (2.4)~~ — done 2026-09-28 (PayPal still open)
 8. ~~Security basics: 2FA, rate limit, secret encryption (4.12)~~ — done 2026-09-28
 9. ~~Redis + queue + Horizon, incremental scheduler (4.13)~~ — done 2026-09-28
@@ -438,5 +440,5 @@ These protect what already works:
 | 6 | ~~2FA + rate limiting + encrypted router/gateway secrets~~ (done) | P0 | M |
 | 7 | ~~Redis queue + Horizon; move SMS/router sync to jobs~~ (done) | P0 | M |
 | 8 | ~~Stripe driver + webhook idempotency~~ (done) | P0 | M |
-| 9 | Grace/notice/late-fee settings (default off) | P0 | M |
+| 9 | ~~Grace/notice/late-fee settings (default off)~~ (done) | P0 | M |
 | 10 | RADIUS driver (FreeRADIUS SQL + CoA) | P0 | L |

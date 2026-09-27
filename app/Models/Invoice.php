@@ -26,6 +26,8 @@ class Invoice extends Model
         'paid' => MoneyCast::class,
         'due' => MoneyCast::class,
         'voided_at' => 'datetime',
+        'late_fee_total' => MoneyCast::class,
+        'last_late_fee_at' => 'datetime',
     ];
 
     // Statuses that still expect money.

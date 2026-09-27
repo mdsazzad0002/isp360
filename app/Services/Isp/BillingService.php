@@ -361,9 +361,10 @@ class BillingService
     }
 
     // Credit note lowers an invoice's total (max: its unpaid part), debit note raises it.
-    public static function addNote(Invoice $invoice, string $type, float $amount, string $reason, $date = null): BillingNote
+    // $taxed = false for charges outside the tax (late fees): the note carries no tax share.
+    public static function addNote(Invoice $invoice, string $type, float $amount, string $reason, $date = null, bool $taxed = true): BillingNote
     {
-        $note = DB::transaction(function () use ($invoice, $type, $amount, $reason, $date) {
+        $note = DB::transaction(function () use ($invoice, $type, $amount, $reason, $date, $taxed) {
             $invoice = Invoice::lockForUpdate()->findOrFail($invoice->id);
             if (! in_array($invoice->status, ['issued', 'partially_paid', 'paid', 'overdue'], true)) {
                 throw new RuntimeException('Notes can only be raised against an issued invoice.');
@@ -377,7 +378,7 @@ class BillingService
             }
 
             // the note carries the invoice's share of tax: a credit note gives it back, a debit note adds it
-            $noteTax = (float) $invoice->total > 0 ? Money::round($amount * (float) $invoice->tax_total / (float) $invoice->total) : 0.0;
+            $noteTax = $taxed && (float) $invoice->total > 0 ? Money::round($amount * (float) $invoice->tax_total / (float) $invoice->total) : 0.0;
 
             $settings = IspSettings::all($invoice->branch_id);
             $note = BillingNote::create([

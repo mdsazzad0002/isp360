@@ -28,6 +28,8 @@ class Connection extends Model
         'suspended_at' => 'datetime',
         'terminated_at' => 'datetime',
         'network_synced_at' => 'datetime',
+        'expiry_notice_for' => 'datetime:Y-m-d H:i:s',
+        'expiry_notice_at' => 'datetime:Y-m-d H:i:s',
     ];
 
     public const STATUSES = ['pending', 'active', 'suspended', 'inactive', 'terminated'];

@@ -342,6 +342,10 @@ class ConnectionService
         if ($connection->expire_at && $connection->expire_at->isFuture()) {
             return false;
         }
+        // still inside the grace period after its paid time
+        if ($connection->expire_at && OverdueService::graceEnd($connection)?->isFuture()) {
+            return false;
+        }
         return Invoice::where('connection_id', $connection->id)->whereNotNull('service_months')
             ->when($connection->status === 'pending',
                 fn ($q) => $q->whereIn('status', Invoice::OPEN_STATUSES)->whereNull('credit_at'),
@@ -349,21 +353,26 @@ class ConnectionService
             ->exists();
     }
 
-    // No grace: an active line whose time is up (or was never paid) goes off now; a line
-    // suspended for that comes back as soon as it has time again.
-    public static function applyExpiry(Connection $connection): void
+    // An active line whose time is up (or was never paid) goes off once the grace period and the
+    // notice rule allow it (OverdueService; with the defaults: at once); a line suspended for that
+    // comes back as soon as it has time again. Returns true when the line was switched.
+    public static function applyExpiry(Connection $connection): bool
     {
         $settings = IspSettings::all($connection->branch_id);
         $hasTime = $connection->expire_at && $connection->expire_at->isFuture();
 
-        if ($connection->status === 'active' && ! $hasTime && $settings['auto_suspend']) {
+        if ($connection->status === 'active' && $settings['auto_suspend'] && OverdueService::isDueForSuspension($connection, $settings)) {
             self::suspend($connection, OverdueService::SUSPEND_REASON, true);
             DB::afterCommit(fn () => IspNotifier::send($connection->branch_id, $connection->customer, 'suspend', ['connection' => $connection->code]));
-        } elseif ($connection->status === 'suspended' && $hasTime && $settings['auto_reactivate']
+            return true;
+        }
+        if ($connection->status === 'suspended' && $hasTime && $settings['auto_reactivate']
             && in_array($connection->suspension_reason, OverdueService::SUSPEND_REASONS, true)) {
             self::reactivate($connection, 'Paid until ' . $connection->expire_at->format('d M Y h:i A'), true);
             DB::afterCommit(fn () => IspNotifier::send($connection->branch_id, $connection->customer, 'reactivate', ['connection' => $connection->code]));
+            return true;
         }
+        return false;
     }
 
     private static function simpleTransition(Connection $connection, array $from, string $to, string $action, string $reason): Connection
@@ -439,6 +448,11 @@ class ConnectionService
         if ($box && $box->capacity > 0 && $box->usedPortsCount() >= $box->capacity) {
             throw new RuntimeException("Box {$box->name} is full ({$box->capacity} ports).");
         }
+    }
+
+    public static function logHistory(Connection $connection, string $action, ?array $old, ?array $new, ?string $reason = null): void
+    {
+        self::history($connection, $action, $old, $new, $reason);
     }
 
     private static function history(Connection $connection, string $action, ?array $old, ?array $new, ?string $reason = null): void

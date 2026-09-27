@@ -27,14 +27,28 @@ class IspSettings
         'referral_commission' => '0',
         'auto_suspend' => true,
         'auto_reactivate' => true,
+        // grace: an expired line stays on this many days before it is suspended (0 = at once)
+        'grace_days' => 0,
+        // notice: an SMS this many days before the line is suspended (0 = none); with
+        // notice_required a line is never suspended sooner than notice_days after its notice
+        'notice_days' => 0,
+        'notice_required' => false,
+        // late fee on an invoice unpaid this many days after its due date, posted as a debit note
+        'late_fee_type' => 'none', // none | fixed | percent (of the unpaid amount before late fees)
+        'late_fee_amount' => '0',
+        'late_fee_after_days' => 0,
+        'late_fee_repeat' => 'once', // once | monthly (every 30 days while unpaid)
+        'late_fee_max' => 1, // most late fees on one invoice
         'sms_invoice' => false,
         'sms_payment' => true,
         'sms_suspend' => true,
         'sms_reactivate' => true,
+        'sms_notice' => true,
         'sms_tpl_invoice' => 'Dear {name}, your internet bill {invoice} of {currency} {amount} is due on {due_date}. Total due: {currency} {balance}.',
         'sms_tpl_payment' => 'Dear {name}, we received {currency} {amount} (receipt {receipt}). Current due: {currency} {balance}. Thank you.',
         'sms_tpl_suspend' => 'Dear {name}, your internet connection {connection} is suspended for unpaid bills. Due: {currency} {balance}.',
         'sms_tpl_reactivate' => 'Dear {name}, your internet connection {connection} is active again. Thank you.',
+        'sms_tpl_notice' => 'Dear {name}, your internet connection {connection} will be suspended on {suspend_date} unless paid. Due: {currency} {balance}.',
     ];
 
     private static array $cache = [];

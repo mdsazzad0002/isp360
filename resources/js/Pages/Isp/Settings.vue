@@ -231,7 +231,59 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                     <label class="flex items-center gap-2 text-sm"><input v-model="s.auto_suspend" type="checkbox" /> Auto-suspend when the expire date passes</label>
                     <label class="flex items-center gap-2 text-sm"><input v-model="s.auto_reactivate" type="checkbox" /> Auto-reactivate when payment extends the expire date</label>
                 </div>
-                <p class="mt-2 text-xs text-slate-500">No grace period. Example: paid until 5 Nov 2:30 PM → the line goes off at 5 Nov 2:30 PM (checked every minute) and comes back the moment the renewal is paid.</p>
+                <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Grace period (days after the paid time)</label>
+                        <input v-model="s.grace_days" type="number" min="0" max="60" :class="input" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Notice SMS, days before suspension <span class="text-slate-400">(0 = none)</span></label>
+                        <input v-model="s.notice_days" type="number" min="0" max="30" :class="input" />
+                    </div>
+                    <label class="flex items-center gap-2 pt-5 text-sm"><input v-model="s.notice_required" type="checkbox" :disabled="!(s.notice_days > 0)" /> Never suspend sooner than that after the notice</label>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">
+                    <template v-if="s.grace_days > 0">Example: paid until 5 Nov 2:30 PM → the line stays on for {{ s.grace_days }} more day(s) and goes off at 2:30 PM on the last grace day.</template>
+                    <template v-else>No grace period. Example: paid until 5 Nov 2:30 PM → the line goes off at 5 Nov 2:30 PM (checked every minute).</template>
+                    It comes back the moment the renewal is paid.
+                    <template v-if="s.notice_days > 0">A notice SMS goes out {{ s.notice_days }} day(s) before the suspension{{ s.notice_required ? ", and a line is never suspended sooner than that after its notice (for countries that require notice)" : '' }}.</template>
+                </p>
+            </section>
+
+            <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 class="mb-3 text-sm font-semibold text-slate-700">Late fee</h2>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Late fee</label>
+                        <select v-model="s.late_fee_type" :class="input">
+                            <option value="none">None</option>
+                            <option value="fixed">Fixed amount ({{ cur() }})</option>
+                            <option value="percent">Percent of the unpaid amount</option>
+                        </select>
+                    </div>
+                    <template v-if="s.late_fee_type !== 'none'">
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-slate-600">{{ s.late_fee_type === 'percent' ? 'Late fee (%)' : `Late fee (${cur()})` }}</label>
+                            <input v-model="s.late_fee_amount" type="number" min="0" step="0.01" :class="input" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Charged when unpaid, days after the due date</label>
+                            <input v-model="s.late_fee_after_days" type="number" min="0" max="365" :class="input" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Repeat</label>
+                            <select v-model="s.late_fee_repeat" :class="input">
+                                <option value="once">Once per invoice</option>
+                                <option value="monthly">Every 30 days while unpaid</option>
+                            </select>
+                        </div>
+                        <div v-if="s.late_fee_repeat === 'monthly'">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">At most, per invoice</label>
+                            <input v-model="s.late_fee_max" type="number" min="1" max="24" :class="input" />
+                        </div>
+                    </template>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">Added to the unpaid invoice as a debit note (in the ledger and on the customer statement), without tax. A percent fee is on the unpaid amount before earlier late fees. Credit notes can waive it.</p>
             </section>
 
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -265,9 +317,9 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
 
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <h2 class="mb-1 text-sm font-semibold text-slate-700">Customer SMS</h2>
-                <p class="mb-3 text-xs text-slate-500">Sent through the active SMS gateway. Placeholders: {name} {code} {currency} {balance} {invoice} {amount} {due_date} {receipt} {connection}</p>
+                <p class="mb-3 text-xs text-slate-500">Sent through the active SMS gateway. Placeholders: {name} {code} {currency} {balance} {invoice} {amount} {due_date} {receipt} {connection} {expire_date} {suspend_date}</p>
                 <div class="space-y-3">
-                    <div v-for="k in [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated']]" :key="k[0]" class="grid grid-cols-1 gap-2 md:grid-cols-5">
+                    <div v-for="k in [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension']]" :key="k[0]" class="grid grid-cols-1 gap-2 md:grid-cols-5">
                         <label class="flex items-center gap-2 text-sm"><input v-model="s['sms_' + k[0]]" type="checkbox" /> {{ k[1] }}</label>
                         <textarea v-model="s['sms_tpl_' + k[0]]" rows="2" maxlength="320" class="md:col-span-4" :class="input"></textarea>
                     </div>
