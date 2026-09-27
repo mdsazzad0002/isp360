@@ -164,7 +164,7 @@ A country pack holds: currency, timezone(s), language, date/number format, phone
 - [ ] Full installation wizard (4.16) on top of `CountryPack::apply()`.
 - [ ] Check each pack's suggested tax rates with a local accountant before the first customer in that country.
 
-### 2.9 Internationalisation of the UI — P0, M
+### 2.9 Internationalisation of the UI — P0, M — **done except translating the remaining pages**
 - [x] Customer-facing first: portal menu/header, customer dashboard and Pay page in en / bn / hi / ar (`portal.*`), status and method labels everywhere (`labels.*` via `label()`), language switcher in the portals, the customer's language as the portal default.
 - [ ] The rest of the UI: customer portal Connections / Profile / Tickets, reseller portal pages, admin pages (about 85 pages still hold English text), and PHP validation / flash messages (`resources/lang` has only `en`). Translations by a native speaker before shipping.
 - [x] RTL layout for Arabic: every physical left/right Tailwind utility in the UI converted to its logical form (ms/me, ps/pe, start/end, text-start/end, border-s/e, rounded-s/e; 737 class tokens), `lang`/`dir` set at load for the language in use, sidebars and slide-in panels mirrored, centered badges kept physical. Checked with screenshots in both directions.
@@ -384,7 +384,7 @@ Goal: the same code runs a BD ISP and a non-BD ISP safely.
 7. ~~Stripe + PayPal drivers, webhook idempotency (2.4)~~ — done 2026-09-28
 8. ~~Security basics: 2FA, rate limit, secret encryption (4.12)~~ — done 2026-09-28
 9. ~~Redis + queue + Horizon, incremental scheduler (4.13)~~ — done 2026-09-28
-10. i18n cleanup, RTL, E.164 phones, generic address (2.9)
+10. ~~RTL, international phones, generic address, number/date formats, SMS language, customer portal translated (2.9)~~ — done 2026-09-28; translating the remaining pages is ongoing
 
 **Exit check:** a test installation in USD/America/New_York with 8% sales tax and Stripe passes the full billing test suite and `isp:ledger-check`.
 
