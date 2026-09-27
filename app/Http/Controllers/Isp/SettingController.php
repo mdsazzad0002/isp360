@@ -40,6 +40,8 @@ class SettingController extends IspController
             'tax_rates' => TaxService::all()->values(),
             // who must use two-factor login, company-wide
             'two_factor_policy' => TwoFactorPolicy::current(),
+            'log_retention_days' => (int) (company()?->log_retention_days ?? 365),
+            'log_retention_minimum' => \App\Support\CountryPack::current()['log_retention_days'],
             'two_factor_policies' => collect(TwoFactorPolicy::POLICIES)->map(fn ($label, $value) => compact('value', 'label'))->values(),
             'my_two_factor' => (bool) auth()->user()?->hasTwoFactor(),
         ]);
@@ -77,6 +79,8 @@ class SettingController extends IspController
             'grace_days' => 'nullable|integer|min:0|max:60',
             'postpaid_due_days' => 'nullable|integer|min:0|max:60',
             'bill_day' => 'nullable|integer|min:0|max:28',
+            'session_log_mikrotik' => 'boolean',
+            'log_retention_days' => 'nullable|integer|min:0|max:3650',
             'terminate_credit_unused' => 'boolean',
             'notice_days' => 'nullable|integer|min:0|max:30',
             'notice_required' => 'boolean',
@@ -102,6 +106,12 @@ class SettingController extends IspController
         if ($policy !== TwoFactorPolicy::current() && ! auth()->user()->hasTwoFactor() && TwoFactorPolicy::requiredFor(auth()->user(), 'web', $policy)) {
             return send_error('Turn on two-factor login for your own account first (My profile), then require it for others.', null, 422);
         }
+        // retention can't go under the country's legal minimum (0 = keep forever)
+        $retention = $request->filled('log_retention_days') ? (int) $request->log_retention_days : (int) $company->log_retention_days;
+        $minimum = (int) (\App\Support\CountryPack::current()['log_retention_days'] ?? 0);
+        if ($retention !== (int) $company->log_retention_days && $retention !== 0 && $retention < $minimum) {
+            return send_error("Session logs must be kept at least {$minimum} days in this country (0 = forever).", null, 422);
+        }
         $tax = ['tax_label' => $company->tax_label, 'tax_number' => $company->tax_number, 'prices_include_tax' => (bool) $company->prices_include_tax];
         $newTax = ['tax_label' => $request->tax_label, 'tax_number' => $request->tax_number ?: null, 'prices_include_tax' => $request->boolean('prices_include_tax')];
         if ($newTax != $tax) {
@@ -109,6 +119,11 @@ class SettingController extends IspController
             $company->update($newTax);
             clearCompanyCache();
             AuditLogger::log('company.tax_updated', null, $tax, $newTax, null, $this->branchId);
+        }
+        if ($retention !== (int) $company->log_retention_days) {
+            AuditLogger::log('company.log_retention_updated', null, ['log_retention_days' => $company->log_retention_days], ['log_retention_days' => $retention], null, $this->branchId);
+            $company->update(['log_retention_days' => $retention]);
+            clearCompanyCache();
         }
         if ($policy !== TwoFactorPolicy::current()) {
             $oldPolicy = TwoFactorPolicy::current();

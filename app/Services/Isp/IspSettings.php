@@ -33,6 +33,9 @@ class IspSettings
         'bill_day' => 0,
         // termination gives the unused paid days back to the customer's balance (day-wise)
         'terminate_credit_unused' => false,
+        // session log: poll this branch's MikroTik API routers for sessions every 5 minutes (RADIUS NAS
+        // sessions come from accounting either way)
+        'session_log_mikrotik' => false,
         // postpaid packages: a bill falls due this many days after its service period starts
         'postpaid_due_days' => 15,
         // grace: an expired line stays on this many days before it is suspended (0 = at once)

@@ -30,6 +30,10 @@ class Kernel extends ConsoleKernel
             $schedule->command('horizon:snapshot')->everyFiveMinutes();
         }
         $schedule->command('queue:prune-failed --hours=720')->daily();
+
+        // lawful session log: who had which IP when (RADIUS accounting, MikroTik polling), then retention
+        $schedule->command('isp:session-logs')->everyFiveMinutes()->withoutOverlapping(15);
+        $schedule->command('isp:session-logs --prune')->dailyAt('03:10');
     }
 
     /**

@@ -217,6 +217,14 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                         </select>
                     </div>
                 </div>
+                <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Keep session logs (days, 0 = forever)</label>
+                        <input v-model="s.log_retention_days" type="number" min="0" max="3650" :class="input" />
+                        <p v-if="s.log_retention_minimum" class="mt-1 text-[11px] text-slate-400">Legal minimum in this country: {{ s.log_retention_minimum }} days</p>
+                    </div>
+                    <label class="flex items-center gap-2 pt-5 text-sm"><input v-model="s.session_log_mikrotik" type="checkbox" /> Record sessions from this branch's MikroTik routers (polled every 5 min)</label>
+                </div>
                 <p class="mt-2 text-xs text-slate-500">
                     Anyone who must use it and hasn't set it up is sent to set it up at their next page. Everyone can turn it on for themselves under My profile.
                     <template v-if="!s.my_two_factor"> Turn it on for your own account first before requiring it.</template>

@@ -446,6 +446,9 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/tax-rate', [Isp\TaxRateController::class, 'store'])->name('isp.tax_rate.store');
     Route::post('/get-tax-rates', [Isp\TaxRateController::class, 'index'])->name('isp.tax_rate.index');
 
+    Route::get('/session-log', [Isp\SessionLogController::class, 'create'])->name('isp.session_log');
+    Route::post('/get-session-log', [Isp\SessionLogController::class, 'index'])->name('isp.session_log.index');
+    Route::post('/session-log-export', [Isp\SessionLogController::class, 'export'])->name('isp.session_log.export');
     Route::get('/queue', [Isp\QueueController::class, 'create'])->name('isp.queue');
     Route::post('/get-queue', [Isp\QueueController::class, 'index'])->name('isp.queue.index');
     Route::post('/queue/retry', [Isp\QueueController::class, 'retry'])->name('isp.queue.retry');

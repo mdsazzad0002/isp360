@@ -115,7 +115,8 @@ class CountryPack
         $before = $company->only(['country_code', 'currency_code', 'timezone', 'language', 'tax_label', 'prices_include_tax']);
         $done = [];
 
-        $new = ['country_code' => $code, 'language' => $pack['language']];
+        // session logs are kept at least as long as the country requires (never shorter than a year here)
+        $new = ['country_code' => $code, 'language' => $pack['language'], 'log_retention_days' => max(365, (int) ($pack['log_retention_days'] ?? 0))];
         if ($withTax) {
             $new += ['tax_label' => $pack['tax']['label'], 'prices_include_tax' => (bool) $pack['tax']['prices_include_tax']];
         }
