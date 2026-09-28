@@ -7,18 +7,18 @@ use App\Models\Router;
 use Illuminate\Support\Collection;
 
 // Picks the driver per router, so one ISP can run MikroTik routers over their API next to NAS
-// devices that authenticate with RADIUS: the connection's router (or the branch default) says
-// which one (routers.driver). Bound as the NetworkDriver when ISP_NETWORK_DRIVER is MikroTik
-// or this class (see AppServiceProvider).
+// devices of any vendor that authenticate with RADIUS: the connection's router (or the branch
+// default) says which one (routers.driver, classes in config('isp.router_drivers')). Bound as the
+// NetworkDriver when ISP_NETWORK_DRIVER is MikroTik or this class (see AppServiceProvider).
 class RouterDriver implements NetworkDriver
 {
-    public function __construct(private MikroTikDriver $mikrotik, private RadiusDriver $radius)
-    {
-    }
+    private array $drivers = [];
 
     public function for(?Router $router): NetworkDriver
     {
-        return $router?->isRadius() ? $this->radius : $this->mikrotik;
+        $key = $router?->driver ?: 'mikrotik';
+        $class = config("isp.router_drivers.{$key}.class") ?: MikroTikDriver::class;
+        return $this->drivers[$class] ??= app($class);
     }
 
     private function forConnection(Connection $connection): NetworkDriver

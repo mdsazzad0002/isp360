@@ -12,13 +12,15 @@ use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 // Keeps FreeRADIUS (SQL) in line with the billing system, for PPPoE and Hotspot users on any NAS
-// that authenticates with RADIUS (MikroTik, Huawei, Cisco, Juniper...):
+// that authenticates with RADIUS (MikroTik, Huawei, Cisco, Juniper, VyOS / accel-ppp, pfSense...).
+// What differs per vendor lives in config/nas_vendors.php (NasVendor):
 //  package    -> radgroupreply group "isp-pkg-<id>" with the NAS vendors' speed attributes
+//                (a vendor on standard attributes gets its own "isp-pkg-<id>-<vendor>" group)
 //  connection -> radcheck Cleartext-Password (+ Calling-Station-Id for a hotspot MAC lock),
 //                radreply Framed-IP-Address for a static IP, radusergroup -> its package group
 //  not active -> radcheck Auth-Type := Reject, and the live session is ended with a
 //                Disconnect-Request (RFC 5176) so it can't carry on until it reconnects
-//  speed change on a live session -> CoA-Request with the new rate (MikroTik NAS), else disconnect
+//  speed change on a live session -> CoA-Request with the new rate where the vendor takes it, else disconnect
 // Online status, sessions, IP/MAC history and usage come from radacct.
 class RadiusDriver implements NetworkDriver
 {
@@ -26,7 +28,6 @@ class RadiusDriver implements NetworkDriver
     // radcheck / radreply attributes this driver owns; anything else on a user is left alone
     public const CHECK_ATTRIBUTES = ['Cleartext-Password', 'Auth-Type', 'Calling-Station-Id'];
     public const REPLY_ATTRIBUTES = ['Framed-IP-Address', 'Delegated-IPv6-Prefix'];
-    public const GROUP_ATTRIBUTES = ['Mikrotik-Rate-Limit', 'Huawei-Input-Average-Rate', 'Huawei-Output-Average-Rate', 'Cisco-AVPair'];
 
     public static function db(): ConnectionInterface
     {
@@ -47,48 +48,48 @@ class RadiusDriver implements NetworkDriver
         return null;
     }
 
-    public static function groupName(?Package $package): string
+    // The package's group for a NAS vendor: shared by every vendor on vendor-specific attributes,
+    // "-<vendor>" for one whose attributes others would misread (NasVendor::ownGroup).
+    public static function groupName(?Package $package, ?string $nasType = null): string
     {
-        return $package ? ($package->network_profile ?: 'isp-pkg-' . $package->id) : 'isp-default';
+        if (! $package) {
+            return 'isp-default';
+        }
+        if ($package->network_profile) {
+            return $package->network_profile;
+        }
+        return 'isp-pkg-' . $package->id . (NasVendor::ownGroup($nasType) ? '-' . $nasType : '');
     }
 
-    // Speed attributes per NAS vendor for "up/down Mbps". Cisco needs policy-maps of these names on the BNG.
+    // Speed attributes of these NAS vendors for "up/down Mbps" (config/nas_vendors.php).
     public static function rateAttributes(Package $package, array $nasTypes): array
     {
-        $up = (int) $package->upload_mbps;
-        $down = (int) $package->download_mbps;
-        if (! $up || ! $down) {
-            return [];
-        }
         $rows = [];
         foreach (array_unique($nasTypes) as $type) {
-            $rows = array_merge($rows, match ($type) {
-                'mikrotik' => [['Mikrotik-Rate-Limit', ':=', "{$up}M/{$down}M"]],
-                'huawei' => [['Huawei-Input-Average-Rate', ':=', (string) ($up * 1000000)], ['Huawei-Output-Average-Rate', ':=', (string) ($down * 1000000)]],
-                'cisco' => [['Cisco-AVPair', '+=', "ip:sub-qos-policy-in=isp-up-{$up}M"], ['Cisco-AVPair', '+=', "ip:sub-qos-policy-out=isp-down-{$down}M"]],
-                default => [],
-            });
+            $rows = array_merge($rows, NasVendor::rateAttributes($type, $package));
         }
         return $rows;
     }
 
-    // NAS types of the active RADIUS routers: a group's reply carries the speed attributes of each.
+    // NAS types of the active RADIUS routers sharing a group: its reply carries the speed attributes of each.
     public static function nasTypes(): array
     {
-        $types = Router::where('driver', 'radius')->where('is_active', true)->pluck('nas_type')->unique()->values()->all();
+        $types = Router::where('driver', 'radius')->where('is_active', true)->pluck('nas_type')->unique()
+            ->reject(fn ($t) => NasVendor::ownGroup($t))->values()->all();
         return $types ?: ['mikrotik'];
     }
 
     // Writes the package's group (only groups this system created: a network_profile set by hand is left alone).
-    public static function ensureGroup(?Package $package): string
+    public static function ensureGroup(?Package $package, ?string $nasType = null): string
     {
-        $group = self::groupName($package);
+        $group = self::groupName($package, $nasType);
         if (! $package || $package->network_profile) {
             return $group;
         }
         $db = self::db();
-        $db->table('radgroupreply')->where('groupname', $group)->whereIn('attribute', self::GROUP_ATTRIBUTES)->delete();
-        $rows = array_map(fn ($r) => ['groupname' => $group, 'attribute' => $r[0], 'op' => $r[1], 'value' => $r[2]], self::rateAttributes($package, self::nasTypes()));
+        $db->table('radgroupreply')->where('groupname', $group)->whereIn('attribute', NasVendor::rateAttributeNames())->delete();
+        $types = NasVendor::ownGroup($nasType) ? [$nasType] : self::nasTypes();
+        $rows = array_map(fn ($r) => ['groupname' => $group, 'attribute' => $r[0], 'op' => $r[1], 'value' => $r[2]], self::rateAttributes($package, $types));
         if ($rows) {
             $db->table('radgroupreply')->insert($rows);
         }
@@ -116,11 +117,11 @@ class RadiusDriver implements NetworkDriver
             'mac' => $db->table('radcheck')->where('username', $user)->where('attribute', 'Calling-Station-Id')->value('value'),
         ];
 
-        $group = $db->transaction(function () use ($db, $connection, $user, $renamedFrom, $enabled) {
+        $group = $db->transaction(function () use ($db, $connection, $user, $renamedFrom, $enabled, $router) {
             if ($renamedFrom) {
                 $this->removeUser($renamedFrom);
             }
-            $group = self::ensureGroup($connection->package);
+            $group = self::ensureGroup($connection->package, $router->nas_type);
 
             $db->table('radcheck')->where('username', $user)->whereIn('attribute', self::CHECK_ATTRIBUTES)->delete();
             $check = [];
@@ -275,7 +276,13 @@ class RadiusDriver implements NetworkDriver
 
     public function disconnect(object $session): void
     {
-        (new RadiusClient($this->nasFor($session)))->disconnect($this->sessionAttributes($session));
+        $nas = $this->nasFor($session);
+        if (! NasVendor::canDisconnect($nas->nas_type)) {
+            // the NAS drops the user at its next re-authentication (see the vendor's note)
+            Log::info('RADIUS disconnect skipped: the NAS does not take Disconnect-Request', ['user' => $session->username, 'nas' => $session->nasipaddress]);
+            return;
+        }
+        (new RadiusClient($nas))->disconnect($this->sessionAttributes($session));
         Log::info('RADIUS disconnect sent', ['user' => $session->username, 'nas' => $session->nasipaddress]);
     }
 
@@ -283,10 +290,14 @@ class RadiusDriver implements NetworkDriver
     public function changeSpeed(object $session, ?Package $package): bool
     {
         $nas = $this->nasFor($session);
-        if (! $package || $nas->nas_type !== 'mikrotik' || ! ($rate = self::rateAttributes($package, ['mikrotik']))) {
+        if (! $package || ! NasVendor::canChangeSpeedLive($nas->nas_type) || ! ($rate = NasVendor::rateAttributes($nas->nas_type, $package))) {
             return false;
         }
-        return (new RadiusClient($nas))->coa($this->sessionAttributes($session) + ['Mikrotik-Rate-Limit' => $rate[0][2]]);
+        $attributes = [];
+        foreach ($rate as [$name, , $value]) {
+            $attributes[$name][] = $value;
+        }
+        return (new RadiusClient($nas))->coa($this->sessionAttributes($session) + $attributes);
     }
 
     // Registers the NAS as a FreeRADIUS client (nas table, read_clients = yes), or removes it.
@@ -302,7 +313,7 @@ class RadiusDriver implements NetworkDriver
         }
         $db->table('nas')->updateOrInsert(['nasname' => $router->host], [
             'shortname' => mb_substr($router->name, 0, 32),
-            'type' => $router->nas_type, // FreeRADIUS checkrad type
+            'type' => NasVendor::checkradType($router->nas_type),
             'ports' => $router->coa_port,
             'secret' => mb_substr($router->radius_secret, 0, 60),
             'description' => 'ISP billing: ' . mb_substr($router->name, 0, 180),

@@ -10,6 +10,7 @@ import { confirmDialog } from '../../lib/confirm';
 import { fmtDate, useApiError } from '../../lib/isp';
 
 defineOptions({ layout: AppLayout });
+const props = defineProps({ drivers: { type: Object, default: () => ({}) }, nasVendors: { type: Object, default: () => ({}) } });
 const toast = useToast();
 const showError = useApiError();
 
@@ -91,29 +92,32 @@ onMounted(load);
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <h1 class="mb-1 text-base font-semibold text-slate-800">{{ form.id ? `Edit router ${form.name}` : form.driver === 'radius' ? 'Add RADIUS NAS' : 'Add MikroTik router' }}</h1>
             <p v-if="form.driver === 'radius'" class="mb-3 text-xs text-slate-500">
-                Any router or BRAS that authenticates PPPoE / Hotspot users with RADIUS (MikroTik, Huawei, Cisco, Juniper…). Billing writes users to the FreeRADIUS SQL tables:
+                Any router or BRAS that authenticates PPPoE / Hotspot users with RADIUS (MikroTik, Huawei, Cisco, Juniper, VyOS / Linux accel-ppp, pfSense / OPNsense…). Billing writes users to the FreeRADIUS SQL tables:
                 packages become groups with the speed attributes of the NAS type, suspended users are rejected, and live sessions are ended (or their speed changed) with Disconnect / CoA (RFC 5176) on the CoA port.
                 Point the NAS's RADIUS authentication and accounting at your FreeRADIUS server with the same secret, and allow incoming CoA from this server. The NAS is registered as a FreeRADIUS client (nas table: set <code>read_clients = yes</code> in the sql module).
             </p>
             <p v-else class="mb-3 text-xs text-slate-500">After saving, use <b>Setup</b> on the router for a live check and the exact commands. RouterOS v7 REST API (IP → Services → www or www-ssl must be enabled). Packages become PPP / hotspot user profiles with their speed as rate-limit; each PPPoE or Hotspot connection becomes a router user that is disabled on suspension. Hotspot also needs a hotspot server on the LAN interface (IP → Hotspot → Hotspot Setup).</p>
+            <p v-if="form.driver === 'radius' && props.nasVendors[form.nas_type]" class="mb-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                <b>{{ props.nasVendors[form.nas_type].label }}:</b> {{ props.nasVendors[form.nas_type].note }}
+                <span class="text-slate-500">
+                    · Speed change on a live session: {{ props.nasVendors[form.nas_type].coa_rate ? 'CoA (disconnect if refused)' : 'disconnect, new speed at reconnect' }}
+                    · Suspension: {{ props.nasVendors[form.nas_type].disconnect ? 'Disconnect-Request' : 'at the next re-authentication' }}
+                </span>
+            </p>
             <form class="grid grid-cols-2 gap-3 md:grid-cols-6" @submit.prevent="save">
                 <div><label class="mb-1 block text-xs font-medium text-slate-600">Name</label><input v-model="form.name" required class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" /></div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-slate-600">Managed by</label>
                     <select v-model="form.driver" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm">
-                        <option value="mikrotik">MikroTik API</option>
-                        <option value="radius">RADIUS (FreeRADIUS)</option>
+                        <option v-for="(label, key) in props.drivers" :key="key" :value="key">{{ label }}</option>
                     </select>
                 </div>
                 <div><label class="mb-1 block text-xs font-medium text-slate-600">{{ form.driver === 'radius' ? 'NAS IP address' : 'Host / IP' }}</label><input v-model="form.host" required placeholder="192.168.88.1" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" /></div>
                 <template v-if="form.driver === 'radius'">
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-slate-600">NAS type (speed attributes)</label>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">NAS vendor</label>
                         <select v-model="form.nas_type" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm">
-                            <option value="mikrotik">MikroTik</option>
-                            <option value="huawei">Huawei BRAS</option>
-                            <option value="cisco">Cisco BNG</option>
-                            <option value="other">Other (speeds set on the NAS)</option>
+                            <option v-for="(v, key) in props.nasVendors" :key="key" :value="key">{{ v.label }}</option>
                         </select>
                     </div>
                     <div><label class="mb-1 block text-xs font-medium text-slate-600">RADIUS secret</label><input v-model="form.radius_secret" type="password" autocomplete="new-password" :required="!form.id" maxlength="60" :placeholder="form.id ? 'Leave blank to keep' : ''" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" /></div>

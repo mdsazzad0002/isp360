@@ -10,9 +10,6 @@ class Router extends Model
 
     protected $hidden = ['password', 'radius_secret'];
 
-    public const DRIVERS = ['mikrotik' => 'MikroTik (REST API)', 'radius' => 'RADIUS (FreeRADIUS)'];
-    // which speed attributes a RADIUS NAS understands (see RadiusDriver::rateAttributes)
-    public const NAS_TYPES = ['mikrotik' => 'MikroTik', 'huawei' => 'Huawei BRAS', 'cisco' => 'Cisco BNG', 'other' => 'Other (speeds set on the NAS)'];
 
     protected $casts = [
         'password' => 'encrypted',
@@ -22,6 +19,12 @@ class Router extends Model
         'is_active' => 'boolean',
         'last_checked_at' => 'datetime',
     ];
+
+    // [driver => label] from config('isp.router_drivers')
+    public static function drivers(): array
+    {
+        return array_map(fn ($d) => $d['label'], config('isp.router_drivers', []));
+    }
 
     public function isRadius(): bool
     {

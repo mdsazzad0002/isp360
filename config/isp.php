@@ -7,6 +7,16 @@ return [
     // a default router is added under Network Setup > Routers. NullNetworkDriver = manual mode.
     'network_driver' => env('ISP_NETWORK_DRIVER', \App\Services\Network\MikroTikDriver::class),
 
+    // How a router can be managed (routers.driver), each a class implementing NetworkDriver.
+    // "radius" covers every vendor that authenticates users with RADIUS — MikroTik, Huawei, Cisco,
+    // Juniper, VyOS / Linux accel-ppp, pfSense / OPNsense — with the per-vendor details in
+    // config/nas_vendors.php. A direct device API (e.g. Juniper NETCONF, VyOS HTTP API) is a new
+    // entry here with its own driver class.
+    'router_drivers' => [
+        'mikrotik' => ['label' => 'MikroTik (REST API)', 'class' => \App\Services\Network\MikroTikDriver::class],
+        'radius' => ['label' => 'RADIUS (FreeRADIUS): any vendor', 'class' => \App\Services\Network\RadiusDriver::class],
+    ],
+
     // Router pushes and SMS run on queues ("network", "sms", "default"). Pick one:
     //  - Redis + Horizon (QUEUE_CONNECTION=redis, run `php artisan horizon` under Supervisor/systemd):
     //    for any installation with its own server; dashboard at /horizon.

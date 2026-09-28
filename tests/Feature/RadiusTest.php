@@ -13,6 +13,7 @@ use App\Services\Isp\ConnectionService;
 use App\Services\Network\MikroTikDriver;
 use App\Services\Network\NetworkDriver;
 use App\Services\Network\RadiusClient;
+use App\Services\Network\NasVendor;
 use App\Services\Network\RadiusDriver;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
@@ -254,5 +255,54 @@ class RadiusTest extends TestCase
         $package = $this->package('RAD V', 100, 20);
         $this->assertSame([['Huawei-Input-Average-Rate', ':=', '20000000'], ['Huawei-Output-Average-Rate', ':=', '100000000']], RadiusDriver::rateAttributes($package, ['huawei']));
         $this->assertSame('ip:sub-qos-policy-out=isp-down-100M', RadiusDriver::rateAttributes($package, ['cisco'])[1][2]);
+    }
+    public function test_every_listed_vendor_gets_its_own_speed_attributes(): void
+    {
+        $package = $this->package('RAD VENDOR', 100, 20);
+        $this->assertSame([['ERX-Ingress-Policy-Name', ':=', 'isp-up-20M'], ['ERX-Egress-Policy-Name', ':=', 'isp-down-100M']], RadiusDriver::rateAttributes($package, ['juniper']));
+        $this->assertSame([['Filter-Id', ':=', '100000/20000']], RadiusDriver::rateAttributes($package, ['accel-ppp'])); // kbit down/up
+        $this->assertSame([['WISPr-Bandwidth-Max-Up', ':=', '20000000'], ['WISPr-Bandwidth-Max-Down', ':=', '100000000']], RadiusDriver::rateAttributes($package, ['pfsense']));
+        $this->assertSame([], RadiusDriver::rateAttributes($package, ['other']));
+        $this->assertSame([], RadiusDriver::rateAttributes($package, ['no-such-vendor']));
+
+        // every vendor's live attributes can be encoded for CoA
+        foreach (NasVendor::all() as $type => $vendor) {
+            foreach (NasVendor::rateAttributes($type, $package) as [$name, , $value]) {
+                $this->assertNotSame('', RadiusClient::encodeAttributes([$name => $value]), "{$type}: {$name}");
+            }
+        }
+    }
+
+    public function test_accel_ppp_users_get_their_own_group_so_filter_id_never_reaches_mikrotik(): void
+    {
+        $vyos = Router::create(['branch_id' => $this->branch->id, 'name' => 'VyOS', 'driver' => 'radius', 'host' => '10.9.9.7', 'nas_type' => 'accel-ppp', 'radius_secret' => self::SECRET, 'coa_port' => 3799, 'is_active' => true, 'is_default' => false]);
+        $package = $this->package('RAD VYOS', 40, 10);
+        $onMikrotik = $this->connection($package, 'rad_mt');
+        $onVyos = $this->connection($package, 'rad_vy');
+        $onVyos->update(['router_id' => $vyos->id]);
+        SyncConnectionToNetwork::dispatchSync($onVyos->id);
+
+        $db = RadiusDriver::db();
+        $shared = 'isp-pkg-' . $package->id;
+        $own = $shared . '-accel-ppp';
+        $this->assertSame($shared, $db->table('radusergroup')->where('username', 'rad_mt')->value('groupname'));
+        $this->assertSame($own, $db->table('radusergroup')->where('username', 'rad_vy')->value('groupname'));
+        $this->assertSame(['Filter-Id' => '40000/10000'], $db->table('radgroupreply')->where('groupname', $own)->pluck('value', 'attribute')->all());
+        $this->assertFalse($db->table('radgroupreply')->where('groupname', $shared)->where('attribute', 'Filter-Id')->exists());
+        $this->assertSame('synced', $onVyos->fresh()->network_sync_status);
+        $this->assertSame('synced', $onMikrotik->fresh()->network_sync_status);
+    }
+
+    public function test_a_nas_without_disconnect_support_is_not_sent_one(): void
+    {
+        $this->nas->update(['nas_type' => 'pfsense']);
+        $connection = $this->connection($this->package('RAD PF', 10, 5), 'rad_pf');
+        $this->openSession('rad_pf');
+        $this->answers[RadiusClient::DISCONNECT_REQUEST] = null; // would fail the sync if one were sent
+
+        ConnectionService::suspend($connection, 'Expired', true);
+        $this->assertSame('Reject', $this->radcheck('rad_pf')['Auth-Type']);
+        $this->assertSame([], $this->sent);
+        $this->assertSame('synced', $connection->fresh()->network_sync_status);
     }
 }

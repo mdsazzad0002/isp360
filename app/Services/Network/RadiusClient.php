@@ -22,6 +22,7 @@ class RadiusClient
         'User-Name' => [1, 'string'],
         'NAS-IP-Address' => [4, 'ipv4'],
         'Framed-IP-Address' => [8, 'ipv4'],
+        'Filter-Id' => [11, 'string'],
         'Acct-Session-Id' => [44, 'string'],
         'Error-Cause' => [101, 'integer'],
     ];
@@ -32,6 +33,10 @@ class RadiusClient
         'Huawei-Input-Average-Rate' => [2011, 2, 'integer'],
         'Huawei-Output-Average-Rate' => [2011, 5, 'integer'],
         'Cisco-AVPair' => [9, 1, 'string'],
+        'ERX-Ingress-Policy-Name' => [4874, 10, 'string'],
+        'ERX-Egress-Policy-Name' => [4874, 11, 'string'],
+        'WISPr-Bandwidth-Max-Up' => [14122, 7, 'integer'],
+        'WISPr-Bandwidth-Max-Down' => [14122, 8, 'integer'],
     ];
 
     // Replaces the UDP round trip in tests: fn (string $host, int $port, string $packet): ?string

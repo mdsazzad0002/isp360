@@ -7,6 +7,7 @@ use App\Models\Connection;
 use App\Models\Router;
 use App\Services\Isp\AuditLogger;
 use App\Services\Network\MikroTikClient;
+use App\Services\Network\NasVendor;
 use App\Services\Network\RadiusDriver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ class RouterController extends IspController
 {
     public function create()
     {
-        return $this->page('router', 'Isp/Router');
+        return $this->page('router', 'Isp/Router', ['drivers' => Router::drivers(), 'nasVendors' => NasVendor::options()]);
     }
 
     public function index()
@@ -36,11 +37,11 @@ class RouterController extends IspController
         if ($r = $this->validateOrFail($request->all(), [
             'id' => 'nullable|integer',
             'name' => 'required|max:100',
-            'driver' => 'nullable|in:' . implode(',', array_keys(Router::DRIVERS)),
+            'driver' => 'nullable|in:' . implode(',', array_keys(Router::drivers())),
             'host' => $request->driver === 'radius' ? 'required|ip' : 'required|max:255',
             'port' => 'nullable|integer|min:1|max:65535',
         ] + ($request->driver === 'radius' ? [
-            'nas_type' => 'required|in:' . implode(',', array_keys(Router::NAS_TYPES)),
+            'nas_type' => 'required|in:' . implode(',', array_keys(NasVendor::labels())),
             'radius_secret' => $request->id ? 'nullable|max:60' : 'required|max:60',
             'coa_port' => 'nullable|integer|min:1|max:65535',
         ] : [
