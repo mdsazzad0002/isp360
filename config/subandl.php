@@ -166,10 +166,10 @@ return [
         'group' => 'web',
         // Redirect authenticated users to the subscription page when the
         // license is unusable.
-        'enforce_license' => true,
+        'enforce_license' => (bool) env('SUBANDL_ENFORCE_LICENSE', true),
         // Poor-man's cron: trigger license/update/backup checks from web
         // traffic for hosts without a system cron.
-        'web_scheduler' => true,
+        'web_scheduler' => (bool) env('SUBANDL_WEB_SCHEDULER', true),
     ],
 
     // Paths (Request::is patterns) that stay reachable with an invalid license.
@@ -239,7 +239,7 @@ return [
     | "often enough to notice when due".
     */
     'schedule' => [
-        'enabled' => true,
+        'enabled' => (bool) env('SUBANDL_SCHEDULE', true),
     ],
 
     /*

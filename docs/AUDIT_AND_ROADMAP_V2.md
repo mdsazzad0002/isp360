@@ -10,7 +10,7 @@ Audit date: 2026-09-30 · Branch audited: `claude/global-isp-roadmap-arxkcu` · 
 | Global blockers, Phases A and B | Finished. Small leftovers are in GLOBAL_ISP_ROADMAP §2. |
 | Phase C (higher-level management) | Reseller tree, staff roles, approvals, settings split open. |
 | Phases D, E | Not started. |
-| Security audit (§2) | C1–C3 fixed 2026-09-28. H1–H5 and the medium items still open. |
+| Security audit (§2) | C1–C3, H1 (CI), H2 (dependencies: npm and composer audits clean) and H4 (fresh-database run + page smoke test) fixed 2026-09-28. H3, H5 and the medium items still open. |
 | Automated tests | 118 feature tests, 1,774 assertions, all passing — but they cover the new ISP modules only (see §2, H3). |
 
 The new ISP modules (`app/Http/Controllers/Isp/*`, `app/Services/Isp/*`) are in good shape: permission-checked,
@@ -31,10 +31,7 @@ All three critical findings (C1 permissions, C2 branch isolation, C3 uploads) we
 
 | # | Finding | Evidence | Fix |
 |---|---|---|---|
-| H1 | No CI: tests only run when someone runs them by hand. | No `.github/workflows`. | GitHub Actions: MariaDB service, `migrate:fresh`, `php artisan test`, `vite build`, `npm audit --omit=dev --audit-level=high`. |
-| H2 | Front-end dependencies have known vulnerabilities. | `npm audit --omit=dev`: 33 (31 moderate, 2 high — `@tiptap/core <= 3.30.4`). `composer audit` could not reach Packagist from the audit box — run it in CI. | Upgrade tiptap; add both audits to CI. |
 | H3 | Older modules (users, roles, accounts, banks, payments/receives, POS reports, balance sheet) have zero tests and no audit log. | 0 of 25 test files touch them. | Tests with the C1/C2 fixes; route them through `AuditLogger`. |
-| H4 | Schema and code can drift apart unnoticed. | A column read by the branch switcher was missing from the schema for months (since fixed). | CI job that runs `migrate:fresh` on an empty DB and smoke-tests every page route (catches missing columns). |
 | H5 | UI is only partly translated. | 6 of 94 Vue pages use i18n; `bn`/`hi`/`ar` each miss 5 keys that exist in `en`. | Translate page by page, starting with the customer portal and billing screens; a key-parity check in CI. |
 
 ### Medium / low
@@ -48,15 +45,13 @@ All three critical findings (C1 permissions, C2 branch isolation, C3 uploads) we
 Estimates assume one developer. Every step keeps the rules in GLOBAL_ISP_ROADMAP §6 (tests with every change,
 money only through the ledger, per-branch scoping, audit log for money and permissions).
 
-### Phase 0 — Security hardening (P0, ~1–2 weeks) — **do this next**
-1. Audit log for branches and accounting entries (users, roles and the company profile are logged).
-2. Upgrade `@tiptap/core`; run `composer audit`.
+Phase 0 (security hardening) finished 2026-09-28.
 
-### Phase 1 — Quality foundation (P0, ~1–2 weeks)
-1. CI pipeline (H1) with fresh-migration smoke test of every page route (H4).
-2. Tests for the older modules touched in Phase 0 (H3).
-3. Production config guide: `.env` values, queue workers / Horizon, scheduler, RADIUS (see RADIUS_SETUP.md), HTTPS, deny PHP in uploads.
-4. Backups: scheduled DB + uploads backup, restore command, full data export (3.1).
+### Phase 1 — Quality foundation (P0, ~1–2 weeks) — **do this next**
+CI (H1, H4) is in place. Still open:
+1. Tests for the older modules beyond permissions and branch isolation (H3): POS reports, balance sheet, cash / bank ledgers.
+2. Production config guide: `.env` values, queue workers / Horizon, scheduler, RADIUS (see RADIUS_SETUP.md), HTTPS, deny PHP in uploads.
+3. Backups: scheduled DB + uploads backup, restore command, full data export (3.1).
 
 ### Phase 2 — Finish Phase C, higher-level management (P1, ~5–6 weeks)
 1. Multi-level reseller tree, per-level commission, credit limit (3.3).

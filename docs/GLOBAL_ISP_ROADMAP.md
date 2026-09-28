@@ -165,7 +165,12 @@ Today: company → reseller → customer (one level).
 ### 4.6 Network: OLT / ONU / monitoring — P1/P2, L
 - [ ] OLT drivers (SNMP/Telnet/SSH/API): Huawei, ZTE, VSOL, BDCOM, Nokia — ONU list, optical power, status, auto-authorise, map ONU to connection.
 - [ ] TR-069/ACS (GenieACS): remote Wi-Fi name/password change, reboot, firmware.
-- [ ] Monitoring: router/OLT/uplink up/down (ping/SNMP), traffic graphs, NOC alerts.
+- [ ] Monitoring: router/OLT/uplink up/down (ping/SNMP), traffic graphs, NOC alerts. Built in steps, MikroTik first (RADIUS NAS report no CPU/interface data; other vendors via an SNMP `NetworkDriver` later); the browser never talks to a router:
+  - [ ] Step 1, live monitor window (no schema change): `MikroTikDriver::resourceSample` (`/system/resource`, `/system/health`: CPU, RAM, disk, uptime, temperature) and `interfaceSample` (`/interface/monitor-traffic`); routes `router-resource`, `router-interfaces`, `router-interface-traffic` with permission + branch scope + throttle; `Isp/RouterMonitor.vue` opened from the Routers page: stat tiles, interface table, live tx/rx graph. `LiveTrafficChart` made generic (endpoint + series props) and keeps its rules: pause when the tab is hidden, auto-pause after 5 min, one request at a time. `routers.monitor_interfaces` (JSON) pins WAN/uplink graphs.
+  - [ ] Step 2, history: `isp:monitor-collect` every minute (`withoutOverlapping`) → `router_metrics` (cpu, mem, uptime, online users) and `interface_metrics` (rx/tx bps from counter deltas, counter reset safe). Keep 1-min 7 days, hourly 90 days, daily 2 years (rollup + prune). Range picker 1h/24h/7d/30d with 95th percentile; real peak next to bought vs sold on Bandwidth Usage.
+  - [ ] Step 3, up/down and alerts: `monitor_events` (down/up, duration); thresholds in Settings (CPU/RAM > 90% for 5 min, uplink down, uplink > 90% of bought bandwidth, online users drop > 30%); dashboard banner, SMS/e-mail through the existing queue, optional auto ticket; alert once per state change, plus a "recovered" message.
+  - [ ] Step 4, NOC dashboard: every router on one page (status, CPU, RAM, online users, uplink rate) from collected data, refresh 10 s; this server's health (load, RAM, disk, queue backlog, failed jobs, last scheduler run).
+  - [ ] Step 5, OLT: the OLT drivers above feed the same collector and alerts (ONU RX power below -27 dBm, PON port down → outage notice).
 - [ ] Outage management: mark an outage for a zone/box/OLT port → notify affected customers, link tickets, optional compensation days.
 - [ ] Topology view: POP → OLT → PON port → splitter → box → customer.
 - [ ] Router config backup and multi-router failover per branch.
@@ -214,13 +219,13 @@ Phase 0 of the audit comes first (permission middleware, branch scoping, safe up
 - [ ] Password policy (length/complexity), session list with remote logout.
 - [ ] Audit log for every admin action (settings, roles, users, branches, package changes, logins).
 - [ ] Signed webhook verification for every gateway.
-- [ ] Security headers (CSP, HSTS); `composer audit` / `npm audit` in CI.
+- [ ] Security headers (CSP, HSTS).
 - [ ] External penetration test before the first large installation.
 
 ### 4.13 Platform, scale and operations — P0/P1, L
 - [ ] Redis for cache and session (`CACHE_DRIVER`/`SESSION_DRIVER=redis`); per-branch jobs for the every-minute billing work on very large installations.
 - [ ] Idempotency for every new job.
-- [ ] Docker images, CI/CD, zero-downtime deploys, migrations tested on big tables.
+- [ ] Docker images, deploy pipeline (CD), zero-downtime deploys, migrations tested on big tables. (CI runs on every push: `.github/workflows/ci.yml`.)
 - [ ] Error tracking (Sentry), metrics, uptime monitoring, structured logs.
 - [ ] Automated offsite backups with restore tests; point-in-time recovery.
 - [ ] Read replica for reports; long reports as queued exports.
@@ -237,7 +242,7 @@ Phase 0 of the audit comes first (permission middleware, branch scoping, safe up
 - [ ] Branch isolation tests for the remaining controllers (customer, bank, receive and branch writes are covered by `BranchIsolationTest`).
 - [ ] Gateway driver contract tests with recorded sandbox responses.
 - [ ] RADIUS driver tests against a FreeRADIUS container in CI.
-- [ ] `isp:ledger-check` in CI and as a nightly job with an alert.
+- [ ] `isp:ledger-check` as a nightly job with an alert (it already runs in CI).
 
 ### 4.16 Documentation and onboarding — P1, S/M
 - [ ] Installation wizard: country pack → company → branch → router/RADIUS → packages → import customers.

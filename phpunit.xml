@@ -27,5 +27,9 @@
         <server name="QUEUE_CONNECTION" value="sync"/>
         <server name="SESSION_DRIVER" value="array"/>
         <server name="TELESCOPE_ENABLED" value="false"/>
+        <!-- no license checks or calls to the vendor server from tests -->
+        <server name="SUBANDL_ENFORCE_LICENSE" value="false"/>
+        <server name="SUBANDL_WEB_SCHEDULER" value="false"/>
+        <server name="SUBANDL_SCHEDULE" value="false"/>
     </php>
 </phpunit>
