@@ -93,6 +93,7 @@ class SessionLogTest extends TestCase
 
     public function test_mikrotik_sessions_are_polled_opened_and_closed(): void
     {
+        Router::query()->update(['is_active' => false]); // only this test's router is polled
         $router = Router::create(['branch_id' => $this->branch->id, 'name' => 'MT', 'driver' => 'mikrotik', 'host' => '192.168.88.1', 'username' => 'api', 'password' => 'x', 'is_active' => true]);
         IspSettings::save($this->branch->id, ['session_log_mikrotik' => true]);
         $active = [['.id' => '*1', 'name' => 'sl_user', 'address' => '10.10.0.7', 'caller-id' => '11:22:33:44:55:66', 'uptime' => '1h30m']];

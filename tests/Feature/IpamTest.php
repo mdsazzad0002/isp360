@@ -92,6 +92,7 @@ class IpamTest extends TestCase
         $this->assertSame('2001:db8:1ff:ff00::/56', IpamService::delegated($pool, 65535));
         $this->api('/isp/ip-pool', ['name' => 'Bad', 'type' => 'ipv6_pd', 'network' => '2001:db8::/56', 'delegated_length' => 48])->assertStatus(422);
 
+        Router::where('branch_id', $this->branch->id)->update(['is_default' => false]); // a router already in the database must not win
         Router::create(['branch_id' => $this->branch->id, 'name' => 'BRAS', 'driver' => 'radius', 'host' => '10.9.9.1', 'nas_type' => 'mikrotik', 'radius_secret' => 's', 'is_active' => true, 'is_default' => true]);
         config(['isp.network_driver' => \App\Services\Network\MikroTikDriver::class]);
         $prefix = $this->api('/isp/ip-pool-next', ['id' => $pool->id])->json('value');
