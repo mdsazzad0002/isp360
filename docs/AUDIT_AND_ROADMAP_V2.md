@@ -1,18 +1,16 @@
 # ISP360 — Audit and Roadmap v2
 
 Audit date: 2026-09-30 · Branch audited: `claude/global-isp-roadmap-arxkcu` · Supersedes the *ordering* of
-[GLOBAL_ISP_ROADMAP.md](GLOBAL_ISP_ROADMAP.md) (that file stays the detailed checklist; this one says what to do next and why).
+[GLOBAL_ISP_ROADMAP.md](GLOBAL_ISP_ROADMAP.md) (that file is the detailed list of open tasks; this one says what to do next and why).
 
 ## 1. Where the product stands
 
 | Area | State |
 |---|---|
-| Global-readiness blockers (currency, timezone, tax, gateways, RADIUS, compliance, billing rules, country packs, i18n) | Done in core. Leftovers listed in §4. |
-| Phase A (global foundation) | Done, except translating the remaining pages. |
-| Phase B (network and compliance) | Done: RADIUS + CoA, session/NAT log, KYC / consent / erasure, IPAM + CGNAT, notifications (e-mail, WhatsApp, Twilio / Vonage / Infobip, reminders). |
-| Phase C (higher-level management) | Item 1 done (company dashboard, regions, regional managers). Items 2–4 open. |
+| Global blockers, Phases A and B | Finished. Small leftovers are in GLOBAL_ISP_ROADMAP §2. |
+| Phase C (higher-level management) | Reseller tree, staff roles, approvals, settings split open. |
 | Phases D, E | Not started. |
-| Roadmap checklist | 75 items done, 136 open. |
+| Security audit (§2) | C1, C2, C3, H1–H5 and all medium items **still open** (re-checked 2026-09-28). |
 | Automated tests | 118 feature tests, 1,774 assertions, all passing — but they cover the new ISP modules only (see §2, H3). |
 
 The new ISP modules (`app/Http/Controllers/Isp/*`, `app/Services/Isp/*`) are in good shape: permission-checked,
@@ -65,7 +63,7 @@ config checks as noted.
 | H1 | No CI: tests only run when someone runs them by hand. | No `.github/workflows`. | GitHub Actions: MariaDB service, `migrate:fresh`, `php artisan test`, `vite build`, `npm audit --omit=dev --audit-level=high`. |
 | H2 | Front-end dependencies have known vulnerabilities. | `npm audit --omit=dev`: 33 (31 moderate, 2 high — `@tiptap/core <= 3.30.4`). `composer audit` could not reach Packagist from the audit box — run it in CI. | Upgrade tiptap; add both audits to CI. |
 | H3 | Older modules (users, roles, accounts, banks, payments/receives, POS reports, balance sheet) have zero tests and no audit log. | 0 of 25 test files touch them. | Tests with the C1/C2 fixes; route them through `AuditLogger`. |
-| H4 | Schema and code drift apart. | `company_profiles.multi_branch_status` was read by the branch switcher since the first commit but never created (fixed 2026-09-30) — branch switching could never have worked. | CI job that runs `migrate:fresh` on an empty DB and smoke-tests every page route (catches missing columns). |
+| H4 | Schema and code can drift apart unnoticed. | A column read by the branch switcher was missing from the schema for months (since fixed). | CI job that runs `migrate:fresh` on an empty DB and smoke-tests every page route (catches missing columns). |
 | H5 | UI is only partly translated. | 6 of 94 Vue pages use i18n; `bn`/`hi`/`ar` each miss 5 keys that exist in `en`. | Translate page by page, starting with the customer portal and billing screens; a key-parity check in CI. |
 
 ### Medium / low
@@ -74,7 +72,6 @@ config checks as noted.
 - `.env.example` ships `APP_DEBUG=true` — document the production values (`APP_DEBUG=false`, `APP_ENV=production`, `SESSION_SECURE_COOKIE=true`).
 - No backup / restore or full data export (roadmap 3.1) — an operational risk for any paying customer.
 - Legacy balance sheet (`ReportController::getBalanceSheet`) is a reduced sheet with retained earnings as the plug figure; it cannot be trusted until the general ledger (4.10) exists.
-- Branch deletion checks every `branch_id` table dynamically (good); region deletion clears references (good).
 
 ## 3. New roadmap (priority order)
 
@@ -118,19 +115,7 @@ money only through the ledger, per-branch scoping, audit log for money and permi
 - Notification leftovers: Telegram, web push, MessageBird, India DLT template IDs, delivery receipts and cost, more events (expiry day, tickets, outage, OTP).
 - Gateway leftovers: more regional gateways as target countries are chosen.
 
-## 4. Leftovers inside sections marked "done"
-
-| Section | Still open |
-|---|---|
-| 2.1 Currency | Old POS modules (sales, purchases, non-ISP reports) still round to 2 decimals. |
-| 2.4 Gateways | Regional drivers per market; refund through the gateway API; saved card / auto-debit; chargeback handling. |
-| 2.6 Compliance | Data residency (host in the country its law requires) — a deployment decision per market. |
-| 2.9 i18n | Remaining pages: customer portal Connections / Profile / Tickets, reseller portal, admin pages (88 of 94 pages). |
-| 3.1 / 3.2 | Backups and export, settings split, inter-branch transfers, consolidated balance sheet. |
-| 4.8 Notifications | DLT, Telegram / web push, MessageBird, delivery receipts, more events. |
-| 4.12 Security | Phase 0 above, plus password policy + session list, signed webhooks for every gateway, CSP / HSTS headers, dependency scanning in CI, external penetration test. |
-
-## 5. Global launch readiness checklist
+## 4. Global launch readiness checklist
 
 A market can go live when all of these are true:
 
