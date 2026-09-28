@@ -162,6 +162,7 @@ onMounted(load);
                             <div class="flex flex-wrap justify-end gap-2">
                                 <button type="button" :disabled="busy === 'test' + r.id" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs" @click="call('/isp/router-test', { id: r.id }, 'test' + r.id)"><i class="bi bi-plug"></i> Test</button>
                                 <button type="button" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs" @click="showSessions(r)"><i class="bi bi-activity"></i> Online users</button>
+                                <Link v-if="r.driver !== 'radius'" :href="`/isp/routers/${r.id}/monitor`" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs"><i class="bi bi-speedometer2"></i> Monitor</Link>
                                 <button v-if="r.driver !== 'radius'" type="button" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs" :class="guideRouter?.id === r.id ? 'border-slate-800' : ''" @click="openGuide(r)"><i class="bi bi-journal-check"></i> Setup</button>
                                 <button type="button" :disabled="busy === 'sync' + r.id" class="rounded-md border border-brand-500 px-2.5 py-1 text-xs text-brand-600" @click="syncAll(r)"><i class="bi bi-arrow-repeat"></i> Sync all</button>
                                 <i class="bi bi-pen cursor-pointer self-center text-brand-500" @click="edit(r)"></i>

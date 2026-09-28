@@ -10,7 +10,7 @@ Audit date: 2026-09-30 · Branch audited: `claude/global-isp-roadmap-arxkcu` · 
 | Global blockers, Phases A and B | Finished. Small leftovers are in GLOBAL_ISP_ROADMAP §2. |
 | Phase C (higher-level management) | Reseller tree, staff roles, approvals, settings split open. |
 | Phases D, E | Not started. |
-| Security audit (§2) | C1–C3, H1 (CI), H2 (dependencies: npm and composer audits clean) and H4 (fresh-database run + page smoke test) fixed 2026-09-28. H3, H5 and the medium items still open. |
+| Security audit (§2) | C1–C3, H1 (CI), H2 (dependencies: npm and composer audits clean) and H4 (fresh-database run + page smoke test) fixed 2026-09-28; security headers (CSP, HSTS), password policy and sign-in list with remote logout added. H3, H5 and the medium items still open. |
 | Automated tests | 118 feature tests, 1,774 assertions, all passing — but they cover the new ISP modules only (see §2, H3). |
 
 The new ISP modules (`app/Http/Controllers/Isp/*`, `app/Services/Isp/*`) are in good shape: permission-checked,
@@ -61,7 +61,7 @@ CI (H1, H4) is in place. Still open:
 6. Leads, coverage map, corporate accounts (4.1).
 
 ### Phase 4 — Scale and ecosystem (P1/P2, ongoing) — unchanged from Phase E
-1. OLT drivers, TR-069, monitoring, outage management (4.6).
+1. Network monitoring (live window → history → alerts → NOC dashboard), OLT / ONU / ONT management, outage management (4.6).
 2. Full general ledger, deferred revenue, bank reconciliation, accounting exports (4.10) — then a real consolidated balance sheet.
 3. Public API, webhooks, API docs (4.14).
 4. Regional payment gateways and e-invoicing per target market (2.4, 4.14).

@@ -25,6 +25,10 @@ return [
     //  - QUEUE_CONNECTION=sync: everything runs inside the web request, as before (small installations).
     'queue_in_scheduler' => (bool) env('ISP_QUEUE_IN_SCHEDULER', false),
 
+    // Content-Security-Policy on HTML pages (App\Http\Middleware\SecurityHeaders):
+    // enforce (default) | report (browser only reports violations) | off
+    'csp' => env('ISP_CSP', 'enforce'),
+
     // isp:backup (database + public/uploads + storage/app) runs daily at `at` when enabled and keeps
     // the newest `keep` archives in storage/app/backups. Copy them off the server too.
     'backup' => [

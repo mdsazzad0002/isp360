@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue';
 import axios from 'axios';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
+import LoginSessionsCard from '../../Components/LoginSessionsCard.vue';
 import { useToast } from '../../lib/toast';
 import { useI18n } from 'vue-i18n';
 
@@ -81,5 +82,6 @@ async function save() {
         <label class="mt-4 flex max-w-md items-center gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm">
             <input v-model="marketing" type="checkbox" @change="setMarketing" /> {{ t('portal.marketing_sms') }}
         </label>
+        <LoginSessionsCard class="mt-4 max-w-md" base="/customer-portal/my-sessions" />
     </PortalLayout>
 </template>

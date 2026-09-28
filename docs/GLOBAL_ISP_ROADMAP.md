@@ -11,7 +11,7 @@
 Priority tags: **P0** = must have before the first customer outside Bangladesh. **P1** = needed to compete in most markets. **P2** = market-specific or scale features.
 Effort tags: **S** ≈ 1–3 days, **M** ≈ 1–2 weeks, **L** ≈ 3+ weeks.
 
-**Already built (not repeated below):** company currency + `Money` (0–3 decimals), company timezone + DST, sales tax + tax report, country packs (BD IN PK NP NG KE PH ID BR US GB), billing rules (postpaid, proration, grace, notice, late fee, deposit), Stripe + PayPal + webhook idempotency, RADIUS + CoA, session/NAT log, KYC / consent / erasure, IPAM + CGNAT, e-mail / WhatsApp / Twilio / Vonage / Infobip + renewal reminder, 2FA + lockout + encrypted secrets, queues + Horizon, RTL / phones / addresses / number formats, company dashboard + regions + regional managers.
+**Already built (not repeated below):** company currency + `Money` (0–3 decimals), company timezone + DST, sales tax + tax report, country packs (BD IN PK NP NG KE PH ID BR US GB), billing rules (postpaid, proration, grace, notice, late fee, deposit), Stripe + PayPal + webhook idempotency, RADIUS + CoA, session/NAT log, KYC / consent / erasure, IPAM + CGNAT, e-mail / WhatsApp / Twilio / Vonage / Infobip + renewal reminder, 2FA + lockout + encrypted secrets, queues + Horizon, RTL / phones / addresses / number formats, company dashboard + regions + regional managers, permission check + branch scoping on the older modules, safe uploads, CI, full backups + restore, security headers (CSP with nonce, HSTS), password policy, sign-in list with remote logout, MikroTik live monitor (CPU / memory / disk / health / online users, interface rates, live interface graph, pinned WAN / uplink interfaces).
 
 ---
 
@@ -79,7 +79,8 @@ differences are data in `config/nas_vendors.php` (`NasVendor`); how a router is 
 - [ ] Check each pack's suggested tax rates with a local accountant before the first customer in that country.
 
 ### 2.9 UI translation
-- [ ] Remaining pages: customer portal Connections / Profile / Tickets, reseller portal, admin pages (88 of 94 pages), and PHP validation / flash messages (`resources/lang` has only `en`). `bn` / `hi` / `ar` each miss 5 keys that exist in `en`. Translations by a native speaker before shipping.
+- [ ] Remaining pages: 91 of 95 pages — customer portal Connections and the rest of Profile, reseller portal (7 pages), admin pages — and PHP validation / flash messages (`resources/lang` has only `en`). Translations by a native speaker before shipping.
+- [ ] Key parity: `bn` / `hi` / `ar` each miss 5 keys that exist in `en` and carry 36 unused ones; add a parity check to CI.
 
 ---
 
@@ -107,7 +108,7 @@ Today: company → reseller → customer (one level).
 - [ ] Role templates: Owner, Manager, Accountant, Billing officer, NOC engineer, Technician, Collector, Support agent, Sales/lead agent, Reseller staff.
 - [ ] Scope per user: organisation / region / branch / zone / area (a collector sees only their areas).
 - [ ] Reporting line (`users.manager_id`) for approvals and escalations.
-- [ ] Per-role 2FA rules once role templates exist; optional login IP allow-list.
+- [ ] Per-role 2FA and password rules once role templates exist (today one policy for everyone: 8+ characters, letters and numbers); optional login IP allow-list.
 
 ### 3.5 Approval workflows (maker-checker) — P1, M
 - [ ] Generic `approvals` table: subject type/id, requested_by, approver role/level, status, reason.
@@ -162,11 +163,12 @@ Today: company → reseller → customer (one level).
 - [ ] P2: asset register with depreciation.
 
 ### 4.6 Network: OLT / ONU / monitoring — P1/P2, L
-- [ ] OLT drivers (SNMP/Telnet/SSH/API): Huawei, ZTE, VSOL, BDCOM, Nokia — ONU list, optical power, status, auto-authorise, map ONU to connection.
-- [ ] TR-069/ACS (GenieACS): remote Wi-Fi name/password change, reboot, firmware.
-- [ ] Monitoring: router/OLT/uplink up/down (ping/SNMP), traffic graphs, NOC alerts. Built in steps, MikroTik first (RADIUS NAS report no CPU/interface data; other vendors via an SNMP `NetworkDriver` later); the browser never talks to a router:
-  - [ ] Step 1, live monitor window (no schema change): `MikroTikDriver::resourceSample` (`/system/resource`, `/system/health`: CPU, RAM, disk, uptime, temperature) and `interfaceSample` (`/interface/monitor-traffic`); routes `router-resource`, `router-interfaces`, `router-interface-traffic` with permission + branch scope + throttle; `Isp/RouterMonitor.vue` opened from the Routers page: stat tiles, interface table, live tx/rx graph. `LiveTrafficChart` made generic (endpoint + series props) and keeps its rules: pause when the tab is hidden, auto-pause after 5 min, one request at a time. `routers.monitor_interfaces` (JSON) pins WAN/uplink graphs.
-  - [ ] Step 2, history: `isp:monitor-collect` every minute (`withoutOverlapping`) → `router_metrics` (cpu, mem, uptime, online users) and `interface_metrics` (rx/tx bps from counter deltas, counter reset safe). Keep 1-min 7 days, hourly 90 days, daily 2 years (rollup + prune). Range picker 1h/24h/7d/30d with 95th percentile; real peak next to bought vs sold on Bandwidth Usage.
+- [ ] OLT records: `olts` (vendor, model, host, protocol, encrypted credentials, `branch_id`), `pon_ports`, `onus` (serial, PON port, ONU id, profile/VLAN, `connection_id`); OLT page under Network.
+- [ ] OLT drivers (SNMP to read, Telnet/SSH/API to change): VSOL, BDCOM, Huawei, ZTE, Nokia — one `OltDriver` interface, vendor differences as data where possible. The first driver is the brand the first customer runs.
+- [ ] ONU management (OLT side): ONU list per PON port with status, RX/TX optical power, distance and last down reason; unregistered ONU list → authorise with a profile and VLAN; reboot, rename, delete; ONU serial linked to the connection and to inventory (4.5); ONU panel on the customer's connection.
+- [ ] ONT management (customer device, TR-069/ACS through GenieACS): Wi-Fi name/password change, reboot, firmware, device info; Wi-Fi change also from the customer portal (4.9).
+- [ ] Monitoring: router/OLT/uplink up/down (ping/SNMP), traffic graphs, NOC alerts. Built in steps, MikroTik first (RADIUS NAS report no CPU/interface data; other vendors via an SNMP `NetworkDriver` later); the browser never talks to a router. Step 1, the live monitor (Routers → Monitor, `RouterMonitorController`), is built:
+  - [ ] Step 2, history: `isp:monitor-collect` every minute (`withoutOverlapping`) → `router_metrics` (cpu, mem, uptime, online users) and `interface_metrics` for the pinned `routers.monitor_interfaces` (rx/tx bps from counter deltas, counter reset safe). Keep 1-min 7 days, hourly 90 days, daily 2 years (rollup + prune). Range picker 1h/24h/7d/30d with 95th percentile; real peak next to bought vs sold on Bandwidth Usage.
   - [ ] Step 3, up/down and alerts: `monitor_events` (down/up, duration); thresholds in Settings (CPU/RAM > 90% for 5 min, uplink down, uplink > 90% of bought bandwidth, online users drop > 30%); dashboard banner, SMS/e-mail through the existing queue, optional auto ticket; alert once per state change, plus a "recovered" message.
   - [ ] Step 4, NOC dashboard: every router on one page (status, CPU, RAM, online users, uplink rate) from collected data, refresh 10 s; this server's health (load, RAM, disk, queue backlog, failed jobs, last scheduler run).
   - [ ] Step 5, OLT: the OLT drivers above feed the same collector and alerts (ONU RX power below -27 dBm, PON port down → outage notice).
@@ -214,11 +216,7 @@ Today: company → reseller → customer (one level).
 - [ ] Scheduled reports by e-mail; XLSX export (PhpSpreadsheet is installed).
 
 ### 4.12 Security — P0, M
-Phase 0 of the audit comes first (permission middleware, branch scoping, safe uploads). Then:
-- [ ] Password policy (length/complexity), session list with remote logout.
-- [ ] Audit log for every admin action (settings, roles, users, branches, package changes, logins).
-- [ ] Signed webhook verification for every gateway.
-- [ ] Security headers (CSP, HSTS).
+- [ ] Audit log for the admin actions still missing it: company profile (name, logo, contact) and SMS gateway changes.
 - [ ] External penetration test before the first large installation.
 
 ### 4.13 Platform, scale and operations — P0/P1, L
@@ -237,7 +235,7 @@ Phase 0 of the audit comes first (permission middleware, branch scoping, safe up
 - [ ] Integrations: accounting (4.10), maps, e-invoicing per country (India GST IRP, Saudi ZATCA, Mexico CFDI, Brazil NF-e/NFCom, EU Peppol, Bangladesh NBR Mushak 6.3).
 
 ### 4.15 Testing and quality — P0, M
-- [ ] Tests for the older modules (users, roles, branches, customers, accounts, banks, payments, POS reports).
+- [ ] Tests for the older modules beyond permissions and branch isolation (`LegacyAccessTest`, `BranchIsolationTest` cover those): POS reports, balance sheet, cash / bank ledgers.
 - [ ] Branch isolation tests for the remaining controllers (customer, bank, receive and branch writes are covered by `BranchIsolationTest`).
 - [ ] Gateway driver contract tests with recorded sandbox responses.
 - [ ] RADIUS driver tests against a FreeRADIUS container in CI.
@@ -259,7 +257,7 @@ Phases A and B are finished; Phase C item 1 is finished.
 1. Multi-level reseller tree, per-level commission, credit limit (3.3)
 2. Staff role templates and scopes (3.4)
 3. Approval workflows (3.5)
-4. Company vs branch settings split, inter-branch transfers, backups (3.1, 3.2)
+4. Company vs branch settings split, inter-branch transfers (3.1, 3.2)
 
 ### Phase D — Operations (P1) ≈ 8–10 weeks
 1. Technicians / work orders (4.4)
@@ -270,7 +268,7 @@ Phases A and B are finished; Phase C item 1 is finished.
 6. Leads, coverage map, corporate accounts (4.1)
 
 ### Phase E — Scale and ecosystem (P1/P2) ongoing
-1. OLT drivers, TR-069, monitoring, outage management (4.6)
+1. Network monitoring, OLT / ONU / ONT management, outage management (4.6)
 2. Full GL, deferred revenue, bank reconciliation, accounting exports (4.10)
 3. Public API + webhooks + docs (4.14)
 4. Regional payment gateways and e-invoicing per target market (2.4, 4.14)
@@ -287,3 +285,4 @@ Phases A and B are finished; Phase C item 1 is finished.
 - Every country difference is data (country pack / settings), never an `if ($country === 'BD')` in code.
 - Every new branch-scoped table carries `branch_id` from day one; company-wide values (country, currency, timezone, tax) live on the company.
 - Default settings must reproduce today's BD behaviour exactly, so current customers see no change.
+- A new payment gateway never trusts the browser redirect: it confirms the payment by a signed webhook or a server-to-server status call, and the paid amount must equal the asked amount.

@@ -50,6 +50,14 @@ Route::group(['prefix' => 'two-factor', 'middleware' => ['auth', 'throttle:20,1'
 });
 Route::get('/logout', [DashboardController::class, 'Logout'])->middleware('auth')->name('logout');
 
+// where the signed-in staff user / reseller / customer is signed in, and signing other browsers out
+Route::post('/my-sessions', [\App\Http\Controllers\Auth\LoginSessionController::class, 'index'])->middleware(['auth', 'throttle:30,1'])->name('mySessions');
+Route::post('/my-sessions/revoke', [\App\Http\Controllers\Auth\LoginSessionController::class, 'revoke'])->middleware(['auth', 'throttle:20,1'])->name('mySessions.revoke');
+Route::post('/reseller/my-sessions', [\App\Http\Controllers\Auth\LoginSessionController::class, 'index'])->middleware(['auth:reseller', 'throttle:30,1'])->defaults('guard', 'reseller')->name('reseller.mySessions');
+Route::post('/reseller/my-sessions/revoke', [\App\Http\Controllers\Auth\LoginSessionController::class, 'revoke'])->middleware(['auth:reseller', 'throttle:20,1'])->defaults('guard', 'reseller')->name('reseller.mySessions.revoke');
+Route::post('/customer-portal/my-sessions', [\App\Http\Controllers\Auth\LoginSessionController::class, 'index'])->middleware(['auth:customer', 'throttle:30,1'])->defaults('guard', 'customer')->name('customerPortal.mySessions');
+Route::post('/customer-portal/my-sessions/revoke', [\App\Http\Controllers\Auth\LoginSessionController::class, 'revoke'])->middleware(['auth:customer', 'throttle:20,1'])->defaults('guard', 'customer')->name('customerPortal.mySessions.revoke');
+
 //company profile update
 Route::get('/companyProfile', [DashboardController::class, 'companyProfile'])->middleware('access:companyProfile')->name('companyProfile');
 Route::get('/get-companyProfile', [DashboardController::class, 'getcompanyProfile'])->name('getcompanyProfile');
@@ -409,6 +417,10 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/router-sessions', [Isp\RouterController::class, 'sessions'])->name('isp.router.sessions');
     Route::post('/router-sync-all', [Isp\RouterController::class, 'syncAll'])->name('isp.router.sync');
     Route::post('/delete-router', [Isp\RouterController::class, 'destroy'])->name('isp.router.delete');
+    Route::get('/routers/{id}/monitor', [Isp\RouterMonitorController::class, 'show'])->whereNumber('id')->name('isp.router.monitor');
+    Route::post('/router-monitor', [Isp\RouterMonitorController::class, 'overview'])->middleware('throttle:40,1')->name('isp.router.monitor.overview');
+    Route::post('/router-interface-traffic', [Isp\RouterMonitorController::class, 'traffic'])->middleware('throttle:90,1')->name('isp.router.monitor.traffic');
+    Route::post('/router-monitor-pins', [Isp\RouterMonitorController::class, 'pins'])->name('isp.router.monitor.pins');
 
     Route::get('/blocks', [Isp\NetworkBlockController::class, 'create'])->name('isp.blocks');
     Route::post('/get-blocks', [Isp\NetworkBlockController::class, 'index'])->name('isp.blocks.index');

@@ -2,12 +2,19 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import axios from 'axios';
 
-// Real-time download/upload of a connection's live session, read from its router every
-// POLL_MS while the panel is open. Two series on one Mbps axis; the package speed is a
-// dashed reference. Colours: dataviz palette slots 1-2 (light), validated on white.
+// Real-time two-series traffic read from a router every POLL_MS while it is shown: a connection's
+// live session (default) or, with url/payload/series, a router interface. One Mbps axis; the
+// package speed is a dashed reference. Colours: dataviz palette slots 1-2 (light), validated on white.
+// The endpoint answers { managed, online, sample: { down_bps, up_bps } | { down_bytes, up_bytes }, at }.
 const props = defineProps({
-    connectionId: { type: Number, required: true },
+    connectionId: { type: Number, default: null },
     packageMbps: { type: Object, default: null }, // { down, up }
+    url: { type: String, default: '/isp/connection-traffic' },
+    payload: { type: Object, default: null }, // request body; default { id: connectionId }
+    series: { type: Array, default: null }, // [{ name, hint }, { name, hint }] for the down / up keys
+    title: { type: String, default: 'Live traffic' },
+    offlineText: { type: String, default: 'Customer is offline: no traffic.' },
+    note: { type: String, default: 'Download = router → customer, upload = customer → router. Near the dashed line = the customer is using the full package.' },
 });
 
 const POLL_MS = 2000;
@@ -16,7 +23,7 @@ const AUTO_PAUSE_MS = 5 * 60 * 1000; // a forgotten open panel must not poll the
 const SERIES = [
     { key: 'down', name: 'Download', hint: 'to customer', color: '#2a78d6' },
     { key: 'up', name: 'Upload', hint: 'from customer', color: '#eb6834' },
-];
+].map((s, i) => ({ ...s, ...(props.series?.[i] || {}) }));
 
 const points = ref([]); // { at (ms), down (bps), up (bps) }
 const state = ref({ status: 'loading', text: '' }); // loading | live | offline | error | unmanaged
@@ -37,12 +44,12 @@ async function poll() {
     }
     if (document.visibilityState === 'visible') {
         try {
-            const { data } = await axios.post('/isp/connection-traffic', { id: props.connectionId });
+            const { data } = await axios.post(props.url, props.payload || { id: props.connectionId });
             if (!alive) return;
             if (!data.managed) state.value = { status: 'unmanaged', text: 'No router session to read (no router, or not PPPoE/hotspot).' };
             else if (data.error) state.value = { status: 'error', text: data.error };
             else if (!data.online) {
-                state.value = { status: 'offline', text: 'Customer is offline: no traffic.' };
+                state.value = { status: 'offline', text: props.offlineText };
                 lastBytes = null;
             } else {
                 state.value = { status: 'live', text: data.sample.address || '' };
@@ -103,7 +110,7 @@ onBeforeUnmount(() => {
     observer?.disconnect();
 });
 watch(
-    () => props.connectionId,
+    () => JSON.stringify([props.connectionId, props.url, props.payload]),
     () => {
         points.value = [];
         lastBytes = null;
@@ -134,6 +141,7 @@ const pkgDown = computed(() => (props.packageMbps?.down > 0 ? Number(props.packa
 
 const last = computed(() => points.value[points.value.length - 1] || null);
 const peak = computed(() => Math.max(0, ...points.value.map((p) => toMbps(p.down))));
+const peakUp = computed(() => Math.max(0, ...points.value.map((p) => toMbps(p.up))));
 // Readable y steps (1/2/2.5/5 × 10^n), about four, top above the peak and the package line.
 const yScale = computed(() => {
     const top = Math.max(0.1, pkgDown.value || 0, ...points.value.flatMap((p) => [toMbps(p.down), toMbps(p.up)]));
@@ -180,7 +188,7 @@ const showTable = ref(false);
     <div class="rounded-md border border-slate-200 p-2">
         <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-1.5 text-xs font-medium text-slate-700">
-                <i class="bi bi-activity"></i> Live traffic
+                <i class="bi bi-activity"></i> {{ title }}
                 <span v-if="state.status === 'live' && !paused" class="inline-flex items-center gap-1 font-normal text-slate-500"><span class="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-500"></span>every {{ POLL_MS / 1000 }}s</span>
                 <span v-else-if="paused" class="font-normal text-slate-500">paused</span>
             </div>
@@ -200,12 +208,16 @@ const showTable = ref(false);
                 <div class="text-sm font-semibold text-slate-900">{{ last ? fmt(toMbps(last[s.key])) : '—' }}</div>
             </div>
             <div class="rounded border border-slate-100 px-2 py-1">
-                <div class="text-[10px] uppercase tracking-wide text-slate-500">Peak download</div>
+                <div class="text-[10px] uppercase tracking-wide text-slate-500">Peak {{ SERIES[0].name }}</div>
                 <div class="text-sm font-semibold text-slate-900">{{ points.length ? fmt(peak) : '—' }}</div>
             </div>
-            <div class="rounded border border-slate-100 px-2 py-1">
+            <div v-if="connectionId" class="rounded border border-slate-100 px-2 py-1">
                 <div class="text-[10px] uppercase tracking-wide text-slate-500">Package</div>
                 <div class="text-sm font-semibold text-slate-900">{{ pkgDown ? `${pkgDown} / ${packageMbps.up || '—'} Mbps` : '—' }}</div>
+            </div>
+            <div v-else class="rounded border border-slate-100 px-2 py-1">
+                <div class="text-[10px] uppercase tracking-wide text-slate-500">Peak {{ SERIES[1].name }}</div>
+                <div class="text-sm font-semibold text-slate-900">{{ points.length ? fmt(peakUp) : '—' }}</div>
             </div>
         </div>
 
@@ -218,7 +230,7 @@ const showTable = ref(false);
         <template v-if="points.length">
             <div v-if="state.status !== 'live'" class="mb-1 text-[11px]" :class="state.status === 'error' ? 'text-red-600' : 'text-slate-500'">{{ state.text }} Showing the last readings.</div>
             <div v-show="!showTable" ref="box" class="relative">
-                <svg :width="width" :height="HEIGHT" class="block touch-none" role="img" :aria-label="`Live traffic: download ${fmt(toMbps(last.down))}, upload ${fmt(toMbps(last.up))}`" @pointermove="onMove" @pointerleave="hover = null">
+                <svg :width="width" :height="HEIGHT" class="block touch-none" role="img" :aria-label="`${title}: ${SERIES[0].name} ${fmt(toMbps(last.down))}, ${SERIES[1].name} ${fmt(toMbps(last.up))}`" @pointermove="onMove" @pointerleave="hover = null">
                     <g v-for="t in ticks" :key="t">
                         <line :x1="PAD.left" :x2="width - PAD.right" :y1="y(t)" :y2="y(t)" stroke="#eef2f6" stroke-width="1" />
                         <text :x="PAD.left - 6" :y="y(t) + 3" text-anchor="end" font-size="10" fill="#64748b">{{ t }}</text>
@@ -249,7 +261,7 @@ const showTable = ref(false);
             <div v-if="showTable" class="max-h-48 overflow-y-auto">
                 <table class="w-full text-xs">
                     <thead class="sticky top-0 bg-white text-start text-slate-500">
-                        <tr><th class="py-1 font-medium">Time</th><th class="py-1 text-end font-medium">Download</th><th class="py-1 text-end font-medium">Upload</th></tr>
+                        <tr><th class="py-1 font-medium">Time</th><th class="py-1 text-end font-medium">{{ SERIES[0].name }}</th><th class="py-1 text-end font-medium">{{ SERIES[1].name }}</th></tr>
                     </thead>
                     <tbody>
                         <tr v-for="p in [...points].reverse()" :key="p.at" class="border-t border-slate-100">
@@ -260,7 +272,7 @@ const showTable = ref(false);
                     </tbody>
                 </table>
             </div>
-            <div class="mt-1 text-[10px] text-slate-500">Download = router → customer, upload = customer → router. Near the dashed line = the customer is using the full package.</div>
+            <div v-if="note" class="mt-1 text-[10px] text-slate-500">{{ note }}</div>
         </template>
     </div>
 </template>

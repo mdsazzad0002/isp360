@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Branch;
 use App\Models\User;
 use App\Services\Isp\AuditLogger;
+use App\Support\LoginSessions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -69,7 +71,7 @@ class UserController extends Controller
                 'required',
                 Rule::unique('users')->whereNull('deleted_at'),
             ],
-            'password' => 'required',
+            'password' => ['required', Password::defaults()],
             'phone'    => 'required',
             'role'     => 'required',
             'email'    => 'required',
@@ -117,6 +119,7 @@ class UserController extends Controller
                 'required',
                 Rule::unique('users')->ignore($request->id)->whereNull('deleted_at'),
             ],
+            'password' => ['nullable', Password::defaults()],
             'phone'    => 'required',
             'role'     => 'required',
             'email'    => 'required',
@@ -141,6 +144,10 @@ class UserController extends Controller
             $data->ipAddress = request()->ip();
             $data->updated_at = Carbon::now();
             $data->update();
+            // a password set by someone else, or a deactivated account: sign it out everywhere
+            if ((!empty($request->password) && $data->id !== $this->userId) || $data->status === 'p') {
+                LoginSessions::revoke('web', $data->id);
+            }
             AuditLogger::log('user.updated', $data, $before, $data->only(array_keys($before)) + (!empty($request->password) ? ['password' => 'changed'] : []));
 
             return response()->json(['status' => true, 'message' => "User has updated successfully"]);
@@ -158,6 +165,7 @@ class UserController extends Controller
             'username' => ['required', Rule::unique('users')->ignore($user->id)->whereNull('deleted_at')],
             'phone'    => 'required',
             'email'    => 'nullable|email',
+            'password' => ['nullable', Password::defaults()],
             'image' => $request->hasFile('image') ? \App\Support\Upload::rule() : 'nullable',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
@@ -169,6 +177,8 @@ class UserController extends Controller
             }
             if (!empty($request->password)) {
                 $user->password = Hash::make($request->password);
+                // a new password signs out every other browser
+                LoginSessions::revoke('web', $user->id, null, LoginSessions::currentId($request, 'web'));
                 AuditLogger::log('user.password_changed', $user);
             }
             $user->ipAddress = request()->ip();
@@ -236,6 +246,7 @@ class UserController extends Controller
             $data->update();
 
             $data->delete();
+            LoginSessions::revoke('web', $data->id);
             AuditLogger::log('user.deleted', $data, $data->only(['username', 'role', 'branch_id']));
             return response()->json(['status' => true, 'message' => "User has deleted successfully"]);
         } catch (\Throwable $th) {

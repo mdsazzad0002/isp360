@@ -4,6 +4,7 @@ import axios from 'axios';
 import PortalLayout from '../../Layouts/PortalLayout.vue';
 import { useToast } from '../../lib/toast';
 import TwoFactorCard from '../../Components/TwoFactorCard.vue';
+import LoginSessionsCard from '../../Components/LoginSessionsCard.vue';
 
 const props = defineProps({
     reseller: { type: Object, required: true },
@@ -72,5 +73,6 @@ async function save() {
             </div>
         </form>
         <TwoFactorCard class="mt-4" base="/reseller/two-factor" />
+        <LoginSessionsCard class="mt-4" base="/reseller/my-sessions" />
     </PortalLayout>
 </template>

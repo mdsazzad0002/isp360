@@ -314,6 +314,79 @@ class MikroTikDriver implements NetworkDriver
         return $base + ['down_bps' => (float) ($r['tx-bits-per-second'] ?? 0), 'up_bps' => (float) ($r['rx-bits-per-second'] ?? 0)];
     }
 
+    // Router health for the live monitor: /system/resource, plus /system/health where the board has
+    // sensors (CHR and x86 have none, and some boards answer that menu with an error).
+    public static function resourceSample(MikroTikClient $api): array
+    {
+        $r = $api->get('/system/resource');
+        $num = fn (string $key) => isset($r[$key]) && is_numeric($r[$key]) ? (float) $r[$key] : null;
+        $health = [];
+        try {
+            foreach ($api->get('/system/health') as $h) {
+                if (isset($h['name'], $h['value'])) {
+                    $health[] = ['name' => $h['name'], 'value' => $h['value'], 'unit' => $h['type'] ?? ''];
+                }
+            }
+        } catch (\Throwable $th) {
+            // no sensors: the monitor shows no health row
+        }
+        return [
+            'cpu' => $num('cpu-load'),
+            'cpu_count' => $num('cpu-count'),
+            'memory_total' => $num('total-memory'),
+            'memory_free' => $num('free-memory'),
+            'disk_total' => $num('total-hdd-space'),
+            'disk_free' => $num('free-hdd-space'),
+            'uptime' => $r['uptime'] ?? '',
+            'version' => $r['version'] ?? '',
+            'board' => $r['board-name'] ?? '',
+            'architecture' => $r['architecture-name'] ?? '',
+            'health' => $health,
+        ];
+    }
+
+    // Configured interfaces with their byte counters; the monitor derives rates from two readings.
+    // The dynamic ones (one <pppoe-user> per session) are left out: thousands on a busy router.
+    public static function interfaceList(MikroTikClient $api): array
+    {
+        $rows = $api->get('/interface', ['dynamic' => 'false', '.proplist' => 'name,type,running,disabled,rx-byte,tx-byte,link-downs,last-link-down-time,comment']);
+        $out = [];
+        foreach ($rows as $i) {
+            if (! isset($i['name']) || str_starts_with($i['name'], '<')) {
+                continue;
+            }
+            $out[] = [
+                'name' => $i['name'],
+                'type' => $i['type'] ?? '',
+                'running' => ($i['running'] ?? 'false') === 'true',
+                'disabled' => ($i['disabled'] ?? 'false') === 'true',
+                'rx_bytes' => (float) ($i['rx-byte'] ?? 0),
+                'tx_bytes' => (float) ($i['tx-byte'] ?? 0),
+                'link_downs' => (int) ($i['link-downs'] ?? 0),
+                'last_link_down' => $i['last-link-down-time'] ?? null,
+                'comment' => $i['comment'] ?? '',
+            ];
+        }
+        return $out;
+    }
+
+    // PPPoE + Hotspot sessions right now (ids only, to keep the answer small on a busy router).
+    public static function onlineCount(MikroTikClient $api): int
+    {
+        return count($api->get('/ppp/active', ['.proplist' => '.id'])) + count($api->get('/ip/hotspot/active', ['.proplist' => '.id']));
+    }
+
+    // One live rate reading of an interface, null when the router has no interface of that name.
+    /** @return array{rx_bps: float, tx_bps: float}|null */
+    public static function interfaceTraffic(MikroTikClient $api, string $name): ?array
+    {
+        $r = $api->run('/interface/monitor-traffic', ['interface' => $name, 'once' => ''], 10)[0] ?? null;
+        if (! $r || ($r['name'] ?? $name) !== $name) {
+            return null;
+        }
+        return ['rx_bps' => (float) ($r['rx-bits-per-second'] ?? 0), 'tx_bps' => (float) ($r['tx-bits-per-second'] ?? 0)];
+    }
+
     // Why there is no live session, read from the router (read-only), so "offline" always comes with a cause.
     public static function offlineReason(MikroTikClient $api, Connection $connection): string
     {

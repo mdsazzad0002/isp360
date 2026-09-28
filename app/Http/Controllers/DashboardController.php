@@ -44,6 +44,7 @@ class DashboardController extends Controller
     public function Logout()
     {
         try {
+            \App\Support\LoginSessions::end(request(), 'web');
             Auth::guard('web')->logout();
             Session::forget(['branch', 'panel']);
             Session::flash('success', 'Logout successfully');

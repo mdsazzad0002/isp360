@@ -5,6 +5,7 @@ import AppLayout from '../../../Layouts/AppLayout.vue';
 import { useToast } from '../../../lib/toast';
 import { resizeImageFile } from '../../../lib/imageResize';
 import TwoFactorCard from '../../../Components/TwoFactorCard.vue';
+import LoginSessionsCard from '../../../Components/LoginSessionsCard.vue';
 
 defineOptions({ layout: AppLayout });
 
@@ -147,5 +148,6 @@ async function updateUser() {
             </div>
         </form>
         <TwoFactorCard class="mt-4" base="/two-factor" />
+        <LoginSessionsCard class="mt-4" base="/my-sessions" />
     </div>
 </template>

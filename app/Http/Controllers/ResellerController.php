@@ -85,7 +85,7 @@ class ResellerController extends Controller
                 'required',
                 Rule::unique('resellers')->whereNull('deleted_at'),
             ],
-            'password' => 'required',
+            'password' => ['required', \Illuminate\Validation\Rules\Password::defaults()],
             'image' => $request->hasFile('image') ? \App\Support\Upload::rule() : 'nullable',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
@@ -116,6 +116,7 @@ class ResellerController extends Controller
         $validator = Validator::make($request->all(), [
             'name'     => 'required',
             'phone'    => ['required', new \App\Rules\PhoneNumber],
+            'password' => ['nullable', \Illuminate\Validation\Rules\Password::defaults()],
             'username' => [
                 'required',
                 Rule::unique('resellers')->ignore($request->id)->whereNull('deleted_at'),
@@ -131,6 +132,7 @@ class ResellerController extends Controller
             $data->forceFill($fields);
             if (!empty($request->password)) {
                 $data->password = Hash::make($request->password);
+                \App\Support\LoginSessions::revoke('reseller', $data->id); // set by staff: sign the reseller out everywhere
             }
             if ($request->hasFile('image')) {
                 deleteUploadedFile($data->image);

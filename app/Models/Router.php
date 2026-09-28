@@ -18,6 +18,7 @@ class Router extends Model
         'is_default' => 'boolean',
         'is_active' => 'boolean',
         'last_checked_at' => 'datetime',
+        'monitor_interfaces' => 'array',
     ];
 
     // [driver => label] from config('isp.router_drivers')

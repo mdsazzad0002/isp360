@@ -125,6 +125,8 @@ class LoginController extends Controller
     protected function completeLogin(string $guard, $account)
     {
         Auth::guard($guard)->login($account);
+        \App\Support\LoginSessions::start(request(), $guard, $account);
+        AuditLogger::log('auth.login', $account, null, ['guard' => $guard, 'ip' => request()->ip()], null, $account->branch_id ?? null);
         Session::put('portal', $guard);
         if ($guard === 'web') {
             $this->branchset();

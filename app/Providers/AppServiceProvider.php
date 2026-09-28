@@ -30,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        // every new or changed password: at least 8 characters with letters and numbers
+        \Illuminate\Validation\Rules\Password::defaults(fn () => \Illuminate\Validation\Rules\Password::min(8)->letters()->numbers());
+
         // Guarded so artisan commands (migrate:fresh included) can boot the
         // app before company_profiles/branches exist yet, on a brand new
         // database.

@@ -58,6 +58,7 @@ class ResellerPanelController extends Controller
         $validator = Validator::make($request->all(), [
             'name'  => 'required',
             'phone' => ['required', new \App\Rules\PhoneNumber],
+            'password' => ['nullable', \Illuminate\Validation\Rules\Password::defaults()],
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
 
@@ -68,6 +69,8 @@ class ResellerPanelController extends Controller
             $reseller->address = $request->address;
             if (!empty($request->password)) {
                 $reseller->password = Hash::make($request->password);
+                // a new password signs out every other browser
+                \App\Support\LoginSessions::revoke('reseller', $reseller->id, null, \App\Support\LoginSessions::currentId($request, 'reseller'));
             }
             $reseller->update();
 
@@ -321,6 +324,7 @@ class ResellerPanelController extends Controller
     public function logout()
     {
         try {
+            \App\Support\LoginSessions::end(request(), 'reseller');
             Auth::guard('reseller')->logout();
             Session::forget('portal');
             if (Session::pull('reseller_impersonator_id') && Auth::guard('web')->check()) {

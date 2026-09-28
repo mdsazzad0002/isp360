@@ -135,6 +135,7 @@ class CustomerPanelController extends Controller
         $validator = Validator::make($request->all(), [
             'name'  => 'required',
             'phone' => ['required', new \App\Rules\PhoneNumber],
+            'password' => ['nullable', \Illuminate\Validation\Rules\Password::defaults()],
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
 
@@ -145,6 +146,8 @@ class CustomerPanelController extends Controller
             $customer->address = $request->address;
             if (!empty($request->password)) {
                 $customer->password = Hash::make($request->password);
+                // a new password signs out every other browser
+                \App\Support\LoginSessions::revoke('customer', $customer->id, null, \App\Support\LoginSessions::currentId($request, 'customer'));
             }
             $customer->update();
 
@@ -157,6 +160,7 @@ class CustomerPanelController extends Controller
     public function logout()
     {
         try {
+            \App\Support\LoginSessions::end(request(), 'customer');
             Auth::guard('customer')->logout();
             Session::forget('portal');
             if (Session::pull('customer_impersonator_id') && Auth::guard('web')->check()) {

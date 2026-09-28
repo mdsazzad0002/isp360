@@ -109,6 +109,7 @@ class CustomerController extends Controller
             'language' => 'nullable|in:en,bn,hi,ar',
             'notify_channels' => ['nullable', 'regex:/^(sms|email|whatsapp)(,(sms|email|whatsapp))*$/'],
             'state' => 'nullable|max:100',
+            'password' => ['nullable', \Illuminate\Validation\Rules\Password::defaults()],
             'image' => $request->hasFile('image') ? \App\Support\Upload::rule() : 'nullable',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
@@ -172,6 +173,7 @@ class CustomerController extends Controller
                 'nullable',
                 Rule::unique('customers')->ignore($request->id)->whereNull('deleted_at'),
             ],
+            'password' => ['nullable', \Illuminate\Validation\Rules\Password::defaults()],
             'image' => $request->hasFile('image') ? \App\Support\Upload::rule() : 'nullable',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
@@ -183,6 +185,7 @@ class CustomerController extends Controller
             $data->forceFill($fields);
             if (!empty($request->password)) {
                 $data->password = Hash::make($request->password);
+                \App\Support\LoginSessions::revoke('customer', $data->id); // set by staff: sign the customer out everywhere
             }
             if ($request->hasFile('image')) {
                 deleteUploadedFile($data->image);

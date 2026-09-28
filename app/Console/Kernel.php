@@ -35,6 +35,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('isp:session-logs')->everyFiveMinutes()->withoutOverlapping(15);
         $schedule->command('isp:session-logs --prune')->dailyAt('03:10');
 
+        // sign-in history older than 60 days
+        $schedule->call(fn () => \App\Support\LoginSessions::prune())->dailyAt('03:20')->name('login-sessions-prune');
+
         // full backup: database + uploaded and private files
         if (config('isp.backup.enabled')) {
             $schedule->command('isp:backup')->dailyAt(config('isp.backup.at'))->withoutOverlapping(120);
