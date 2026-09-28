@@ -40,13 +40,12 @@ async function updateUser() {
     formdata.append('name', user.name);
     formdata.append('username', user.username);
     formdata.append('email', user.email ?? '');
-    formdata.append('role', user.role);
     formdata.append('phone', user.phone ?? '');
     formdata.append('password', user.password ?? '');
     if (imageFile) formdata.append('image', imageFile);
 
     try {
-        const res = await axios.post('/update-user', formdata);
+        const res = await axios.post('/update-profile', formdata);
         if (res.data.status) {
             toast.success(res.data.message);
             user.password = '';

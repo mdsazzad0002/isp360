@@ -53,13 +53,6 @@ class DashboardController extends Controller
         }
     }
 
-    // branch set on session
-    protected function branchset($id)
-    {
-        $branch = Branch::find($id);
-        Session::put('branch', $branch);
-        return back();
-    }
 
     public function companyProfile()
     {

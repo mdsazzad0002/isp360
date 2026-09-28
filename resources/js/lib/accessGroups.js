@@ -115,6 +115,8 @@ export const accessGroups = [
             { value: 'supplier', label: 'Supplier Entry' },
             { value: 'supplierList', label: 'Supplier List' },
             { value: 'customer', label: 'Customer' },
+            { value: 'customerRestore', label: 'Deleted Customer Record (Restore)' },
+            { value: 'reseller', label: 'Reseller Entry / Import / Export' },
             { value: 'customerLoginAs', label: 'Login As Customer (portal)' },
             { value: 'resellerLoginAs', label: 'Login As Reseller (portal)' },
             { value: 'resellerRequest', label: 'Reseller Packages, Ledger, Withdrawals & Wallets (view)' },
@@ -143,6 +145,8 @@ export const accessGroups = [
         label: 'Setting Panel',
         items: [
             { value: 'companyProfile', label: 'Company Profile' },
+            { value: 'smsSetting', label: 'SMS Gateways' },
+            { value: 'smsPromotion', label: 'SMS Promotion & SMS Log' },
             { value: 'vatSettings', label: 'VAT Settings' },
             { value: 'pharmacyManage', label: 'Pharmacy Manage' },
             { value: 'quotationSettings', label: 'Quotation Settings' },

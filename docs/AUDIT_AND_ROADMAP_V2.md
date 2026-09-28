@@ -10,7 +10,7 @@ Audit date: 2026-09-30 · Branch audited: `claude/global-isp-roadmap-arxkcu` · 
 | Global blockers, Phases A and B | Finished. Small leftovers are in GLOBAL_ISP_ROADMAP §2. |
 | Phase C (higher-level management) | Reseller tree, staff roles, approvals, settings split open. |
 | Phases D, E | Not started. |
-| Security audit (§2) | C1, C2, C3, H1–H5 and all medium items **still open** (re-checked 2026-09-28). |
+| Security audit (§2) | C1 fixed 2026-09-28 (route permission middleware, privilege rules for users / roles). C2, C3, H1–H5 still open. |
 | Automated tests | 118 feature tests, 1,774 assertions, all passing — but they cover the new ISP modules only (see §2, H3). |
 
 The new ISP modules (`app/Http/Controllers/Isp/*`, `app/Services/Isp/*`) are in good shape: permission-checked,
@@ -25,23 +25,12 @@ config checks as noted.
 
 ### Critical — fix before any real customer uses a multi-user install
 
-**C1. Most older write endpoints have no permission check — any logged-in staff user can become Superadmin.**
-- 14 controllers, ~45 write methods (`store` / `update` / `destroy` in User, Role, Branch, Company, Customer,
-  AccountHead, Bank, BankTransaction, Payment, Receive, Transaction, Reseller, SmsGateway; `updatecompanyProfile`,
-  `updateBranchManage`, `saveRoleAccess`) only check the *page* permission, never the *action*. There is no
-  route-level permission middleware.
-- **Proven:** a staff user whose role allows only `connection` called `POST /update-user` on themselves with
-  `role=Superadmin` → HTTP 200, role changed. The same user created a branch (`POST /branch` → 200).
-- Fix: an `access:<name>` route middleware applied per route group, plus `checkAccess` in each write method;
-  forbid changing `role`, `branch_id`, `region_id`, `switchable_branches` unless the actor has `user` + head-office
-  rights and never above their own role. Regression test per endpoint.
-
 **C2. Cross-branch record access and mass assignment.**
-- The same controllers load records with `Model::find($request->id)` without `where('branch_id', …)`, and then
+- Several older controllers load records with `Model::find($request->id)` without `where('branch_id', …)`, and then
   copy every request field onto the model (`foreach ($request->except('id') …)`).
-- **Proven:** the same low-permission staff user in branch 1 edited a customer of branch 32 → HTTP 200, the
+- **Proven:** a low-permission staff user in branch 1 edited a customer of branch 32 → HTTP 200, the
   customer was renamed **and moved into branch 1** (`CustomerController::update` forces the current branch).
-- Deletes (`destroy`) in 12 controllers have neither permission nor branch checks.
+- Deletes (`destroy`) in 12 controllers have no branch check (the permission check is now on the route).
 - Fix: a `BelongsToBranch` scope / `findForBranch()` helper used everywhere; replace the generic loops with
   explicit `$request->validated()` field lists (`$fillable` on the models).
 
@@ -68,7 +57,6 @@ config checks as noted.
 
 ### Medium / low
 
-- `GET /branchset/{id}` routes to a `protected` method (dead route; remove it).
 - `.env.example` ships `APP_DEBUG=true` — document the production values (`APP_DEBUG=false`, `APP_ENV=production`, `SESSION_SECURE_COOKIE=true`).
 - No backup / restore or full data export (roadmap 3.1) — an operational risk for any paying customer.
 - Legacy balance sheet (`ReportController::getBalanceSheet`) is a reduced sheet with retained earnings as the plug figure; it cannot be trusted until the general ledger (4.10) exists.
@@ -79,12 +67,10 @@ Estimates assume one developer. Every step keeps the rules in GLOBAL_ISP_ROADMAP
 money only through the ledger, per-branch scoping, audit log for money and permissions).
 
 ### Phase 0 — Security hardening (P0, ~1–2 weeks) — **do this next**
-1. Route permission middleware + action checks on every older write endpoint (C1), with a test that walks all `POST` routes as a no-permission user and expects 403.
-2. Branch scoping helper and explicit field lists replacing the generic assignment loops (C2).
-3. Safe uploads: allow-listed extensions, random names, private storage, validation on every upload (C3).
-4. Privilege rules for user management: cannot grant a role above your own; only head office changes branches / regions / switch lists.
-5. Audit log for users, roles, branches, company profile and accounting entries.
-6. Upgrade `@tiptap/core`; run `composer audit`.
+1. Branch scoping helper and explicit field lists replacing the generic assignment loops (C2).
+2. Safe uploads: allow-listed extensions, random names, private storage, validation on every upload (C3).
+3. Audit log for branches, company profile and accounting entries (users and roles are logged).
+4. Upgrade `@tiptap/core`; run `composer audit`.
 
 ### Phase 1 — Quality foundation (P0, ~1–2 weeks)
 1. CI pipeline (H1) with fresh-migration smoke test of every page route (H4).

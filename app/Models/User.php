@@ -77,6 +77,37 @@ class User extends Authenticatable
         return $this->allowedBranchIds() === null;
     }
 
+    // Superadmin > admin > every other role: nobody grants, edits or logs in as a rank above their own.
+    public static function roleRank(?string $role): int
+    {
+        return match ($role) {
+            'Superadmin' => 3,
+            'admin' => 2,
+            default => 1,
+        };
+    }
+
+    public function rank(): int
+    {
+        return $this->id == 1 ? 3 : self::roleRank($this->role);
+    }
+
+    // Admin of the whole company: may move users between branches and hand out regions / switch lists.
+    public function isHeadOffice(): bool
+    {
+        return $this->rank() >= 2 && $this->seesAllBranches();
+    }
+
+    // May this user edit, delete or log in as $target? Never someone ranked higher; outside head
+    // office only users of their own branch.
+    public function canManage(User $target, ?int $branchId = null): bool
+    {
+        if ($target->rank() > $this->rank()) {
+            return false;
+        }
+        return $this->isHeadOffice() || (int) $target->branch_id === (int) ($branchId ?? $this->branch_id);
+    }
+
     public function region()
     {
         return $this->belongsTo(Region::class);

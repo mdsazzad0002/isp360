@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Role;
+use App\Services\Isp\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -54,10 +55,26 @@ class RoleController extends Controller
 
     public function saveRoleAccess(Request $request)
     {
+        $validator = Validator::make($request->all(), ['id' => 'required|integer', 'access' => 'present|array', 'access.*' => 'string|max:100']);
+        if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
+        $role = Role::find($request->id);
+        if (!$role) return send_error('Role not found', null, 404);
+        $access = array_values(array_unique($request->access));
+        // below admin, a user can only hand out permissions they hold themselves
+        if (auth()->user()->rank() < 2) {
+            $old = json_decode((string) $role->access, true) ?: [];
+            $added = array_diff($access, $old);
+            $missing = array_values(array_filter($added, fn ($name) => !checkAccess($name)));
+            if ($missing) {
+                return send_error('You cannot grant permissions you do not have: ' . implode(', ', $missing), null, 403);
+            }
+        }
         try {
-            Role::where('id', $request->id)->update([
-                'access' => json_encode($request->access),
+            $old = json_decode((string) $role->access, true) ?: [];
+            Role::where('id', $role->id)->update([
+                'access' => json_encode($access),
             ]);
+            AuditLogger::log('role.access_changed', $role, ['access' => $old], ['access' => $access]);
 
             return response()->json(['status' => true, 'message' => "Role access has been saved successfully"]);
         } catch (\Throwable $th) {
@@ -79,6 +96,7 @@ class RoleController extends Controller
             ],
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
+        if ($r = $this->reservedName($request)) return $r;
         try {
             $check = Role::where('name', $request->name)->withTrashed()->first();
             if (!empty($check) && $check->deleted_at != NULL) {
@@ -88,10 +106,7 @@ class RoleController extends Controller
                 $check->update();
             } else {
                 $data = new Role();
-                $dataKey = $request->except('id');
-                foreach ($dataKey as $key => $value) {
-                    $data[$key] = $value;
-                }
+                $data->name = $request->name;
                 $data->created_by = $this->userId;
                 $data->branch_id  = $this->branchId;
                 $data->ipAddress  = request()->ip();
@@ -119,12 +134,11 @@ class RoleController extends Controller
             ],
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
+        if ($r = $this->reservedName($request)) return $r;
         try {
             $data = Role::find($request->id);
-            $dataKey = $request->except('id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            if (!$data) return send_error('Role not found', null, 404);
+            $data->name = $request->name;
             $data->updated_at = Carbon::now();
             $data->updated_by = $this->userId;
             $data->ipAddress = request()->ip();
@@ -135,6 +149,13 @@ class RoleController extends Controller
         } catch (\Throwable $th) {
             return send_error('Something went wrong', $th->getMessage());
         }
+    }
+
+    // "Superadmin" and "admin" pass every permission check by name, so no role may be called that
+    private function reservedName(Request $request)
+    {
+        return in_array(strtolower(trim((string) $request->name)), ['superadmin', 'admin'], true)
+            ? send_error('This role name is reserved', null, 422) : null;
     }
 
     public function destroy(Request $request)
