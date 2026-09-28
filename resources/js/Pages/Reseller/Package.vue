@@ -6,13 +6,17 @@ import { useToast } from '../../lib/toast';
 import { confirmDialog } from '../../lib/confirm';
 import { money, label, useApiError, fmtMoney, cur, moneyStep } from '../../lib/isp';
 
-// A reseller sells company packages under their own name and price. Speed, router
-// profile and billing cycle come from the company package. When the company changes that
-// package, the reseller's copy keeps its terms until the reseller reviews and saves it.
+// A reseller sells company packages under their own name and price (a sub-reseller: its parent
+// reseller's packages). Speed, router profile and billing cycle come from the base package. When
+// the level above changes that package, the copy keeps its terms until the reseller reviews and saves it.
 const props = defineProps({
     reseller: { type: Object, required: true },
     basePackages: { type: Array, default: () => [] },
+    above: { type: String, default: null }, // the parent reseller's name; null = the company
 });
+const aboveTitle = computed(() => props.above || 'The company');
+const pkgNoun = computed(() => (props.above ? `${props.above}'s package` : 'company package'));
+const priceNoun = computed(() => (props.above ? `${props.above}'s price` : 'company price'));
 
 const toast = useToast();
 const showError = useApiError();
@@ -28,7 +32,7 @@ const originalPrice = ref(null);
 const reviewing = ref(null); // base_changes of the package being reviewed
 const waitingCount = computed(() => rows.value.filter((r) => r.base_changes).length);
 
-const FIELD_LABELS = { company_price: 'Company price', download_mbps: 'Download (Mbps)', upload_mbps: 'Upload (Mbps)', billing_cycle: 'Billing cycle', validity_days: 'Validity (days)', installation_fee: 'Installation fee', activation_fee: 'Activation fee', network_profile: 'Router profile' };
+const FIELD_LABELS = { company_price: 'Price above', download_mbps: 'Download (Mbps)', upload_mbps: 'Upload (Mbps)', billing_cycle: 'Billing cycle', validity_days: 'Validity (days)', installation_fee: 'Installation fee', activation_fee: 'Activation fee', network_profile: 'Router profile' };
 const MONEY_FIELDS = ['company_price', 'installation_fee', 'activation_fee'];
 function fmtField(field, value) {
     if (MONEY_FIELDS.includes(field)) return money(value);
@@ -116,14 +120,14 @@ onMounted(load);
 
         <div v-if="waitingCount && !reviewing" class="mb-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
             <i class="bi bi-exclamation-triangle"></i>
-            The company changed {{ waitingCount }} of your base packages. Review them below: your packages keep their current terms until you save them.
+            {{ aboveTitle }} changed {{ waitingCount }} of your base packages. Review them below: your packages keep their current terms until you save them.
         </div>
 
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 class="mb-1 text-sm font-semibold text-slate-700">{{ reviewing ? `Review company change: ${form.name}` : form.id ? `Edit package: ${form.name}` : 'Customize a company package' }}</h2>
-            <p class="mb-3 text-xs text-slate-500">Pick a company package, give it your name and price. Your earning is your price minus the company price.</p>
+            <h2 class="mb-1 text-sm font-semibold text-slate-700">{{ reviewing ? `Review change: ${form.name}` : form.id ? `Edit package: ${form.name}` : `Customize a ${pkgNoun}` }}</h2>
+            <p class="mb-3 text-xs text-slate-500">Pick a {{ pkgNoun }}, give it your name and price. Your earning is your price minus the {{ priceNoun }}.</p>
             <div v-if="reviewing" class="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                <div class="mb-1 font-semibold">The company changed this package:</div>
+                <div class="mb-1 font-semibold">{{ aboveTitle }} changed this package:</div>
                 <table class="w-full max-w-md">
                     <tr v-for="(pair, field) in reviewing" :key="field">
                         <td class="py-0.5 pe-3 text-amber-700">{{ FIELD_LABELS[field] || field }}</td>
@@ -164,7 +168,7 @@ onMounted(load);
                     <div class="text-sm font-semibold" :class="margin !== null && margin < 0 ? 'text-red-600' : 'text-emerald-700'">{{ margin !== null ? money(margin) : '—' }}</div>
                 </div>
                 <div v-if="base" class="col-span-2 text-xs text-slate-500 md:col-span-4">
-                    From the company package: {{ base.download_mbps }}/{{ base.upload_mbps }} Mbps, {{ label(base.billing_cycle) }}, validity {{ base.validity_days }} days,
+                    From the {{ pkgNoun }}: {{ base.download_mbps }}/{{ base.upload_mbps }} Mbps, {{ label(base.billing_cycle) }}, validity {{ base.validity_days }} days,
                     installation {{ money(base.installation_fee) }}, activation {{ money(base.activation_fee) }}.
                 </div>
                 <div class="col-span-2 md:col-span-3">

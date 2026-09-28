@@ -18,6 +18,9 @@ const props = defineProps({
             <h1 class="text-lg font-semibold text-slate-800">My Dashboard</h1>
         </div>
 
+        <div v-if="wallet.over_limit" role="alert" class="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+            You owe {{ money(Math.abs(wallet.balance)) }}, over your credit limit of {{ money(wallet.credit_limit) }}. Cash collection is blocked until you deposit with {{ wallet.settles_with || 'the company' }}.
+        </div>
         <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
             <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">My Customers</div>
@@ -36,7 +39,7 @@ const props = defineProps({
                 <div class="mt-1 text-2xl font-bold text-slate-800">{{ money(wallet.earned) }}</div>
             </Link>
             <Link href="/reseller/withdrawals" class="col-span-2 rounded-lg border p-4 shadow-sm lg:col-span-1" :class="wallet.balance < 0 ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'">
-                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ wallet.balance < 0 ? 'I owe the company' : 'Wallet balance' }}</div>
+                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ wallet.balance < 0 ? `I owe ${wallet.settles_with || 'the company'}` : 'Wallet balance' }}</div>
                 <div class="mt-1 text-2xl font-bold" :class="wallet.balance < 0 ? 'text-red-600' : 'text-emerald-700'">{{ money(Math.abs(wallet.balance || 0)) }}</div>
             </Link>
         </div>

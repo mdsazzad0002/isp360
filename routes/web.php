@@ -113,6 +113,12 @@ Route::group(['prefix' => 'reseller', 'middleware' => 'auth:reseller'], function
     Route::post('/withdrawal-cancel', [ResellerPanelController::class, 'cancelWithdrawal'])->name('reseller.withdrawal.cancel');
     Route::get('/ledger', [ResellerPanelController::class, 'ledger'])->name('reseller.ledger');
     Route::post('/get-ledger', [ResellerPanelController::class, 'getLedger'])->name('reseller.ledger.data');
+    Route::get('/sub-resellers', [ResellerPanelController::class, 'subResellers'])->name('reseller.subResellers');
+    Route::post('/get-sub-resellers', [ResellerPanelController::class, 'getSubResellers'])->name('reseller.subResellers.index');
+    Route::post('/get-sub-reseller-ledger', [ResellerPanelController::class, 'subResellerLedger'])->name('reseller.subResellers.ledger');
+    Route::post('/sub-reseller-deposit', [ResellerPanelController::class, 'subResellerDeposit'])->name('reseller.subResellers.deposit');
+    Route::post('/sub-reseller-withdrawal-pay', [ResellerPanelController::class, 'subResellerPay'])->name('reseller.subResellers.pay');
+    Route::post('/sub-reseller-withdrawal-reject', [ResellerPanelController::class, 'subResellerReject'])->name('reseller.subResellers.reject');
     Route::get('/logout', [ResellerPanelController::class, 'logout'])->name('reseller.logout');
     Route::group(['prefix' => 'two-factor', 'middleware' => 'throttle:20,1'], function () {
         Route::get('/setup', [TwoFactorController::class, 'setupPage'])->defaults('guard', 'reseller')->name('reseller.twoFactor.setup');

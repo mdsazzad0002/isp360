@@ -71,15 +71,17 @@ class ResellerRequestController extends IspController
     public function wallets()
     {
         if ($r = $this->deny('resellerRequest')) return $r;
-        $rows = Reseller::where('branch_id', $this->branchId)->orderBy('name')->get(['id', 'code', 'name', 'phone'])
-            ->map(fn ($r) => $r->only(['id', 'code', 'name', 'phone']) + ResellerWalletService::summary($r->id));
+        // the whole tree in order (a parent above its sub-resellers); only top-level resellers
+        // settle with the company, the others with their parent in the reseller portal
+        $rows = Reseller::where('branch_id', $this->branchId)->orderBy('path')->get(['id', 'code', 'name', 'phone', 'parent_id', 'depth', 'path'])
+            ->map(fn ($r) => $r->only(['id', 'code', 'name', 'phone', 'parent_id', 'depth']) + ResellerWalletService::summary($r->id));
         return response()->json($rows);
     }
 
     public function transactions(Request $request)
     {
         if ($r = $this->deny('resellerRequest')) return $r;
-        $query = ResellerTransaction::with(['reseller', 'bank:id,name,bank_name', 'processedBy'])
+        $query = ResellerTransaction::with(['reseller', 'parentReseller', 'bank:id,name,bank_name', 'processedBy'])
             ->where('branch_id', $this->branchId)
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->when($request->type, fn ($q, $t) => $q->where('type', $t))

@@ -9,17 +9,24 @@ use App\Models\Reseller;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
-// A reseller sells a company package under their own name and price. Their edits go live
-// at once. When the company changes the base package, the copy does NOT follow on its own:
-// it keeps the company price the reseller accepted (base_price) and its old speed/profile/
-// cycle until the reseller reviews the change and saves the package again.
+// A reseller sells a company package under their own name and price; a sub-reseller does the
+// same with its parent reseller's packages (ResellerChainService). Their edits go live at once.
+// When the level above changes the base package, the copy does NOT follow on its own: it keeps
+// the price the reseller accepted (base_price) and its old speed/profile/cycle until the
+// reseller reviews the change and saves the package again.
 class ResellerPackageService
 {
-    // Company packages a reseller may customize.
-    public static function basePackages(Reseller $reseller)
+    // The packages of the level above: its parent reseller's, or the company's for a top-level reseller.
+    private static function aboveQuery(Reseller $reseller)
     {
         return Package::where('branch_id', $reseller->branch_id)
-            ->whereNull('reseller_id')
+            ->when($reseller->parent_id, fn ($q) => $q->where('reseller_id', $reseller->parent_id), fn ($q) => $q->whereNull('reseller_id'));
+    }
+
+    // Packages a reseller may customize.
+    public static function basePackages(Reseller $reseller)
+    {
+        return self::aboveQuery($reseller)
             ->where('is_active', true)
             ->orderBy('price')
             ->get(['id', 'name', 'code', 'download_mbps', 'upload_mbps', 'price', 'billing_cycle', 'validity_days', 'installation_fee', 'activation_fee', 'visibility', 'description']);
@@ -53,13 +60,14 @@ class ResellerPackageService
                 ? new Package(['branch_id' => $reseller->branch_id, 'reseller_id' => $reseller->id, 'visibility' => 'universal'])
                 : Package::where('reseller_id', $reseller->id)->lockForUpdate()->findOrFail($data['id']);
 
-            $base = Package::where('branch_id', $reseller->branch_id)->whereNull('reseller_id')->find($data['base_package_id'] ?? null);
+            $base = self::aboveQuery($reseller)->find($data['base_package_id'] ?? null);
+            $above = $reseller->parent_id ? 'parent reseller' : 'company';
             if (! $base || (! $base->is_active && (int) $base->id !== (int) $package->base_package_id)) {
-                throw new RuntimeException('Select an active company package to customize.');
+                throw new RuntimeException("Select an active {$above} package to customize.");
             }
             $price = Money::round((float) $data['price']);
             if ($price < (float) $base->price) {
-                throw new RuntimeException('Your price cannot be lower than the company price (' . Money::format($base->price) . ').');
+                throw new RuntimeException("Your price cannot be lower than the {$above} price (" . Money::format($base->price) . ').');
             }
 
             $old = $package->exists ? $package->only(['name', 'price', 'base_price', 'download_mbps', 'upload_mbps', 'billing_cycle']) : null;

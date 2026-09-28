@@ -45,6 +45,8 @@ const buildMenus = () => ({
                 { uri: '/reseller/dashboard', icon: 'bi-grid-1x2-fill', label: t('dashboard') },
                 { uri: '/reseller/connections', icon: 'bi-ethernet', label: t('my_connections') },
                 { uri: '/reseller/packages', icon: 'bi-speedometer2', label: t('my_packages') },
+                // only for a reseller that has, or may have, sub-resellers (reseller levels > 1)
+                ...(portalUser.value?.sub_resellers ? [{ uri: '/reseller/sub-resellers', icon: 'bi-diagram-3', label: t('sub_resellers') }] : []),
             ],
         },
         {

@@ -104,7 +104,7 @@ onMounted(load);
 
         <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <h2 class="mb-1 text-sm font-semibold text-slate-700">Collect bill</h2>
-            <p class="mb-3 text-xs text-slate-500">The payment is added to the customer's account right away. Money you collect stays with you and is settled with the company from your wallet.</p>
+            <p class="mb-3 text-xs text-slate-500">The payment is added to the customer's account right away. Money you collect stays with you and is settled with {{ reseller.settles_with || 'the company' }} from your wallet.</p>
             <form class="grid grid-cols-2 gap-3 md:grid-cols-4" @submit.prevent="save">
                 <div class="col-span-2">
                     <label class="mb-1 block text-xs font-medium text-slate-600">Customer</label>

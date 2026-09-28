@@ -80,7 +80,7 @@ onMounted(load);
                 <div class="text-[11px] text-slate-400">pending {{ money(wallet.pending) }}</div>
             </div>
             <div class="rounded-lg border p-3 shadow-sm" :class="wallet.balance < 0 ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'">
-                <div class="text-[11px] uppercase text-slate-500">{{ wallet.balance < 0 ? 'I owe the company' : 'Balance' }}</div>
+                <div class="text-[11px] uppercase text-slate-500">{{ wallet.balance < 0 ? `I owe ${wallet.settles_with || 'the company'}` : 'Balance' }}</div>
                 <div class="text-lg font-semibold" :class="wallet.balance < 0 ? 'text-red-600' : 'text-emerald-700'">{{ money(Math.abs(wallet.balance || 0)) }}</div>
             </div>
             <div class="col-span-2 rounded-lg border border-brand-200 bg-white p-3 shadow-sm md:col-span-1">
@@ -93,7 +93,7 @@ onMounted(load);
         <div class="mt-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <h2 class="mb-1 text-sm font-semibold text-slate-700">Withdrawal request</h2>
             <p class="mb-3 text-xs text-slate-500">
-                Balance = your earning on paid bills − cash you collected + cash you deposited − money already withdrawn. The company pays the request and marks it paid.
+                Balance = your earning on paid bills (with your sub-resellers') − cash collected (by you and your sub-resellers) + cash you deposited − money already withdrawn. {{ wallet.settles_with || 'The company' }} pays the request and marks it paid.
             </p>
             <form class="grid grid-cols-2 gap-3 md:grid-cols-4" @submit.prevent="save">
                 <div>
@@ -144,7 +144,7 @@ onMounted(load);
                         <tr v-for="row in rows" :key="row.id" class="border-b border-slate-100 align-top hover:bg-slate-50">
                             <td class="px-3 py-2 font-medium">{{ row.ref_no }}</td>
                             <td class="px-3 py-2">{{ fmtDate(row.created_at) }}<div v-if="row.processed_at" class="text-xs text-slate-400">done {{ fmtDate(row.processed_at) }}</div></td>
-                            <td class="px-3 py-2">{{ row.type === 'deposit' ? 'Deposit to company' : 'Withdrawal' }}</td>
+                            <td class="px-3 py-2">{{ row.type === 'deposit' ? `Deposit to ${wallet.settles_with || 'company'}` : 'Withdrawal' }}</td>
                             <td class="px-3 py-2">{{ label(row.method) }}<div class="text-xs text-slate-400">{{ row.account_details }}<span v-if="row.transaction_id"> · {{ row.transaction_id }}</span></div></td>
                             <td class="px-3 py-2 text-end font-medium" :class="row.type === 'deposit' ? 'text-emerald-700' : ''">{{ money(row.amount) }}</td>
                             <td class="px-3 py-2"><StatusBadge :status="row.status" /></td>

@@ -149,7 +149,7 @@ class PackageChangeService
             // Reseller line: the company's share of the extra, so the reseller keeps only their margin.
             if ($connection->package->reseller_id) {
                 $share = min($diff, max(0, Money::round($quote['company_cost'] - $quote['company_credit'])));
-                Invoice::whereKey($invoice->id)->update(['reseller_id' => $connection->package->reseller_id, 'reseller_cost' => $share]);
+                ResellerChainService::record($invoice, $connection->package, $share);
             }
             $notes[] = Money::format($invoice->total) . " added as due ({$invoice->invoice_no})";
         } elseif ($diff <= -Money::unit()) {
@@ -201,7 +201,7 @@ class PackageChangeService
         if (! $new->reseller_id) {
             return $cost;
         }
-        $base = $new->base_price ?? ($new->base_package_id ? $new->basePackage?->price : null);
-        return $base === null || ! $days ? $cost : Money::round(TaxService::net((float) $base, TaxService::forPackage($new)) / $cycleDays * $days);
+        $unit = ResellerChainService::companyUnitCost($new); // the top of the reseller chain
+        return $unit === null || ! $days ? $cost : Money::round($unit / $cycleDays * $days);
     }
 }

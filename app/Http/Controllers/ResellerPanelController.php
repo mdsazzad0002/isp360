@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\CustomerPayment;
 use App\Models\Invoice;
 use App\Models\Package;
+use App\Models\Reseller;
 use App\Models\ResellerTransaction;
 use App\Services\Isp\AuditLogger;
 use App\Services\Isp\CollectionService;
@@ -87,6 +88,7 @@ class ResellerPanelController extends Controller
         return \Inertia\Inertia::render('Reseller/Package', [
             'reseller' => $reseller->only(['id', 'name']),
             'basePackages' => ResellerPackageService::basePackages($reseller),
+            'above' => $reseller->parent?->name,
         ]);
     }
 
@@ -144,6 +146,9 @@ class ResellerPanelController extends Controller
         if (Connection::where('package_id', $package->id)->where('status', '!=', 'terminated')->exists()) {
             return send_error('Connections still use this package. Deactivate it instead.', null, 422);
         }
+        if (Package::where('base_package_id', $package->id)->exists()) {
+            return send_error('Your sub-resellers sell packages built on this one. Deactivate it instead.', null, 422);
+        }
         $package->update(['status' => 'd']);
         $package->delete();
         AuditLogger::log('package.deleted', $package, $package->only(['name', 'price']));
@@ -172,7 +177,7 @@ class ResellerPanelController extends Controller
         $reseller = Auth::guard('reseller')->user();
 
         return \Inertia\Inertia::render('Reseller/Payment', [
-            'reseller' => $reseller->only(['id', 'name']),
+            'reseller' => $reseller->only(['id', 'name']) + ['settles_with' => $reseller->parent?->name],
             'customers' => Customer::where('reseller_id', $reseller->id)->orderBy('name')->get(['id', 'code', 'name', 'phone', 'ledger_balance']),
         ]);
     }
@@ -234,6 +239,8 @@ class ResellerPanelController extends Controller
                 $payment = ResellerWalletService::payFromWallet($reseller, $customer, (float) $request->amount, $request->notes);
                 return response()->json(['status' => true, 'message' => "Payment {$payment->receipt_no} paid from your wallet", 'id' => $payment->id]);
             }
+            // money in hand counts against the credit limit
+            ResellerWalletService::assertWithinCreditLimit($reseller, (float) $request->amount);
             $payment = CollectionService::receive($customer, $request->only(['amount', 'method', 'transaction_id', 'notes']) + [
                 'payment_date' => now()->toDateString(),
                 'source' => 'reseller',
@@ -284,7 +291,8 @@ class ResellerPanelController extends Controller
 
         try {
             $tx = ResellerWalletService::requestWithdrawal($reseller, $request->only(['amount', 'method', 'account_details', 'note']));
-            return response()->json(['status' => true, 'message' => "Withdrawal request {$tx->ref_no} sent to the company."]);
+            $to = $reseller->parent_id ? ($reseller->parent?->name ?? 'your parent reseller') : 'the company';
+            return response()->json(['status' => true, 'message' => "Withdrawal request {$tx->ref_no} sent to {$to}."]);
         } catch (\RuntimeException $e) {
             return send_error($e->getMessage(), null, 422);
         } catch (\Throwable $th) {
@@ -319,6 +327,99 @@ class ResellerPanelController extends Controller
         $reseller = Auth::guard('reseller')->user();
         return response()->json(ResellerLedgerService::statement($reseller->id, sqlDate($request->dateFrom), sqlDate($request->dateTo))
             + ['wallet' => ResellerWalletService::summary($reseller->id)]);
+    }
+
+    // ── Sub-resellers: a parent sees its direct sub-resellers' wallets and settles with them ──
+    public function subResellers()
+    {
+        $reseller = Auth::guard('reseller')->user();
+        return \Inertia\Inertia::render('Reseller/SubResellers', [
+            'reseller' => $reseller->only(['id', 'code', 'name']),
+        ]);
+    }
+
+    public function getSubResellers()
+    {
+        $reseller = Auth::guard('reseller')->user();
+        $children = Reseller::where('parent_id', $reseller->id)->orderBy('name')->get(['id', 'code', 'name', 'phone', 'status', 'credit_limit']);
+        return response()->json([
+            'children' => $children->map(fn ($c) => $c->only(['id', 'code', 'name', 'phone', 'status']) + ResellerWalletService::summary($c->id)
+                + ['sub_count' => Reseller::where('parent_id', $c->id)->count()]),
+            'requests' => ResellerTransaction::with('reseller:id,code,name')
+                ->where('parent_reseller_id', $reseller->id)->latest('id')->limit(200)
+                ->get(['id', 'ref_no', 'reseller_id', 'type', 'amount', 'status', 'method', 'account_details', 'transaction_id', 'reseller_note', 'admin_note', 'processed_at', 'created_at']),
+        ]);
+    }
+
+    public function subResellerLedger(Request $request)
+    {
+        $child = $this->myChild($request->resellerId);
+        return response()->json(ResellerLedgerService::statement($child->id, sqlDate($request->dateFrom), sqlDate($request->dateTo))
+            + ['wallet' => ResellerWalletService::summary($child->id)]);
+    }
+
+    // cash a sub-reseller handed over to this reseller
+    public function subResellerDeposit(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'reseller_id' => 'required|integer',
+            'amount' => 'required|numeric|gt:0|max:9999999',
+            'method' => 'required|in:cash,bank,bkash,nagad,rocket,other',
+            'transaction_id' => 'nullable|max:100',
+            'note' => 'nullable|max:255',
+        ]);
+        if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
+        return $this->settle(function () use ($request) {
+            $tx = ResellerWalletService::deposit($this->myChild($request->reseller_id), $request->only(['amount', 'method', 'transaction_id', 'note']), Auth::guard('reseller')->user());
+            return "Deposit {$tx->ref_no} recorded.";
+        });
+    }
+
+    public function subResellerPay(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer',
+            'method' => 'required|in:cash,bank,bkash,nagad,rocket,other',
+            'transaction_id' => 'nullable|max:100',
+            'note' => 'nullable|max:255',
+        ]);
+        if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
+        return $this->settle(function () use ($request) {
+            $me = Auth::guard('reseller')->user();
+            $tx = ResellerTransaction::where('parent_reseller_id', $me->id)->findOrFail($request->id);
+            ResellerWalletService::pay($tx, $request->only(['method', 'transaction_id', 'note']), $me);
+            return "Withdrawal {$tx->ref_no} marked as paid.";
+        });
+    }
+
+    public function subResellerReject(Request $request)
+    {
+        $validator = Validator::make($request->all(), ['id' => 'required|integer', 'note' => 'required|min:3|max:255']);
+        if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
+        return $this->settle(function () use ($request) {
+            $me = Auth::guard('reseller')->user();
+            $tx = ResellerTransaction::where('parent_reseller_id', $me->id)->findOrFail($request->id);
+            ResellerWalletService::reject($tx, $request->note, $me);
+            return "Withdrawal {$tx->ref_no} rejected.";
+        });
+    }
+
+    private function myChild($id): Reseller
+    {
+        return Reseller::where('parent_id', Auth::guard('reseller')->id())->findOrFail($id);
+    }
+
+    private function settle(callable $action)
+    {
+        try {
+            return response()->json(['status' => true, 'message' => $action()]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return send_error('Not found', null, 404);
+        } catch (\RuntimeException $e) {
+            return send_error($e->getMessage(), null, 422);
+        } catch (\Throwable $th) {
+            return send_error('Something went wrong', $th->getMessage());
+        }
     }
 
     public function logout()

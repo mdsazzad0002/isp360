@@ -674,7 +674,8 @@
         "legal_version": "{title}، الإصدار {version}",
         "i_accept": "لقد قرأت وأوافق",
         "marketing_sms": "أرسل لي العروض والأخبار عبر الرسائل القصيرة",
-        "saved": "تم الحفظ"
+        "saved": "تم الحفظ",
+        "sub_resellers": "الموزعون الفرعيون"
     },
     "labels": {
         "active": "نشط",

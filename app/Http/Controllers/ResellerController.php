@@ -6,6 +6,7 @@ use App\Models\Area;
 use App\Models\Customer;
 use App\Models\Package;
 use App\Models\Reseller;
+use App\Services\Isp\ResellerChainService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -39,7 +40,7 @@ class ResellerController extends Controller
 
     public function index(Request $request)
     {
-        $resellers = Reseller::with('adUser', 'upUser', 'area')->where('branch_id', $this->branchId);
+        $resellers = Reseller::with('adUser', 'upUser', 'area', 'parent')->where('branch_id', $this->branchId);
         if (!empty($request->resellerId)) {
             $resellers = $resellers->where('id', $request->resellerId);
         }
@@ -72,7 +73,7 @@ class ResellerController extends Controller
         if (!checkAccess('reseller')) {
             return \Inertia\Inertia::render('Error/Forbidden');
         }
-        return \Inertia\Inertia::render('Control/Reseller/Entry');
+        return \Inertia\Inertia::render('Control/Reseller/Entry', ['maxDepth' => ResellerChainService::maxDepth($this->branchId)]);
     }
 
     public function store(Request $request)
@@ -87,6 +88,8 @@ class ResellerController extends Controller
             ],
             'password' => ['required', \Illuminate\Validation\Rules\Password::defaults()],
             'image' => $request->hasFile('image') ? \App\Support\Upload::rule() : 'nullable',
+            'parent_id' => 'nullable|integer',
+            'credit_limit' => 'nullable|numeric|min:0|max:999999999',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
@@ -102,9 +105,15 @@ class ResellerController extends Controller
             $data->created_by = $this->userId;
             $data->ipAddress = request()->ip();
             $data->branch_id = $this->branchId;
-            $data->save();
+            $data->credit_limit = $this->creditLimit($request);
+            \Illuminate\Support\Facades\DB::transaction(function () use ($data, $request) {
+                $data->save();
+                ResellerChainService::setParent($data, $request->integer('parent_id') ?: null);
+            });
 
             return response()->json(['status' => true, 'message' => "Reseller has created successfully"]);
+        } catch (\RuntimeException $e) {
+            return send_error($e->getMessage(), ['parent_id' => $e->getMessage()], 422);
         } catch (\Throwable $th) {
             return send_error('Something went wrong', $th->getMessage());
         }
@@ -117,6 +126,8 @@ class ResellerController extends Controller
             'name'     => 'required',
             'phone'    => ['required', new \App\Rules\PhoneNumber],
             'password' => ['nullable', \Illuminate\Validation\Rules\Password::defaults()],
+            'parent_id' => 'nullable|integer',
+            'credit_limit' => 'nullable|numeric|min:0|max:999999999',
             'username' => [
                 'required',
                 Rule::unique('resellers')->ignore($request->id)->whereNull('deleted_at'),
@@ -141,12 +152,28 @@ class ResellerController extends Controller
             $data->updated_by = $this->userId;
             $data->updated_at = Carbon::now();
             $data->ipAddress = request()->ip();
-            $data->update();
+            $oldLimit = $data->credit_limit;
+            $data->credit_limit = $this->creditLimit($request);
+            \Illuminate\Support\Facades\DB::transaction(function () use ($data, $request) {
+                $data->update();
+                ResellerChainService::setParent($data, $request->integer('parent_id') ?: null);
+            });
+            if ((string) $oldLimit !== (string) $data->credit_limit) {
+                \App\Services\Isp\AuditLogger::log('reseller.credit_limit_changed', $data, ['credit_limit' => $oldLimit], ['credit_limit' => $data->credit_limit]);
+            }
 
             return response()->json(['status' => true, 'message' => "Reseller has updated successfully"]);
+        } catch (\RuntimeException $e) {
+            return send_error($e->getMessage(), ['parent_id' => $e->getMessage()], 422);
         } catch (\Throwable $th) {
             return send_error('Something went wrong', $th->getMessage());
         }
+    }
+
+    // empty = no limit
+    private function creditLimit(Request $request): ?float
+    {
+        return $request->filled('credit_limit') ? \App\Support\Money::round((float) $request->credit_limit) : null;
     }
 
     public function destroy(Request $request)
@@ -154,6 +181,9 @@ class ResellerController extends Controller
         try {
             $data = $this->findInBranch(Reseller::class, $request->id);
             if (!$data) return send_error('Record not found', null, 404);
+            if (Reseller::where('parent_id', $data->id)->exists()) {
+                return send_error('Move or delete its sub-resellers first.', null, 422);
+            }
             deleteUploadedFile($data->image);
             $data->status = 'd';
             $data->deleted_by = $this->userId;

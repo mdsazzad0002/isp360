@@ -92,7 +92,13 @@ class SettingController extends IspController
             'late_fee_after_days' => 'nullable|integer|min:0|max:365',
             'late_fee_repeat' => 'nullable|in:once,monthly',
             'late_fee_max' => 'nullable|integer|min:1|max:24',
+            'reseller_max_depth' => 'nullable|integer|min:1|max:6',
         ])) return $r;
+        // the levels can't drop below the deepest reseller already placed
+        $deepest = (int) \App\Models\Reseller::where('branch_id', $this->branchId)->max('depth');
+        if ($request->filled('reseller_max_depth') && (int) $request->reseller_max_depth < $deepest) {
+            return send_error("Resellers already sit {$deepest} levels deep; move them up before lowering the levels.", ['reseller_max_depth' => "At least {$deepest}."], 422);
+        }
         if ($request->boolean('notice_required') && (int) $request->notice_days < 1) {
             return send_error('Validation Error', ['notice_days' => 'Set how many days before suspension the notice goes out.'], 422);
         }

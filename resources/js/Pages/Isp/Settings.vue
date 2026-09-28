@@ -378,6 +378,24 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
             </section>
 
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 class="mb-3 text-sm font-semibold text-slate-700">Reseller network</h2>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Reseller levels</label>
+                        <select v-model.number="s.reseller_max_depth" :class="input">
+                            <option :value="1">1 — resellers only</option>
+                            <option :value="2">2 — resellers with sub-resellers</option>
+                            <option :value="3">3 — e.g. distributor → reseller → sub-reseller</option>
+                            <option :value="4">4 — e.g. master distributor → distributor → reseller → sub-reseller</option>
+                            <option :value="5">5</option>
+                            <option :value="6">6</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">Set a reseller's parent on the reseller form. A sub-reseller customizes its parent's packages (never below the parent's price) and settles its wallet with the parent in the reseller portal; top-level resellers settle with the company. Each level earns its price minus the price it bought at.</p>
+            </section>
+
+            <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <h2 class="mb-3 text-sm font-semibold text-slate-700">Numbering prefixes</h2>
                 <div class="grid grid-cols-3 gap-3 md:grid-cols-6">
                     <div v-for="k in [['invoice_prefix', 'Invoice'], ['receipt_prefix', 'Receipt'], ['credit_note_prefix', 'Credit note'], ['debit_note_prefix', 'Debit note'], ['refund_prefix', 'Refund'], ['connection_prefix', 'Connection']]" :key="k[0]">

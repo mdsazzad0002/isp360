@@ -99,7 +99,10 @@ class HandleInertiaRequests extends Middleware
                 // pick the guard from the URL, since one browser can hold both portal sessions
                 $guard = $request->is('customer-portal/*') ? 'customer' : ($request->is('reseller/*') ? 'reseller' : null);
                 $account = $guard ? Auth::guard($guard)->user() : null;
-                return $account ? ['type' => $guard, 'name' => $account->name, 'code' => $account->code, 'email' => $account->email] : null;
+                return $account ? ['type' => $guard, 'name' => $account->name, 'code' => $account->code, 'email' => $account->email]
+                    // a reseller that has, or may have, sub-resellers gets the Sub-resellers page
+                    + ($guard === 'reseller' ? ['sub_resellers' => $account->children()->exists()
+                        || $account->depth < \App\Services\Isp\ResellerChainService::maxDepth($account->branch_id)] : []) : null;
             },
             // admin used "Login as" to open the portal of the current URL
             'portalImpersonating' => fn () => ($request->is('customer-portal/*') && $request->session()->has('customer_impersonator_id') && Auth::guard('customer')->check())

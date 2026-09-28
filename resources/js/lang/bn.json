@@ -674,7 +674,8 @@
         "legal_version": "{title}, সংস্করণ {version}",
         "i_accept": "আমি পড়েছি এবং গ্রহণ করছি",
         "marketing_sms": "অফার ও খবর SMS-এ পাঠান",
-        "saved": "সংরক্ষিত"
+        "saved": "সংরক্ষিত",
+        "sub_resellers": "সাব-রিসেলার"
     },
     "labels": {
         "active": "সক্রিয়",

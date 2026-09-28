@@ -9,8 +9,12 @@ import AppLayout from '../../../Layouts/AppLayout.vue';
 import { useToast } from '../../../lib/toast';
 import { resizeImageFile } from '../../../lib/imageResize';
 import ResellerLedgerOffcanvas from './ResellerLedgerOffcanvas.vue';
+import { cur, moneyStep } from '../../../lib/isp';
 
 defineOptions({ layout: AppLayout });
+
+// reseller levels from ISP Settings: 1 = no sub-resellers
+const props = defineProps({ maxDepth: { type: Number, default: 1 } });
 
 const toast = useToast();
 const page = usePage();
@@ -33,6 +37,8 @@ function emptyForm() {
         address: '',
         status: 'a',
         image: '',
+        parent_id: '',
+        credit_limit: '',
     };
 }
 
@@ -47,6 +53,13 @@ const filter = ref('');
 const imageSrc = ref('/noImage.jpg');
 const onProgress = ref(false);
 let filterTimeout = null;
+
+// possible parents: resellers with room below them (the server checks the rest)
+const allResellers = ref([]);
+const parentOptions = computed(() => allResellers.value.filter((r) => r.id !== form.id && (r.depth ?? 1) < props.maxDepth));
+function getResellers() {
+    axios.post('/get-reseller').then((res) => (allResellers.value = res.data));
+}
 
 function getAreas() {
     axios.post('/get-area').then((res) => {
@@ -98,6 +111,7 @@ async function saveData() {
         toast.success(res.data.message);
         resetForm();
         load();
+        getResellers();
     } catch (err) {
         onProgress.value = false;
         const r = err.response?.data;
@@ -120,6 +134,8 @@ function editRow(row) {
         address: row.address,
         status: row.status,
         image: row.image,
+        parent_id: row.parent_id ?? '',
+        credit_limit: row.credit_limit ?? '',
     });
     selectedArea.value = { id: row.area_id, name: row.area?.name };
     imageSrc.value = row.image ? '/' + row.image : '/noImage.jpg';
@@ -284,6 +300,7 @@ async function startImport() {
 onMounted(() => {
     getAreas();
     load();
+    getResellers();
 });
 </script>
 
@@ -309,6 +326,13 @@ onMounted(() => {
                         <label class="mb-1 block text-xs font-medium text-slate-600">Area <span class="font-normal text-slate-400">(Optional)</span></label>
                         <SearchSelect :options="areas" v-model="selectedArea" label="name" placeholder="Select area" />
                     </div>
+                    <div v-if="maxDepth > 1 || form.parent_id">
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Parent reseller <span class="font-normal text-slate-400">(empty = settles with the company)</span></label>
+                        <select v-model="form.parent_id" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm">
+                            <option value="">— Top level —</option>
+                            <option v-for="r in parentOptions" :key="r.id" :value="r.id">{{ '— '.repeat((r.depth ?? 1) - 1) }}{{ r.name }} ({{ r.code }})</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="space-y-3 md:col-span-5">
                     <div>
@@ -330,6 +354,10 @@ onMounted(() => {
                                 class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
                             />
                         </div>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Credit limit ({{ cur() }}) <span class="font-normal text-slate-400">(empty = no limit)</span></label>
+                        <input type="number" min="0" :step="moneyStep()" v-model="form.credit_limit" placeholder="Most cash the reseller may hold before settling" class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" />
                     </div>
                     <div class="flex items-center justify-between pt-1">
                         <label class="flex items-center gap-2 text-sm text-slate-600">
@@ -388,6 +416,7 @@ onMounted(() => {
                             <td class="px-2 py-1.5">{{ row.code }}</td>
                             <td class="px-2 py-1.5">
                                 <button type="button" class="text-start font-medium text-brand-600 hover:underline" title="Open ledger" @click="openLedger(row)">{{ row.name }}</button>
+                                <div v-if="row.parent" class="text-xs text-slate-400">under {{ row.parent.name }}</div>
                             </td>
                             <td class="px-2 py-1.5">{{ row.username }}</td>
                             <td class="px-2 py-1.5">{{ row.phone }}</td>

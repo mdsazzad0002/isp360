@@ -17,6 +17,12 @@ class ResellerTransaction extends Model
         'processed_at' => 'datetime',
     ];
 
+    // who the reseller settled with: its parent reseller (null = the company)
+    public function parentReseller()
+    {
+        return $this->belongsTo(Reseller::class, 'parent_reseller_id')->select('id', 'code', 'name')->withTrashed();
+    }
+
     public function reseller()
     {
         return $this->belongsTo(Reseller::class)->select('id', 'code', 'name', 'phone')->withTrashed();

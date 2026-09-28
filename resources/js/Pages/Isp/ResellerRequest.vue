@@ -93,7 +93,8 @@ async function submitDeposit() {
     }
 }
 
-const totals = computed(() => wallets.value.reduce((t, w) => {
+// only top-level resellers settle with the company; a sub-reseller's balance is already inside its parent's
+const totals = computed(() => wallets.value.filter((w) => !w.parent_id).reduce((t, w) => {
     if (w.balance > 0) t.owed += w.balance;
     else t.receivable += -w.balance;
     t.pending += w.pending;
@@ -175,7 +176,8 @@ onMounted(() => {
                             <tr v-for="row in txRows" :key="row.id" class="border-b border-slate-100 align-top hover:bg-slate-50">
                                 <td class="px-3 py-2 font-medium">{{ row.ref_no }}</td>
                                 <td class="px-3 py-2">{{ fmtDate(row.created_at) }}<div v-if="row.processed_by" class="text-xs text-slate-400">{{ row.processed_by.name }} · {{ fmtDate(row.processed_at) }}</div></td>
-                                <td class="px-3 py-2">{{ row.reseller?.name }}<div class="text-xs text-slate-400">{{ row.reseller?.phone }}</div></td>
+                                <td class="px-3 py-2">{{ row.reseller?.name }}<div class="text-xs text-slate-400">{{ row.reseller?.phone }}</div>
+                                    <div v-if="row.parent_reseller" class="text-xs text-amber-700">with parent {{ row.parent_reseller.name }}</div></td>
                                 <td class="px-3 py-2">{{ row.type === 'deposit' ? 'Deposit' : 'Withdrawal' }}</td>
                                 <td class="px-3 py-2">
                                     {{ label(row.method) }}
@@ -187,7 +189,7 @@ onMounted(() => {
                                 <td class="px-3 py-2 text-end text-xs" :class="walletOf(row.reseller_id).balance < 0 ? 'text-red-600' : 'text-slate-600'">{{ money(walletOf(row.reseller_id).balance) }}</td>
                                 <td class="px-3 py-2"><StatusBadge :status="row.status" /></td>
                                 <td class="px-3 py-2 text-end">
-                                    <div v-if="row.type === 'withdrawal' && row.status === 'pending' && can.settle" class="flex justify-end gap-2">
+                                    <div v-if="row.type === 'withdrawal' && row.status === 'pending' && can.settle && !row.parent_reseller_id" class="flex justify-end gap-2">
                                         <button type="button" class="rounded-md bg-emerald-600 px-2.5 py-1 text-xs text-white" @click="openPay(row)">Mark paid</button>
                                         <button type="button" class="rounded-md bg-red-600 px-2.5 py-1 text-xs text-white" @click="Object.assign(rejectForm, { show: true, row, note: '', saving: false })">Reject</button>
                                     </div>
@@ -203,7 +205,7 @@ onMounted(() => {
             <!-- Wallets -->
             <div v-if="tab === 'wallets'" class="p-3">
                 <p class="mb-3 text-xs text-slate-500">
-                    Balance = reseller margin on paid bills − cash the reseller collected + deposits − paid withdrawals. Positive: the company owes the reseller. Negative: the reseller holds company money.
+                    Balance = margin on paid bills (own + sub-resellers') − cash collected (own + sub-resellers') + deposits − paid withdrawals, with the level above. Positive: the level above owes the reseller. Negative: the reseller holds money of the level above. Sub-resellers (indented) settle with their parent in the reseller portal; the totals count top-level resellers only.
                 </p>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
@@ -221,9 +223,13 @@ onMounted(() => {
                         </thead>
                         <tbody>
                             <tr v-for="w in wallets" :key="w.id" class="border-b border-slate-100 hover:bg-slate-50">
-                                <td class="px-3 py-2">{{ w.name }}<div class="text-xs text-slate-400">{{ w.code }} · {{ w.phone }}</div></td>
-                                <td class="px-3 py-2 text-end">{{ money(w.earned) }}</td>
-                                <td class="px-3 py-2 text-end">{{ money(w.collected) }}</td>
+                                <td class="px-3 py-2" :style="{ paddingInlineStart: `${0.75 + ((w.depth ?? 1) - 1) * 1.25}rem` }">
+                                    <span v-if="w.parent_id" class="text-slate-300">└ </span>{{ w.name }}
+                                    <span v-if="w.over_limit" class="ms-1 rounded bg-red-100 px-1.5 text-[10px] font-semibold text-red-700">over limit</span>
+                                    <div class="text-xs text-slate-400">{{ w.code }} · {{ w.phone }}<span v-if="w.settles_with"> · settles with {{ w.settles_with }}</span></div>
+                                </td>
+                                <td class="px-3 py-2 text-end">{{ money(w.earned) }}<div v-if="w.downline" class="text-xs text-slate-400">+ {{ money(w.downline) }} downline</div></td>
+                                <td class="px-3 py-2 text-end">{{ money(w.collected) }}<div v-if="w.downline_collected" class="text-xs text-slate-400">+ {{ money(w.downline_collected) }} downline</div></td>
                                 <td class="px-3 py-2 text-end">{{ money(w.deposits) }}</td>
                                 <td class="px-3 py-2 text-end">{{ money(w.withdrawn) }}</td>
                                 <td class="px-3 py-2 text-end text-amber-700">{{ money(w.pending) }}</td>
@@ -231,7 +237,7 @@ onMounted(() => {
                                 <td class="px-3 py-2 text-end">
                                     <div class="flex justify-end gap-2">
                                         <a :href="`/isp/reseller-ledger?resellerId=${w.id}`" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs">Ledger</a>
-                                        <button v-if="can.settle" type="button" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs" @click="openDeposit(w)">Record deposit</button>
+                                        <button v-if="can.settle && !w.parent_id" type="button" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs" @click="openDeposit(w)">Record deposit</button>
                                     </div>
                                 </td>
                             </tr>

@@ -674,7 +674,8 @@
         "legal_version": "{title}, version {version}",
         "i_accept": "I have read and accept",
         "marketing_sms": "Send me offers and news by SMS",
-        "saved": "Saved"
+        "saved": "Saved",
+        "sub_resellers": "Sub-resellers"
     },
     "labels": {
         "active": "Active",

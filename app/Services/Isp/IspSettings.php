@@ -26,6 +26,9 @@ class IspSettings
         'referral_enabled' => false,
         'referral_commission_type' => 'fixed', // fixed amount | percent of the first bill
         'referral_commission' => '0',
+        // reseller network levels: 1 = resellers only (no sub-resellers), 2+ = resellers can have
+        // sub-resellers down to this depth (master distributor -> distributor -> reseller -> ...)
+        'reseller_max_depth' => 1,
         'auto_suspend' => true,
         'auto_reactivate' => true,
         // proration: 1-28 = a new line's first bill also covers the days up to this day of the month,

@@ -134,6 +134,10 @@ class BillingService
                 'due_date' => $dueDate,
                 'source' => 'auto',
             ] + $reseller, $items, true);
+            if ($reseller) {
+                // every level of the reseller tree gets its share of the bill
+                ResellerChainService::record($invoice, $package, $reseller['reseller_cost']);
+            }
 
             if ($postpaid) {
                 // the period starts now, on credit (like "start on due", automatically)
@@ -288,18 +292,18 @@ class BillingService
             ->whereIn('invoices.status', array_merge(Invoice::OPEN_STATUSES, ['draft']));
     }
 
-    // A reseller package invoice records the company's share: the company price the reseller
-    // last accepted (base_price), so a company price change counts only once the reseller has
-    // reviewed it. A reseller package with no base package has no known share: the whole
-    // amount is the company's. The share is net of tax: the tax is never the reseller's.
+    // A reseller package invoice records the company's share: the price the top reseller of the
+    // chain last accepted from the company (base_price), so a company price change counts only
+    // once the reseller has reviewed it. A reseller package with no base package has no known
+    // share: the whole amount is the company's. The share is net of tax: the tax is never the
+    // reseller's. ResellerChainService::record splits the rest between the levels.
     private static function resellerCost(Connection $connection, float $amount): array
     {
         $package = $connection->package;
         if (! $package->reseller_id) {
             return [];
         }
-        $basePrice = $package->base_price ?? ($package->base_package_id ? $package->basePackage?->price : null);
-        $cost = TaxService::net($basePrice !== null ? (float) $basePrice : $amount, TaxService::forPackage($package));
+        $cost = ResellerChainService::companyUnitCost($package) ?? TaxService::net($amount, TaxService::forPackage($package));
         return ['reseller_id' => $package->reseller_id, 'reseller_cost' => $cost];
     }
 

@@ -18,6 +18,27 @@ class Reseller extends Authenticatable
         'password',
     ];
 
+    // a new reseller sits at the top until ResellerChainService::setParent places it
+    protected static function booted(): void
+    {
+        static::created(function (Reseller $reseller) {
+            if (! $reseller->path) {
+                $parent = $reseller->parent_id ? self::withTrashed()->find($reseller->parent_id) : null;
+                $reseller->forceFill(['path' => ($parent?->path ?? '/') . $reseller->id . '/', 'depth' => $parent ? $parent->depth + 1 : 1])->saveQuietly();
+            }
+        });
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(Reseller::class, 'parent_id')->select('id', 'code', 'name', 'phone', 'parent_id', 'depth')->withTrashed();
+    }
+
+    public function children()
+    {
+        return $this->hasMany(Reseller::class, 'parent_id');
+    }
+
     public function adUser()
     {
         return $this->belongsTo(User::class, 'created_by', 'id')->select('id', 'name', 'username')->withTrashed();

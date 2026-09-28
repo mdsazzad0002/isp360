@@ -3,7 +3,8 @@ import { ref, reactive, watch, onMounted } from 'vue';
 import axios from 'axios';
 import { money, fmtDate, monthStart, today } from '../../lib/isp';
 
-// Reseller ledger with running balance. Balance > 0: the company owes the reseller.
+// Reseller ledger with running balance. Balance > 0: the level above (parent reseller, or the
+// company) owes the reseller.
 const props = defineProps({
     endpoint: { type: String, required: true },
     resellerId: { type: [Number, String], default: null },
@@ -48,17 +49,18 @@ onMounted(load);
             <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                 <div class="text-[11px] uppercase text-slate-400">Earned (all time)</div>
                 <div class="text-lg font-semibold text-slate-800">{{ money(data.wallet.earned) }}</div>
+                <div v-if="data.wallet.downline" class="text-xs text-slate-500">+ {{ money(data.wallet.downline) }} for sub-resellers</div>
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-                <div class="text-[11px] uppercase text-slate-400">Cash in reseller's hand</div>
-                <div class="text-lg font-semibold text-amber-700">{{ money(data.wallet.collected - data.wallet.deposits) }}</div>
+                <div class="text-[11px] uppercase text-slate-400">{{ data.wallet.downline_collected ? 'Cash collected (with sub-resellers) − deposited' : "Cash in reseller's hand" }}</div>
+                <div class="text-lg font-semibold text-amber-700">{{ money(data.wallet.collected + (data.wallet.downline_collected || 0) - data.wallet.deposits) }}</div>
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                 <div class="text-[11px] uppercase text-slate-400">Withdrawn / pending</div>
                 <div class="text-lg font-semibold text-slate-800">{{ money(data.wallet.withdrawn) }} <span class="text-sm font-normal text-amber-700">/ {{ money(data.wallet.pending) }}</span></div>
             </div>
             <div class="rounded-lg border p-3 shadow-sm" :class="data.wallet.balance < 0 ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'">
-                <div class="text-[11px] uppercase text-slate-500">{{ data.wallet.balance < 0 ? 'Reseller owes company' : 'Company owes reseller' }}</div>
+                <div class="text-[11px] uppercase text-slate-500">{{ data.wallet.balance < 0 ? `Reseller owes ${data.wallet.settles_with || 'company'}` : `${data.wallet.settles_with || 'Company'} owes reseller` }}</div>
                 <div class="text-lg font-semibold" :class="data.wallet.balance < 0 ? 'text-red-600' : 'text-emerald-700'">{{ money(Math.abs(data.wallet.balance)) }}</div>
             </div>
         </div>

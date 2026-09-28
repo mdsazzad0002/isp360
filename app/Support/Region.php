@@ -48,6 +48,9 @@ class Region
     // IANA zones of a country, e.g. BD => ['Asia/Dhaka'], US => ['America/New_York', ...].
     public static function timezonesFor(string $country): array
     {
+        if (! preg_match('/^[A-Z]{2}$/', $country)) {
+            return []; // not a country code (e.g. a missing form field): no zones, not a crash
+        }
         $zones = DateTimeZone::listIdentifiers(DateTimeZone::PER_COUNTRY, $country);
         $main = config("countries.$country.timezone");
         // the country's main zone first
