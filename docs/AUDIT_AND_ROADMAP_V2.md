@@ -36,7 +36,6 @@ All three critical findings (C1 permissions, C2 branch isolation, C3 uploads) we
 
 ### Medium / low
 
-- `.env.example` ships `APP_DEBUG=true` — document the production values (`APP_DEBUG=false`, `APP_ENV=production`, `SESSION_SECURE_COOKIE=true`).
 - No backup / restore or full data export (roadmap 3.1) — an operational risk for any paying customer.
 - Legacy balance sheet (`ReportController::getBalanceSheet`) is a reduced sheet with retained earnings as the plug figure; it cannot be trusted until the general ledger (4.10) exists.
 
@@ -50,8 +49,7 @@ Phase 0 (security hardening) finished 2026-09-28.
 ### Phase 1 — Quality foundation (P0, ~1–2 weeks) — **do this next**
 CI (H1, H4) is in place. Still open:
 1. Tests for the older modules beyond permissions and branch isolation (H3): POS reports, balance sheet, cash / bank ledgers.
-2. Production config guide: `.env` values, queue workers / Horizon, scheduler, RADIUS (see RADIUS_SETUP.md), HTTPS, deny PHP in uploads.
-3. Backups: scheduled DB + uploads backup, restore command, full data export (3.1).
+2. Backups: scheduled DB + uploads backup, restore command, full data export (3.1).
 
 ### Phase 2 — Finish Phase C, higher-level management (P1, ~5–6 weeks)
 1. Multi-level reseller tree, per-level commission, credit limit (3.3).
@@ -86,4 +84,4 @@ A market can go live when all of these are true:
 - [ ] Customer portal and SMS / e-mail templates translated into the market's language.
 - [ ] Session / NAT log retention set to the local legal minimum and the export tested.
 - [ ] Backups running and a restore rehearsed.
-- [ ] Production config reviewed (debug off, HTTPS, secure cookies, uploads not executable).
+- [ ] Production config reviewed with `docs/PRODUCTION.md` (debug off, HTTPS, secure cookies, uploads not executable).

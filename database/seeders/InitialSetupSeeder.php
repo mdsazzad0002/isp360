@@ -42,7 +42,8 @@ class InitialSetupSeeder extends Seeder
         );
 
         $username = env('ADMIN_USERNAME', 'admin');
-        $password = env('ADMIN_PASSWORD', '1');
+        // "1" is only for a local install; production gets a random password unless one is set
+        $password = env('ADMIN_PASSWORD') ?: (app()->environment('production') ? \Illuminate\Support\Str::password(16, symbols: false) : '1');
 
         User::firstOrCreate(
             ['username' => $username],
