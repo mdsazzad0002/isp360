@@ -146,6 +146,9 @@ Route::group(['prefix' => 'customer-portal', 'middleware' => 'auth:customer'], f
     Route::post('/ticket-status', [\App\Http\Controllers\PortalTicketController::class, 'status'])->name('customerPortal.ticket.status');
 });
 
+// private ticket attachments (staff, customer and reseller portals; the controller checks who may read)
+Route::get('/ticket-file/{id}', [\App\Http\Controllers\TicketFileController::class, 'show'])->whereNumber('id')->name('ticket.file');
+
 // ============================= Control Panel Route ==============================
 // branch route
 Route::get('/branch', [BranchController::class, 'create'])->name('branch.create');

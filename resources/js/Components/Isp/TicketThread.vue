@@ -155,8 +155,8 @@ watch(() => props.ticketId, load, { immediate: true });
                             <span v-if="r.is_internal" class="ms-1 rounded bg-amber-200 px-1 text-[10px] text-amber-900">internal note</span>
                         </div>
                         <div class="whitespace-pre-wrap break-words text-slate-800">{{ r.message }}</div>
-                        <a v-if="r.attachment" :href="'/' + r.attachment" target="_blank" rel="noopener" class="mt-2 block">
-                            <img v-if="isImage(r.attachment)" :src="'/' + r.attachment" class="max-h-48 rounded border border-slate-200" />
+                        <a v-if="r.attachment" :href="r.attachment_url" target="_blank" rel="noopener" class="mt-2 block">
+                            <img v-if="isImage(r.attachment)" :src="r.attachment_url" class="max-h-48 rounded border border-slate-200" />
                             <span v-else class="text-xs text-brand-600 underline"><i class="bi bi-paperclip"></i> Attachment</span>
                         </a>
                     </div>

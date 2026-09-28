@@ -254,15 +254,10 @@ function send_error($message, $errors = null, $code = 500)
     return response()->json($response, $code);
 }
 
-// upload image
-function imageUpload($request, $image, $directory, $code)
+// upload image: content-checked extension from an allow-list, random name (see App\Support\Upload)
+function imageUpload($request, $image, $directory, $code, array $allowed = \App\Support\Upload::IMAGES)
 {
-    $doUpload = function ($image) use ($directory, $code) {
-        $extention = $image->getClientOriginalExtension();
-        $imageName = $code . '_' . uniqId() . '.' . $extention;
-        $image->move(public_path($directory), $imageName);
-        return $directory . '/' . $imageName;
-    };
+    $doUpload = fn ($file) => \App\Support\Upload::toPublic($file, $directory, (string) $code, $allowed);
     if (!empty($image) && $request->hasFile($image)) {
         $file = $request->file($image);
         if (is_array($file) && count($file)) {
@@ -279,15 +274,16 @@ function imageUpload($request, $image, $directory, $code)
     return false;
 }
 
-// delete a previously uploaded file, given the relative path stored in the DB
+// delete a previously uploaded file, given the relative path stored in the DB (only under public/uploads)
 function deleteUploadedFile($path)
 {
     if (empty($path) || !is_string($path)) {
         return;
     }
 
-    $fullPath = public_path($path);
-    if (file_exists($fullPath)) {
+    $uploads = realpath(public_path('uploads'));
+    $fullPath = realpath(public_path($path));
+    if ($uploads && $fullPath && str_starts_with($fullPath, $uploads . DIRECTORY_SEPARATOR) && is_file($fullPath)) {
         unlink($fullPath);
     }
 }

@@ -71,7 +71,9 @@ class DashboardController extends Controller
         $this->validate($request, [
             'name' => 'required',
             'title' => 'required',
-            'phone' => 'required'
+            'phone' => 'required',
+            'logo' => $request->hasFile('logo') ? \App\Support\Upload::rule() : 'nullable',
+            'favicon' => $request->hasFile('favicon') ? \App\Support\Upload::rule(\App\Support\Upload::ICONS, 1024) : 'nullable',
         ]);
 
         try {
@@ -84,11 +86,10 @@ class DashboardController extends Controller
                 deleteUploadedFile($data->favicon);
                 $data->favicon = NULL;
             }
-            // country and currency are managed from the ISP settings page
-            $dataKeys = $request->except('id', 'logo', 'favicon', 'country_code', 'currency_code');
-            foreach ($dataKeys as $key => $value) {
-                $data[$key] = $value;
-            }
+            // only the profile's own fields: country, currency, timezone, 2FA policy, log retention...
+            // are managed (and locked) from the ISP settings page
+            $before = $data->only(['name', 'title', 'phone', 'email', 'address', 'url']);
+            $data->forceFill($request->only(['name', 'title', 'phone', 'email', 'address', 'url']));
 
             if ($request->hasFile('logo')) {
                 deleteUploadedFile($data->logo);
@@ -100,7 +101,7 @@ class DashboardController extends Controller
             }
             if ($request->hasFile('favicon')) {
                 deleteUploadedFile($data->favicon);
-                $data->favicon = imageUpload($request, 'favicon', 'uploads/favicon', 'favicon');
+                $data->favicon = imageUpload($request, 'favicon', 'uploads/favicon', 'favicon', \App\Support\Upload::ICONS);
             }
 
             // Regenerate the favicon/PWA icon set (16/32/180/192/512) from
@@ -119,6 +120,7 @@ class DashboardController extends Controller
             $data->ipAddress = request()->ip();
             $data->update();
             clearCompanyCache();
+            \App\Services\Isp\AuditLogger::log('company.profile_updated', $data, $before, $data->only(array_keys($before)) + array_filter(['logo' => $request->hasFile('logo') ? 'changed' : null, 'favicon' => $request->hasFile('favicon') ? 'changed' : null]));
 
             return response()->json(['status' => true, 'message' => 'Company profile update successfully']);
         } catch (\Throwable $th) {

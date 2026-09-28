@@ -68,7 +68,7 @@ class TicketController extends IspController
         ])) return $r;
         try {
             $data = $request->only(['customer_id', 'reseller_id', 'connection_id', 'subject', 'category', 'priority', 'message']);
-            $data['attachment'] = imageUpload($request, 'attachment', 'uploads/tickets', 'tkt') ?: null;
+            $data['attachment'] = TicketService::storeAttachment($request, (int) $this->branchId);
             $ticket = TicketService::open($data, 'admin', $this->userId, $this->branchId);
             return $this->ok("Ticket {$ticket->ticket_no} opened", ['id' => $ticket->id]);
         } catch (\Throwable $th) {
@@ -86,7 +86,7 @@ class TicketController extends IspController
         ])) return $r;
         try {
             $ticket = Ticket::where('branch_id', $this->branchId)->findOrFail($request->id);
-            $file = imageUpload($request, 'attachment', 'uploads/tickets', $ticket->ticket_no) ?: null;
+            $file = TicketService::storeAttachment($request, (int) $ticket->branch_id);
             TicketService::reply($ticket, 'admin', $this->userId, $request->message, $file, $request->boolean('internal'));
             if ($request->status) {
                 TicketService::setStatus($ticket, $request->status, 'admin', $this->userId);

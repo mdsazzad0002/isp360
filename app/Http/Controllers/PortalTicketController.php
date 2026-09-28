@@ -89,7 +89,7 @@ class PortalTicketController extends Controller
         try {
             $actor = $this->actor($request);
             $data = $request->only(['customer_id', 'connection_id', 'subject', 'category', 'priority', 'message']);
-            $data['attachment'] = imageUpload($request, 'attachment', 'uploads/tickets', 'tkt') ?: null;
+            $data['attachment'] = TicketService::storeAttachment($request, (int) $actor->branch_id);
             $ticket = TicketService::open($data, $this->portal($request), $actor->id, $actor->branch_id);
             return response()->json(['status' => true, 'message' => "Ticket {$ticket->ticket_no} opened. We will reply here.", 'id' => $ticket->id]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -110,7 +110,7 @@ class PortalTicketController extends Controller
 
         try {
             $ticket = $this->visible($request)->findOrFail($request->id);
-            $file = imageUpload($request, 'attachment', 'uploads/tickets', $ticket->ticket_no) ?: null;
+            $file = TicketService::storeAttachment($request, (int) $ticket->branch_id);
             TicketService::reply($ticket, $this->portal($request), $this->actor($request)->id, $request->message, $file);
             return response()->json(['status' => true, 'message' => 'Reply sent']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {

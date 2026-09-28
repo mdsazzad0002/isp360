@@ -109,6 +109,7 @@ class CustomerController extends Controller
             'language' => 'nullable|in:en,bn,hi,ar',
             'notify_channels' => ['nullable', 'regex:/^(sms|email|whatsapp)(,(sms|email|whatsapp))*$/'],
             'state' => 'nullable|max:100',
+            'image' => $request->hasFile('image') ? \App\Support\Upload::rule() : 'nullable',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
@@ -171,6 +172,7 @@ class CustomerController extends Controller
                 'nullable',
                 Rule::unique('customers')->ignore($request->id)->whereNull('deleted_at'),
             ],
+            'image' => $request->hasFile('image') ? \App\Support\Upload::rule() : 'nullable',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {

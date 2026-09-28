@@ -86,6 +86,7 @@ class ResellerController extends Controller
                 Rule::unique('resellers')->whereNull('deleted_at'),
             ],
             'password' => 'required',
+            'image' => $request->hasFile('image') ? \App\Support\Upload::rule() : 'nullable',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
@@ -119,6 +120,7 @@ class ResellerController extends Controller
                 'required',
                 Rule::unique('resellers')->ignore($request->id)->whereNull('deleted_at'),
             ],
+            'image' => $request->hasFile('image') ? \App\Support\Upload::rule() : 'nullable',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {

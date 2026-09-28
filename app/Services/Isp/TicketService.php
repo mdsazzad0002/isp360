@@ -149,6 +149,14 @@ class TicketService
     }
 
     // Thread for one viewer: internal notes only for the company, author names resolved.
+    // Saves a reply's attachment on the private disk (served by TicketFileController), or null.
+    public static function storeAttachment(\Illuminate\Http\Request $request, int $branchId): ?string
+    {
+        return $request->hasFile('attachment')
+            ? \App\Support\Upload::toPrivate($request->file('attachment'), "tickets/{$branchId}")
+            : null;
+    }
+
     public static function thread(Ticket $ticket, bool $includeInternal): array
     {
         return $ticket->replies()

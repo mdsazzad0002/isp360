@@ -75,6 +75,7 @@ class UserController extends Controller
             'email'    => 'required',
             'branch_id' => 'nullable|integer|exists:branches,id',
             'region_id' => 'nullable|integer|exists:regions,id',
+            'image' => $request->hasFile('image') ? \App\Support\Upload::rule() : 'nullable',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         if ($r = $this->privilegeGuard($request, null)) return $r;
@@ -121,6 +122,7 @@ class UserController extends Controller
             'email'    => 'required',
             'branch_id' => 'nullable|integer|exists:branches,id',
             'region_id' => 'nullable|integer|exists:regions,id',
+            'image' => $request->hasFile('image') ? \App\Support\Upload::rule() : 'nullable',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         $data = User::find($request->id);
@@ -156,7 +158,7 @@ class UserController extends Controller
             'username' => ['required', Rule::unique('users')->ignore($user->id)->whereNull('deleted_at')],
             'phone'    => 'required',
             'email'    => 'nullable|email',
-            'image'    => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'image' => $request->hasFile('image') ? \App\Support\Upload::rule() : 'nullable',
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {

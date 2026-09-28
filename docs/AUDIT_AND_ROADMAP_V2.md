@@ -10,7 +10,7 @@ Audit date: 2026-09-30 · Branch audited: `claude/global-isp-roadmap-arxkcu` · 
 | Global blockers, Phases A and B | Finished. Small leftovers are in GLOBAL_ISP_ROADMAP §2. |
 | Phase C (higher-level management) | Reseller tree, staff roles, approvals, settings split open. |
 | Phases D, E | Not started. |
-| Security audit (§2) | C1 and C2 fixed 2026-09-28 (route permissions, user/role privilege rules, branch-scoped lookups, field lists). C3, H1–H5 still open. |
+| Security audit (§2) | C1–C3 fixed 2026-09-28. H1–H5 and the medium items still open. |
 | Automated tests | 118 feature tests, 1,774 assertions, all passing — but they cover the new ISP modules only (see §2, H3). |
 
 The new ISP modules (`app/Http/Controllers/Isp/*`, `app/Services/Isp/*`) are in good shape: permission-checked,
@@ -25,16 +25,7 @@ config checks as noted.
 
 ### Critical — fix before any real customer uses a multi-user install
 
-**C3. File uploads can place executable files in `public/`.**
-- `imageUpload()` (`app/Helpers/Functions.php`) keeps the client's file extension and writes into
-  `public/uploads/...`. User, customer, reseller, logo and favicon uploads have **no file validation at all**.
-  Ticket attachments (reachable from the customer portal) validate the *content* type (`mimes:`), but a file whose
-  content is a valid JPEG and whose name ends in `.php` passes and is stored as `.php`.
-- On a typical Apache / nginx + PHP-FPM setup, a `.php` file under `public/` executes → remote code execution.
-- Found by reading the code; not exploited in a test.
-- Fix: take the extension from `guessExtension()` against an allow-list, random file names, private disk with a
-  controller that streams the file (KYC documents already work this way), `image|mimes|max` rules on every upload,
-  and a server rule denying script execution under `/uploads`.
+All three critical findings (C1 permissions, C2 branch isolation, C3 uploads) were fixed on 2026-09-28; see git history.
 
 ### High
 
@@ -58,9 +49,8 @@ Estimates assume one developer. Every step keeps the rules in GLOBAL_ISP_ROADMAP
 money only through the ledger, per-branch scoping, audit log for money and permissions).
 
 ### Phase 0 — Security hardening (P0, ~1–2 weeks) — **do this next**
-1. Safe uploads: allow-listed extensions, random names, private storage, validation on every upload (C3).
-2. Audit log for branches, company profile and accounting entries (users and roles are logged).
-3. Upgrade `@tiptap/core`; run `composer audit`.
+1. Audit log for branches and accounting entries (users, roles and the company profile are logged).
+2. Upgrade `@tiptap/core`; run `composer audit`.
 
 ### Phase 1 — Quality foundation (P0, ~1–2 weeks)
 1. CI pipeline (H1) with fresh-migration smoke test of every page route (H4).
