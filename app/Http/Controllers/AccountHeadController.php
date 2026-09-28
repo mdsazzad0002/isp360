@@ -485,7 +485,8 @@ class AccountHeadController extends Controller
                 and exp.type = 'expense'
                 " . ($branchId == null ? "" : " and exp.branch_id = '$branchId'") . "
 
-                order by created_at asc";
+                -- the running balance follows the business date, so a back-dated entry lands where it belongs
+                order by date asc, created_at asc, sequence asc, id asc";
 
         return collect(DB::select($query));
     }
@@ -503,7 +504,7 @@ class AccountHeadController extends Controller
         $previousLedger = collect($ledgers)->filter(function ($ledger) use ($request) {
             return $ledger->date < $request->dateFrom;
         });
-        $previousBalance = count($previousLedger) > 0 ? $previousLedger[count($previousLedger) - 1]->balance : 0;
+        $previousBalance = $previousLedger->isNotEmpty() ? $previousLedger->last()->balance : 0;
 
         if (!empty($request->dateFrom) && !empty($request->dateTo)) {
             $ledgers = $ledgers->filter(function ($ledger) use ($request) {

@@ -1,4 +1,5 @@
 <script setup>
+import { moneyDecimals } from '../../lib/isp';
 import { ref, computed, watch } from 'vue';
 import axios from 'axios';
 
@@ -56,9 +57,9 @@ const filteredRows = computed(() => {
 });
 
 function total() {
-    if (!result.value) return '0.00';
-    if (result.value.type === 'breakdown') return Number(result.value.total || 0).toFixed(2);
-    return filteredRows.value.reduce((pre, cur) => pre + parseFloat(cur.amount || 0), 0).toFixed(2);
+    if (!result.value) return (0).toFixed(moneyDecimals());
+    if (result.value.type === 'breakdown') return Number(result.value.total || 0).toFixed(moneyDecimals());
+    return filteredRows.value.reduce((pre, cur) => pre + parseFloat(cur.amount || 0), 0).toFixed(moneyDecimals());
 }
 
 watch(
@@ -107,7 +108,7 @@ watch(
                                         <td class="px-2 py-1.5">
                                             <span :class="row.direction === 'in' ? 'text-emerald-600' : 'text-red-600'">{{ row.direction === 'in' ? '+ In' : '− Out' }}</span>
                                         </td>
-                                        <td class="px-2 py-1.5 text-end">{{ parseFloat(row.amount).toFixed(2) }}</td>
+                                        <td class="px-2 py-1.5 text-end">{{ parseFloat(row.amount).toFixed(moneyDecimals()) }}</td>
                                     </tr>
                                     <tr v-if="result.rows.length === 0">
                                         <td colspan="3" class="px-2 py-6 text-center text-slate-400">No contributing entries found</td>
@@ -139,7 +140,7 @@ watch(
                                         <tr v-for="(row, index) in filteredRows" :key="index" class="border-b border-slate-100">
                                             <td class="px-2 py-1.5 whitespace-nowrap">{{ row.date }}</td>
                                             <td class="px-2 py-1.5">{{ row.description }}</td>
-                                            <td class="px-2 py-1.5 text-end">{{ parseFloat(row.amount).toFixed(2) }}</td>
+                                            <td class="px-2 py-1.5 text-end">{{ parseFloat(row.amount).toFixed(moneyDecimals()) }}</td>
                                         </tr>
                                         <tr v-if="filteredRows.length === 0">
                                             <td colspan="3" class="px-2 py-6 text-center text-slate-400">No records found</td>

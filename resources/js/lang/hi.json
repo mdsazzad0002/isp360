@@ -29,7 +29,8 @@
         "back": "वापस",
         "print": "प्रिंट",
         "download": "डाउनलोड",
-        "language": "भाषा"
+        "language": "भाषा",
+        "alert": "चेतावनी"
     },
     "impersonation": {
         "logged_in_as": "आप {name} के रूप में लॉग इन हैं",

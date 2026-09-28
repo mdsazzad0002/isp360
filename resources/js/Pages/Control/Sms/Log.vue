@@ -1,4 +1,5 @@
 <script setup>
+import { today } from '../../../lib/isp';
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import AppLayout from '../../../Layouts/AppLayout.vue';
@@ -11,11 +12,11 @@ defineOptions({ layout: AppLayout });
 const toast = useToast();
 
 function todayStr() {
-    const d = new Date();
+    const d = new Date(today() + 'T00:00:00');
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 function monthStartStr() {
-    const d = new Date();
+    const d = new Date(today() + 'T00:00:00');
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
 }
 

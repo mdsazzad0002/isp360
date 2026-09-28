@@ -106,6 +106,8 @@ class HandleInertiaRequests extends Middleware
                 || ($request->is('reseller/*') && $request->session()->has('reseller_impersonator_id') && Auth::guard('reseller')->check()),
             'canViewCustomerLedger' => fn () => $user && checkAccess('customerLedger'),
             'impersonating' => fn () => $request->session()->has('impersonator_id'),
+            // problems the scheduled checks found (see App\Support\SystemAlerts), for admins only
+            'systemAlerts' => fn () => $user && in_array($user->role, ['Superadmin', 'admin']) ? \App\Support\SystemAlerts::all() : [],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

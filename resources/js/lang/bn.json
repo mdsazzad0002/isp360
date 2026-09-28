@@ -29,7 +29,8 @@
         "back": "পিছনে",
         "print": "প্রিন্ট",
         "download": "ডাউনলোড",
-        "language": "ভাষা"
+        "language": "ভাষা",
+        "alert": "সতর্কতা"
     },
     "impersonation": {
         "logged_in_as": "আপনি {name} হিসেবে লগইন করেছেন",

@@ -1,4 +1,5 @@
 <script setup>
+import { moneyDecimals } from '../../lib/isp';
 defineProps({
     loading: Boolean,
     loaded: Boolean,
@@ -86,7 +87,7 @@ defineEmits(['update:dateFrom', 'update:dateTo', 'date-input', 'quick-range', 's
                         <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.cash_payment }}</td>
                         <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.cash_receive }}</td>
                         <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.return_amount }}</td>
-                        <td class="border border-slate-200 px-2 py-1.5 text-end font-medium" :class="balanceClass(item.balance)">{{ parseFloat(item.balance).toFixed(2) }}</td>
+                        <td class="border border-slate-200 px-2 py-1.5 text-end font-medium" :class="balanceClass(item.balance)">{{ parseFloat(item.balance).toFixed(moneyDecimals()) }}</td>
                     </tr>
                     <tr v-if="ledgers.length === 0">
                         <td colspan="9" class="border border-slate-200 px-2 py-6 text-center text-slate-400">No records found</td>

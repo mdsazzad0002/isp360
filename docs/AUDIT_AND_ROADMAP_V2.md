@@ -10,8 +10,8 @@ Audit date: 2026-09-30 · Branch audited: `claude/global-isp-roadmap-arxkcu` · 
 | Global blockers, Phases A and B | Finished. Small leftovers are in GLOBAL_ISP_ROADMAP §2. |
 | Phase C (higher-level management) | Reseller tree, staff roles, approvals, settings split open. |
 | Phases D, E | Not started. |
-| Security audit (§2) | C1–C3, H1 (CI), H2 (dependencies: npm and composer audits clean) and H4 (fresh-database run + page smoke test) fixed 2026-09-28; security headers (CSP, HSTS), password policy and sign-in list with remote logout added. H3, H5 and the medium items still open. |
-| Automated tests | 118 feature tests, 1,774 assertions, all passing — but they cover the new ISP modules only (see §2, H3). |
+| Security audit (§2) | C1–C3, H1 (CI), H2 (dependencies: npm and composer audits clean), H3 (tests and audit log for the older modules) and H4 (fresh-database run + page smoke test) fixed 2026-09-28; security headers (CSP, HSTS), password policy and sign-in list with remote logout added. H5 (translation) and the medium item still open. |
+| Automated tests | 168 tests, 4,158 assertions, all passing, including the older cash / bank books, day book and balance sheet. |
 
 The new ISP modules (`app/Http/Controllers/Isp/*`, `app/Services/Isp/*`) are in good shape: permission-checked,
 branch-scoped, audited and tested. **The risk sits in the older generic modules the product was built on**
@@ -31,8 +31,7 @@ All three critical findings (C1 permissions, C2 branch isolation, C3 uploads) we
 
 | # | Finding | Evidence | Fix |
 |---|---|---|---|
-| H3 | Older modules (users, roles, accounts, banks, payments/receives, POS reports, balance sheet) have zero tests and no audit log. | 0 of 25 test files touch them. | Tests with the C1/C2 fixes; route them through `AuditLogger`. |
-| H5 | UI is only partly translated. | 6 of 94 Vue pages use i18n; `bn`/`hi`/`ar` each miss 5 keys that exist in `en`. | Translate page by page, starting with the customer portal and billing screens; a key-parity check in CI. |
+| H5 | UI is only partly translated. | 6 of 94 Vue pages use i18n (key parity between languages is now checked in CI by `LanguageParityTest`). | Translate page by page, starting with the customer portal and billing screens. |
 
 ### Medium / low
 
@@ -45,11 +44,11 @@ money only through the ledger, per-branch scoping, audit log for money and permi
 
 Phase 0 (security hardening) finished 2026-09-28.
 
-### Phase 1 — Quality foundation (P0, ~1–2 weeks) — **do this next**
-CI (H1, H4) is in place. Still open:
-1. Tests for the older modules beyond permissions and branch isolation (H3): POS reports, balance sheet, cash / bank ledgers.
+Phase 1 (quality foundation) finished 2026-09-28: tests for the older cash / bank books, day book and balance
+sheet (`LegacyReportsTest`, which also found and fixed a wrong opening balance after back-dated entries), the
+nightly ledger check with an admin alert, and the language key parity test.
 
-### Phase 2 — Finish Phase C, higher-level management (P1, ~5–6 weeks)
+### Phase 2 — Finish Phase C, higher-level management (P1, ~5–6 weeks) — **do this next**
 1. Multi-level reseller tree, per-level commission, credit limit (3.3).
 2. Staff role templates and scopes (3.4) — builds on the Phase 0 permission middleware.
 3. Maker-checker approval workflows for refunds, write-offs, price changes, deletions (3.5).

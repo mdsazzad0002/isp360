@@ -51,6 +51,7 @@ onBeforeUnmount(() => {
 
 const auth = computed(() => page.props.auth?.user ?? null);
 const impersonating = computed(() => !!page.props.impersonating);
+const systemAlerts = computed(() => page.props.systemAlerts ?? []);
 const company = computed(() => page.props.company ?? {});
 const menuGroups = computed(() => translateMenuGroups(page.props.menuGroups ?? [], t, te));
 const currentPath = computed(() => {
@@ -309,6 +310,10 @@ if (page.props.flash?.error) toast.error(page.props.flash.error);
 
         <!-- Content -->
         <main class="transition-all print:!pt-0 print:!ps-0" :class="isPosPage ? '' : [impersonating ? 'pt-[88px]' : 'pt-14', sidebarOpen ? 'lg:ps-64' : '']">
+            <div v-for="alert in systemAlerts" :key="alert.key" role="alert" class="mx-4 mt-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 print:hidden dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+                <span class="font-semibold">{{ t('common.alert') }}:</span> {{ alert.message }}
+                <span class="ms-1 text-xs opacity-75">({{ alert.since }})</span>
+            </div>
             <slot />
             <footer v-if="!isPosPage" class="px-4 py-3 text-center text-[11px] font-bold text-emerald-600 print:hidden">
                 <a :href="footerCreditUrl" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-700">

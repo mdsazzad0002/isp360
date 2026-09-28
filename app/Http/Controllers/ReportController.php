@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AccountHead;
 use App\Models\Bank;
 use App\Models\Customer;
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -71,37 +72,37 @@ class ReportController extends Controller
                 'name' => trim($bank->bank_name . ' ' . $bank->name . ' ' . $bank->number),
                 'opening' => $opening,
                 'closing' => $closing,
-                'change' => round($closing - $opening, 2),
+                'change' => Money::round($closing - $opening),
             ];
         })->values();
 
-        $totalOpeningBank = round($bankRows->sum('opening'), 2);
-        $totalClosingBank = round($bankRows->sum('closing'), 2);
-        $cashChange = round($closingCash - $openingCash, 2);
+        $totalOpeningBank = Money::round($bankRows->sum('opening'));
+        $totalClosingBank = Money::round($bankRows->sum('closing'));
+        $cashChange = Money::round($closingCash - $openingCash);
 
         $receiptBanks = $bankRows->filter(fn ($b) => $b['change'] > 0)->map(fn ($b) => ['id' => $b['id'], 'name' => $b['name'], 'amount' => $b['change']])->values();
-        $paymentBanks = $bankRows->filter(fn ($b) => $b['change'] < 0)->map(fn ($b) => ['id' => $b['id'], 'name' => $b['name'], 'amount' => round(abs($b['change']), 2)])->values();
+        $paymentBanks = $bankRows->filter(fn ($b) => $b['change'] < 0)->map(fn ($b) => ['id' => $b['id'], 'name' => $b['name'], 'amount' => Money::round(abs($b['change']))])->values();
 
-        $totalReceipt = round($receiptBanks->sum('amount') + ($cashChange > 0 ? $cashChange : 0), 2);
-        $totalPayment = round($paymentBanks->sum('amount') + ($cashChange < 0 ? abs($cashChange) : 0), 2);
+        $totalReceipt = Money::round($receiptBanks->sum('amount') + ($cashChange > 0 ? $cashChange : 0));
+        $totalPayment = Money::round($paymentBanks->sum('amount') + ($cashChange < 0 ? abs($cashChange) : 0));
 
         return response()->json([
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
-            'openingCash' => round($openingCash, 2),
-            'closingCash' => round($closingCash, 2),
+            'openingCash' => Money::round($openingCash),
+            'closingCash' => Money::round($closingCash),
             'totalOpeningBank' => $totalOpeningBank,
             'totalClosingBank' => $totalClosingBank,
             'openingBanks' => $bankRows->map(fn ($b) => ['id' => $b['id'], 'name' => $b['name'], 'amount' => $b['opening']])->values(),
             'closingBanks' => $bankRows->map(fn ($b) => ['id' => $b['id'], 'name' => $b['name'], 'amount' => $b['closing']])->values(),
             'receiptCash' => $cashChange > 0 ? $cashChange : 0,
-            'paymentCash' => $cashChange < 0 ? round(abs($cashChange), 2) : 0,
+            'paymentCash' => $cashChange < 0 ? Money::round(abs($cashChange)) : 0,
             'receiptBanks' => $receiptBanks,
             'paymentBanks' => $paymentBanks,
             'totalReceipt' => $totalReceipt,
             'totalPayment' => $totalPayment,
-            'leftTotal' => round($openingCash + $totalOpeningBank + $totalReceipt, 2),
-            'rightTotal' => round($totalPayment + $closingCash + $totalClosingBank, 2),
+            'leftTotal' => Money::round($openingCash + $totalOpeningBank + $totalReceipt),
+            'rightTotal' => Money::round($totalPayment + $closingCash + $totalClosingBank),
         ]);
     }
 
@@ -132,35 +133,35 @@ class ReportController extends Controller
             return [
                 'id' => $b->id,
                 'name' => trim($b->bank_name . ' ' . $b->name . ' ' . $b->number),
-                'amount' => round((float) $b->currentbalance, 2),
+                'amount' => Money::round((float) $b->currentbalance),
             ];
         })->values();
-        $totalBank = round($bankRows->sum('amount'), 2);
+        $totalBank = Money::round($bankRows->sum('amount'));
 
         // ---- Receivables (customer ledger can flip sign into an advance) ----
         $customerRows = collect(Customer::customerDue($req, $date));
-        $accountsReceivable = round($customerRows->sum(fn ($c) => (float) $c->due > 0 ? (float) $c->due : 0), 2);
-        $customerAdvance = round($customerRows->sum(fn ($c) => (float) $c->due < 0 ? abs((float) $c->due) : 0), 2);
+        $accountsReceivable = Money::round($customerRows->sum(fn ($c) => (float) $c->due > 0 ? (float) $c->due : 0));
+        $customerAdvance = Money::round($customerRows->sum(fn ($c) => (float) $c->due < 0 ? abs((float) $c->due) : 0));
 
         $assets = [
-            'cashInHand' => round($cashInHand, 2),
+            'cashInHand' => Money::round($cashInHand),
             'bankBalances' => $bankRows,
             'totalBank' => $totalBank,
             'accountsReceivable' => $accountsReceivable,
         ];
-        $totalAssets = round(array_sum([
+        $totalAssets = Money::round(array_sum([
             $assets['cashInHand'],
             $assets['totalBank'],
             $assets['accountsReceivable'],
-        ]), 2);
+        ]));
 
         $liabilities = [
             'customerAdvance' => $customerAdvance,
         ];
-        $totalLiabilities = round(array_sum($liabilities), 2);
+        $totalLiabilities = Money::round(array_sum($liabilities));
 
-        $retainedEarnings = round($totalAssets - $totalLiabilities, 2);
-        $totalEquity = round($retainedEarnings, 2);
+        $retainedEarnings = Money::round($totalAssets - $totalLiabilities);
+        $totalEquity = Money::round($retainedEarnings);
         $equity = [
             'retainedEarnings' => $retainedEarnings,
         ];
@@ -173,7 +174,7 @@ class ReportController extends Controller
             'totalLiabilities' => $totalLiabilities,
             'equity' => $equity,
             'totalEquity' => $totalEquity,
-            'totalLiabilitiesAndEquity' => round($totalLiabilities + $totalEquity, 2),
+            'totalLiabilitiesAndEquity' => Money::round($totalLiabilities + $totalEquity),
         ]);
     }
 
@@ -191,7 +192,7 @@ class ReportController extends Controller
                 $rows = collect(Customer::customerDue($req, $date))
                     ->filter(fn ($c) => (float) $c->due > 0)
                     ->sortByDesc(fn ($c) => (float) $c->due)
-                    ->map(fn ($c) => ['label' => $c->name, 'sublabel' => $c->code, 'amount' => round((float) $c->due, 2)])
+                    ->map(fn ($c) => ['label' => $c->name, 'sublabel' => $c->code, 'amount' => Money::round((float) $c->due)])
                     ->values();
                 break;
 
@@ -199,7 +200,7 @@ class ReportController extends Controller
                 $rows = collect(Customer::customerDue($req, $date))
                     ->filter(fn ($c) => (float) $c->due < 0)
                     ->sortBy(fn ($c) => (float) $c->due)
-                    ->map(fn ($c) => ['label' => $c->name, 'sublabel' => $c->code, 'amount' => round(abs((float) $c->due), 2)])
+                    ->map(fn ($c) => ['label' => $c->name, 'sublabel' => $c->code, 'amount' => Money::round(abs((float) $c->due))])
                     ->values();
                 break;
 

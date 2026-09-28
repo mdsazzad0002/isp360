@@ -1,4 +1,5 @@
 <script setup>
+import { moneyDecimals, today } from '../../lib/isp';
 import { ref, onMounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -11,7 +12,7 @@ const page = usePage();
 const title = 'Cash & Bank Ledger';
 
 function todayStr() {
-    const d = new Date();
+    const d = new Date(today() + 'T00:00:00');
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
@@ -60,27 +61,27 @@ function showLedger() {
 }
 
 function sumField(field) {
-    return ledgers.value.reduce((pre, cur) => pre + cur[field], 0).toFixed(2);
+    return ledgers.value.reduce((pre, cur) => pre + cur[field], 0).toFixed(moneyDecimals());
 }
 
 function lastBalance() {
-    return ledgers.value.length ? ledgers.value[ledgers.value.length - 1].balance.toFixed(2) : '0.00';
+    return ledgers.value.length ? ledgers.value[ledgers.value.length - 1].balance.toFixed(moneyDecimals()) : (0).toFixed(moneyDecimals());
 }
 
 function print() {
     const dateText = `<p><strong>Statement From:</strong> ${dateFrom.value} to ${dateTo.value}</p>`;
 
     const rowsHtml =
-        `<tr><td></td><td colspan="3">Previous Balance</td><td style="text-align:right;">${previousBalance.value.toFixed(2)}</td></tr>` +
+        `<tr><td></td><td colspan="3">Previous Balance</td><td style="text-align:right;">${previousBalance.value.toFixed(moneyDecimals())}</td></tr>` +
         ledgers.value
             .map(
                 (item) => `
             <tr>
                 <td>${item.date}</td>
                 <td>${item.description ?? ''} <em>(${item.source})</em></td>
-                <td style="text-align:right;">${item.in.toFixed(2)}</td>
-                <td style="text-align:right;">${item.out.toFixed(2)}</td>
-                <td style="text-align:right;">${item.balance.toFixed(2)}</td>
+                <td style="text-align:right;">${item.in.toFixed(moneyDecimals())}</td>
+                <td style="text-align:right;">${item.out.toFixed(moneyDecimals())}</td>
+                <td style="text-align:right;">${item.balance.toFixed(moneyDecimals())}</td>
             </tr>`
             )
             .join('') +
@@ -139,7 +140,7 @@ onMounted(showLedger);
                         <tr class="border-b border-slate-100">
                             <td class="px-2 py-1.5"></td>
                             <td colspan="4" class="px-2 py-1.5">Previous Balance</td>
-                            <td class="px-2 py-1.5 text-end">{{ previousBalance.toFixed(2) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ previousBalance.toFixed(moneyDecimals()) }}</td>
                         </tr>
                         <tr v-for="(item, index) in ledgers" :key="index" class="border-b border-slate-100">
                             <td class="px-2 py-1.5">{{ item.date }}</td>
@@ -149,9 +150,9 @@ onMounted(showLedger);
                                     {{ item.source }}
                                 </span>
                             </td>
-                            <td class="px-2 py-1.5 text-end">{{ item.in.toFixed(2) }}</td>
-                            <td class="px-2 py-1.5 text-end">{{ item.out.toFixed(2) }}</td>
-                            <td class="px-2 py-1.5 text-end">{{ item.balance.toFixed(2) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ item.in.toFixed(moneyDecimals()) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ item.out.toFixed(moneyDecimals()) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ item.balance.toFixed(moneyDecimals()) }}</td>
                         </tr>
                         <tr v-if="ledgers.length > 0" class="bg-slate-50 font-semibold">
                             <td colspan="3" class="px-2 py-2 text-center">Total</td>

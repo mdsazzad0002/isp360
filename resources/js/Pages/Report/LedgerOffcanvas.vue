@@ -1,4 +1,5 @@
 <script setup>
+import { moneyDecimals } from '../../lib/isp';
 import { reactive, ref, watch } from 'vue';
 import axios from 'axios';
 
@@ -50,11 +51,11 @@ watch(
 );
 
 function sumField(field) {
-    return ledgers.value.reduce((pre, cur) => pre + parseFloat(cur[field]), 0).toFixed(2);
+    return ledgers.value.reduce((pre, cur) => pre + parseFloat(cur[field]), 0).toFixed(moneyDecimals());
 }
 
 function lastBalance() {
-    return ledgers.value.length ? parseFloat(ledgers.value[ledgers.value.length - 1].balance).toFixed(2) : '0.00';
+    return ledgers.value.length ? parseFloat(ledgers.value[ledgers.value.length - 1].balance).toFixed(moneyDecimals()) : (0).toFixed(moneyDecimals());
 }
 
 function isClickableLedgerRow() {
@@ -135,7 +136,7 @@ function openInvoice() {
                                         <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.cash_payment }}</td>
                                         <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.cash_receive }}</td>
                                         <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.return_amount }}</td>
-                                        <td class="border border-slate-200 px-2 py-1.5 text-end font-medium">{{ parseFloat(item.balance).toFixed(2) }}</td>
+                                        <td class="border border-slate-200 px-2 py-1.5 text-end font-medium">{{ parseFloat(item.balance).toFixed(moneyDecimals()) }}</td>
                                     </tr>
                                     <tr v-if="ledgers.length > 0" class="bg-slate-50 font-semibold">
                                         <td colspan="2" class="border border-slate-200 px-2 py-2 text-center">Total</td>

@@ -36,4 +36,7 @@ return [
         'at' => env('ISP_BACKUP_AT', '02:30'),
         'keep' => (int) env('ISP_BACKUP_KEEP', 14),
     ],
+
+    // where scheduled checks (nightly ledger check) send an alert e-mail; the admin banner shows either way
+    'alert_email' => env('ISP_ALERT_EMAIL'),
 ];

@@ -1,4 +1,5 @@
 <script setup>
+import { moneyDecimals, today } from '../../../lib/isp';
 import { ref, watch } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -22,10 +23,10 @@ function formatDate(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 function todayStr() {
-    return formatDate(new Date());
+    return formatDate(new Date(today() + 'T00:00:00'));
 }
 function daysAgoStr(days) {
-    const d = new Date();
+    const d = new Date(today() + 'T00:00:00');
     d.setDate(d.getDate() - days);
     return formatDate(d);
 }
@@ -79,10 +80,10 @@ watch(
 );
 
 function sumField(field) {
-    return ledgers.value.reduce((pre, cur) => pre + parseFloat(cur[field]), 0).toFixed(2);
+    return ledgers.value.reduce((pre, cur) => pre + parseFloat(cur[field]), 0).toFixed(moneyDecimals());
 }
 function lastBalance() {
-    return ledgers.value.length ? parseFloat(ledgers.value[ledgers.value.length - 1].balance).toFixed(2) : '0.00';
+    return ledgers.value.length ? parseFloat(ledgers.value[ledgers.value.length - 1].balance).toFixed(moneyDecimals()) : (0).toFixed(moneyDecimals());
 }
 
 function print() {
@@ -107,7 +108,7 @@ function print() {
                 <td class="${cell}" style="text-align:right;">${item.cash_payment}</td>
                 <td class="${cell}" style="text-align:right;">${item.cash_receive}</td>
                 <td class="${cell}" style="text-align:right;">${item.return_amount}</td>
-                <td class="${cell}" style="text-align:right;">${parseFloat(item.balance).toFixed(2)}</td>
+                <td class="${cell}" style="text-align:right;">${parseFloat(item.balance).toFixed(moneyDecimals())}</td>
             </tr>`
             )
             .join('') +
@@ -245,7 +246,7 @@ function openInvoice(item) {
                                         <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.cash_payment }}</td>
                                         <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.cash_receive }}</td>
                                         <td class="border border-slate-200 px-2 py-1.5 text-end">{{ item.return_amount }}</td>
-                                        <td class="border border-slate-200 px-2 py-1.5 text-end font-medium">{{ parseFloat(item.balance).toFixed(2) }}</td>
+                                        <td class="border border-slate-200 px-2 py-1.5 text-end font-medium">{{ parseFloat(item.balance).toFixed(moneyDecimals()) }}</td>
                                     </tr>
                                     <tr v-if="ledgers.length > 0" class="bg-slate-50 font-semibold">
                                         <td colspan="2" class="border border-slate-200 px-2 py-2 text-center">Total</td>

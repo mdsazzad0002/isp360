@@ -1,4 +1,5 @@
 <script setup>
+import { today, money } from '../../lib/isp';
 import { ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -11,12 +12,12 @@ defineOptions({ layout: AppLayout });
 const page = usePage();
 
 function todayStr() {
-    const d = new Date();
+    const d = new Date(today() + 'T00:00:00');
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function currency(value) {
-    return Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return money(value);
 }
 
 const date = ref(todayStr());

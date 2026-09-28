@@ -1,4 +1,5 @@
 <script setup>
+import { moneyDecimals } from '../../lib/isp';
 import { ref, computed } from 'vue';
 import { usePage, router } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -136,7 +137,7 @@ function sortColumn(column) {
 }
 
 function grandTotal() {
-    return rows.value.reduce((pre, cur) => pre + parseFloat(cur.due), 0).toFixed(2);
+    return rows.value.reduce((pre, cur) => pre + parseFloat(cur.due), 0).toFixed(moneyDecimals());
 }
 
 function print() {
@@ -158,7 +159,7 @@ function print() {
                     <td>${item.name ?? ''}</td>
                     <td>${item.phone ?? ''}</td>
                     <td>${item.address ?? ''}</td>
-                    <td style="text-align:right;">${parseFloat(item.due).toFixed(2)}</td>
+                    <td style="text-align:right;">${parseFloat(item.due).toFixed(moneyDecimals())}</td>
                 </tr>`
               )
               .join('') + `<tr><td colspan="5" style="text-align:center;font-weight:bold;">Total (this page)</td><td style="text-align:right;font-weight:bold;">${grandTotal()}</td></tr>`
@@ -250,8 +251,8 @@ function exportExcel() {
         <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
             <div v-if="dues.total_due !== undefined" class="mb-3 flex flex-wrap gap-4 text-sm">
                 <span class="text-slate-500">{{ dues.total }} {{ mode === 'customer' ? 'customers' : 'suppliers' }}</span>
-                <span class="text-slate-500">Total due: <strong class="text-slate-800">{{ Number(dues.total_due).toFixed(2) }}</strong></span>
-                <span class="text-slate-500">Total advance: <strong class="text-rose-600">{{ Number(dues.total_advance).toFixed(2) }}</strong></span>
+                <span class="text-slate-500">Total due: <strong class="text-slate-800">{{ Number(dues.total_due).toFixed(moneyDecimals()) }}</strong></span>
+                <span class="text-slate-500">Total advance: <strong class="text-rose-600">{{ Number(dues.total_advance).toFixed(moneyDecimals()) }}</strong></span>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full border border-slate-200 text-sm">
@@ -285,7 +286,7 @@ function exportExcel() {
                             </td>
                             <td class="border-e border-slate-200 px-3 py-2">{{ item.phone }}</td>
                             <td class="border-e border-slate-200 px-3 py-2">{{ item.address }}</td>
-                            <td class="border-e border-slate-200 px-3 py-2 text-end" :class="{ 'text-rose-600': parseFloat(item.due) < 0 }">{{ parseFloat(item.due).toFixed(2) }}</td>
+                            <td class="border-e border-slate-200 px-3 py-2 text-end" :class="{ 'text-rose-600': parseFloat(item.due) < 0 }">{{ parseFloat(item.due).toFixed(moneyDecimals()) }}</td>
                             <td class="px-3 py-2">
                                 <button type="button" @click="openPayment(item)" class="inline-flex items-center gap-1 rounded-md bg-brand-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-600">
                                     <i class="bi bi-cash-coin"></i> {{ actionLabel(item) }}

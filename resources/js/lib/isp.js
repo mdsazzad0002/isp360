@@ -34,6 +34,12 @@ export function moneyStep() {
     return decimals > 0 ? (1 / 10 ** decimals).toFixed(decimals) : '1';
 }
 
+// Digits after the point for the company currency: 2, 0 (JPY) or 3 (KWD). For plain number strings
+// that later code may parseFloat again (older report pages): x.toFixed(moneyDecimals()).
+export function moneyDecimals() {
+    return currency().decimals ?? 2;
+}
+
 // Rounds to the currency's smallest unit (for amounts put into inputs).
 export function roundMoney(value) {
     return Number(Number(value || 0).toFixed(currency().decimals ?? 2));

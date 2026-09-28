@@ -29,7 +29,8 @@
         "back": "رجوع",
         "print": "طباعة",
         "download": "تنزيل",
-        "language": "اللغة"
+        "language": "اللغة",
+        "alert": "تنبيه"
     },
     "impersonation": {
         "logged_in_as": "أنت مسجل الدخول باسم {name}",

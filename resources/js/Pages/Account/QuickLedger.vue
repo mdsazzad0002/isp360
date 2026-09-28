@@ -1,4 +1,5 @@
 <script setup>
+import { moneyDecimals, today } from '../../lib/isp';
 import { ref, computed, watch } from 'vue';
 import axios from 'axios';
 import QuickLedgerBody from './QuickLedgerBody.vue';
@@ -18,17 +19,17 @@ function toDateStr(d) {
 }
 
 function todayStr() {
-    return toDateStr(new Date());
+    return toDateStr(new Date(today() + 'T00:00:00'));
 }
 
 function daysAgoStr(days) {
-    const d = new Date();
+    const d = new Date(today() + 'T00:00:00');
     d.setDate(d.getDate() - days);
     return toDateStr(d);
 }
 
 function monthsAgoStr(months) {
-    const d = new Date();
+    const d = new Date(today() + 'T00:00:00');
     d.setMonth(d.getMonth() - months);
     return toDateStr(d);
 }
@@ -71,11 +72,11 @@ function applyQuickRange(range) {
 }
 
 function sumField(field) {
-    return ledgers.value.reduce((pre, cur) => pre + parseFloat(cur[field] || 0), 0).toFixed(2);
+    return ledgers.value.reduce((pre, cur) => pre + parseFloat(cur[field] || 0), 0).toFixed(moneyDecimals());
 }
 
 function lastBalance() {
-    return ledgers.value.length ? parseFloat(ledgers.value[ledgers.value.length - 1].balance).toFixed(2) : parseFloat(previousBalance.value || 0).toFixed(2);
+    return ledgers.value.length ? parseFloat(ledgers.value[ledgers.value.length - 1].balance).toFixed(moneyDecimals()) : parseFloat(previousBalance.value || 0).toFixed(moneyDecimals());
 }
 
 function onDateInput() {

@@ -11,15 +11,13 @@
 Priority tags: **P0** = must have before the first customer outside Bangladesh. **P1** = needed to compete in most markets. **P2** = market-specific or scale features.
 Effort tags: **S** ≈ 1–3 days, **M** ≈ 1–2 weeks, **L** ≈ 3+ weeks.
 
-**Already built (not repeated below):** company currency + `Money` (0–3 decimals), company timezone + DST, sales tax + tax report, country packs (BD IN PK NP NG KE PH ID BR US GB), billing rules (postpaid, proration, grace, notice, late fee, deposit), Stripe + PayPal + webhook idempotency, RADIUS + CoA, session/NAT log, KYC / consent / erasure, IPAM + CGNAT, e-mail / WhatsApp / Twilio / Vonage / Infobip + renewal reminder, 2FA + lockout + encrypted secrets, queues + Horizon, RTL / phones / addresses / number formats, company dashboard + regions + regional managers, permission check + branch scoping on the older modules, safe uploads, CI, full backups + restore, security headers (CSP with nonce, HSTS), password policy, sign-in list with remote logout, MikroTik live monitor (CPU / memory / disk / health / online users, interface rates, live interface graph, pinned WAN / uplink interfaces).
+**Already built (not repeated below):** company currency + `Money` (0–3 decimals), company timezone + DST, sales tax + tax report, country packs (BD IN PK NP NG KE PH ID BR US GB), billing rules (postpaid, proration, grace, notice, late fee, deposit), Stripe + PayPal + webhook idempotency, RADIUS + CoA, session/NAT log, KYC / consent / erasure, IPAM + CGNAT, e-mail / WhatsApp / Twilio / Vonage / Infobip + renewal reminder, 2FA + lockout + encrypted secrets, queues + Horizon, RTL / phones / addresses / number formats, company dashboard + regions + regional managers, permission check + branch scoping on the older modules, safe uploads, CI, full backups + restore, security headers (CSP with nonce, HSTS), password policy, sign-in list with remote logout, MikroTik live monitor (CPU / memory / disk / health / online users, interface rates, live interface graph, pinned WAN / uplink interfaces), tests for the older cash / bank books, day book and balance sheet, older pages on the company currency's decimals and the company's date, audit log on every admin settings change (SMS gateway keys masked), nightly ledger check with admin banner and e-mail alert, language key parity test.
 
 ---
 
 ## 2. Leftovers of the global blockers (P0 areas)
 
 ### 2.1–2.2 Currency and timezone
-- [ ] Old POS modules (sales, purchases, reports outside ISP) still round to 2 decimals.
-- [ ] Old POS pages (Account/*, Report/*) build "today" from the browser clock; move them to `today()` from `lib/isp.js`.
 - [ ] Countries with several zones (US, CA, AU, BR, MX): a per-branch zone would need UTC storage — only if a customer asks.
 - [ ] Fall-back hour: a wall-clock time inside the repeated DST hour is ambiguous (at most one hour a year, DST countries only).
 
@@ -80,7 +78,6 @@ differences are data in `config/nas_vendors.php` (`NasVendor`); how a router is 
 
 ### 2.9 UI translation
 - [ ] Remaining pages: 91 of 95 pages — customer portal Connections and the rest of Profile, reseller portal (7 pages), admin pages — and PHP validation / flash messages (`resources/lang` has only `en`). Translations by a native speaker before shipping.
-- [ ] Key parity: `bn` / `hi` / `ar` each miss 5 keys that exist in `en` and carry 36 unused ones; add a parity check to CI.
 
 ---
 
@@ -216,7 +213,6 @@ Today: company → reseller → customer (one level).
 - [ ] Scheduled reports by e-mail; XLSX export (PhpSpreadsheet is installed).
 
 ### 4.12 Security — P0, M
-- [ ] Audit log for the admin actions still missing it: company profile (name, logo, contact) and SMS gateway changes.
 - [ ] External penetration test before the first large installation.
 
 ### 4.13 Platform, scale and operations — P0/P1, L
@@ -235,11 +231,9 @@ Today: company → reseller → customer (one level).
 - [ ] Integrations: accounting (4.10), maps, e-invoicing per country (India GST IRP, Saudi ZATCA, Mexico CFDI, Brazil NF-e/NFCom, EU Peppol, Bangladesh NBR Mushak 6.3).
 
 ### 4.15 Testing and quality — P0, M
-- [ ] Tests for the older modules beyond permissions and branch isolation (`LegacyAccessTest`, `BranchIsolationTest` cover those): POS reports, balance sheet, cash / bank ledgers.
 - [ ] Branch isolation tests for the remaining controllers (customer, bank, receive and branch writes are covered by `BranchIsolationTest`).
 - [ ] Gateway driver contract tests with recorded sandbox responses.
 - [ ] RADIUS driver tests against a FreeRADIUS container in CI.
-- [ ] `isp:ledger-check` as a nightly job with an alert (it already runs in CI).
 
 ### 4.16 Documentation and onboarding — P1, S/M
 - [ ] Installation wizard: country pack → company → branch → router/RADIUS → packages → import customers.

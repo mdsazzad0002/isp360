@@ -1,4 +1,5 @@
 <script setup>
+import { moneyDecimals, today } from '../../lib/isp';
 import { reactive, ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import SearchSelect from '../../Components/SearchSelect.vue';
@@ -21,7 +22,7 @@ const toast = useToast();
 const page = usePage();
 
 function todayStr() {
-    const d = new Date();
+    const d = new Date(today() + 'T00:00:00');
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
@@ -50,7 +51,7 @@ const filteredRows = computed(() => {
     return rows.value.filter((row) => JSON.stringify(row).toLowerCase().includes(term));
 });
 
-const totalAmount = computed(() => filteredRows.value.reduce((pr, cu) => pr + parseFloat(cu.amount || 0), 0).toFixed(2));
+const totalAmount = computed(() => filteredRows.value.reduce((pr, cu) => pr + parseFloat(cu.amount || 0), 0).toFixed(moneyDecimals()));
 
 function getAccounts() {
     axios.post('/get-accounthead', { type: activeType.value }).then((res) => {

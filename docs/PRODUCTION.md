@@ -37,7 +37,7 @@ The web server's document root is `public/`. The PHP user needs write access to 
 ## 3. Scheduler and queues
 
 One cron entry runs everything that is time-based (invoices, suspensions, reminders, session logs,
-backups):
+backups, the nightly ledger check):
 
 ```cron
 * * * * * cd /path/to/isp306 && php artisan schedule:run >> /dev/null 2>&1
@@ -49,6 +49,11 @@ Router pushes and SMS go through queues. Pick one:
   systemd. Dashboard at `/horizon` (needs the `queueMonitor` permission).
 - **Shared hosting:** `QUEUE_CONNECTION=database`, `ISP_QUEUE_IN_SCHEDULER=true`. The cron entry works
   the queue every minute.
+
+Every night at 03:40 `isp:ledger-check --alert` checks every customer's ledger against their invoices
+and payments. If one is out of balance, admins see a red banner on every page until a clean run, and
+`ISP_ALERT_EMAIL` (if set) gets one e-mail when it breaks and one when it recovers. The mail settings
+(`MAIL_*`) must work for the e-mail.
 
 After every update: `php artisan horizon:terminate` (Horizon restarts with the new code) or
 `php artisan queue:restart`.
@@ -100,4 +105,4 @@ location ^~ /uploads/ {
 - [ ] Queue worker or `ISP_QUEUE_IN_SCHEDULER` set, and a test SMS goes out
 - [ ] Seeded admin password changed, 2FA policy on
 - [ ] A backup taken and restored once on another machine
-- [ ] `php artisan isp:ledger-check` reports every ledger balanced
+- [ ] `php artisan isp:ledger-check` reports every ledger balanced, and `ISP_ALERT_EMAIL` is set

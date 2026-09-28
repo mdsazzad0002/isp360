@@ -38,6 +38,10 @@ class Kernel extends ConsoleKernel
         // sign-in history older than 60 days
         $schedule->call(fn () => \App\Support\LoginSessions::prune())->dailyAt('03:20')->name('login-sessions-prune');
 
+        // financial integrity: ledger == cached balance == open invoices - advance, for every customer;
+        // a failure shows admins a banner (and e-mails ISP_ALERT_EMAIL) until a clean run
+        $schedule->command('isp:ledger-check --alert')->dailyAt('03:40')->withoutOverlapping(60);
+
         // full backup: database + uploaded and private files
         if (config('isp.backup.enabled')) {
             $schedule->command('isp:backup')->dailyAt(config('isp.backup.at'))->withoutOverlapping(120);

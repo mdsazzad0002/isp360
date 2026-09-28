@@ -1,4 +1,5 @@
 <script setup>
+import { today } from '../../../lib/isp';
 import { reactive, ref, computed, onMounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -85,7 +86,7 @@ function exportExcel() {
 }
 
 function todayStr() {
-    const d = new Date();
+    const d = new Date(today() + 'T00:00:00');
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 

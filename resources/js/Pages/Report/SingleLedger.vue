@@ -1,4 +1,5 @@
 <script setup>
+import { moneyDecimals, today } from '../../lib/isp';
 import { ref, onMounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -21,7 +22,7 @@ const outField = props.mode === 'bank' ? 'withdraw' : 'out_amount';
 const ledgerUrl = props.mode === 'bank' ? '/get-bank-ledger' : '/get-cash-ledger';
 
 function todayStr() {
-    const d = new Date();
+    const d = new Date(today() + 'T00:00:00');
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
@@ -53,11 +54,11 @@ function showLedger() {
 }
 
 function sumField(field) {
-    return ledgers.value.reduce((pre, cur) => pre + parseFloat(cur[field]), 0).toFixed(2);
+    return ledgers.value.reduce((pre, cur) => pre + parseFloat(cur[field]), 0).toFixed(moneyDecimals());
 }
 
 function lastBalance() {
-    return ledgers.value.length ? parseFloat(ledgers.value[ledgers.value.length - 1].balance).toFixed(2) : '0.00';
+    return ledgers.value.length ? parseFloat(ledgers.value[ledgers.value.length - 1].balance).toFixed(moneyDecimals()) : (0).toFixed(moneyDecimals());
 }
 
 function print() {
@@ -82,7 +83,7 @@ function print() {
                 ${bankCol ? `<td>${item.bank_name ?? ''}</td>` : ''}
                 <td style="text-align:right;">${item[inField]}</td>
                 <td style="text-align:right;">${item[outField]}</td>
-                <td style="text-align:right;">${parseFloat(item.balance).toFixed(2)}</td>
+                <td style="text-align:right;">${parseFloat(item.balance).toFixed(moneyDecimals())}</td>
             </tr>`
             )
             .join('') +
@@ -169,7 +170,7 @@ onMounted(() => {
                             <td v-if="mode === 'bank'" class="px-2 py-1.5">{{ item.bank_name }}</td>
                             <td class="px-2 py-1.5 text-end">{{ item[inField] }}</td>
                             <td class="px-2 py-1.5 text-end">{{ item[outField] }}</td>
-                            <td class="px-2 py-1.5 text-end">{{ parseFloat(item.balance).toFixed(2) }}</td>
+                            <td class="px-2 py-1.5 text-end">{{ parseFloat(item.balance).toFixed(moneyDecimals()) }}</td>
                         </tr>
                         <tr v-if="ledgers.length > 0" class="bg-slate-50 font-semibold">
                             <td :colspan="mode === 'bank' ? 3 : 2" class="px-2 py-2 text-center">Total</td>

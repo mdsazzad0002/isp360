@@ -1,4 +1,5 @@
 <script setup>
+import { moneyDecimals, today } from '../../lib/isp';
 import { reactive, ref, computed, onMounted, nextTick } from 'vue';
 import axios from 'axios';
 import { usePage } from '@inertiajs/vue3';
@@ -32,11 +33,11 @@ const deleteUrl = computed(() => `/delete-${activeMode.value}`);
 const invoiceUrl = computed(() => `/get-${activeMode.value}-invoice`);
 
 function todayStr() {
-    const d = new Date();
+    const d = new Date(today() + 'T00:00:00');
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 function daysAgoStr(days) {
-    const d = new Date();
+    const d = new Date(today() + 'T00:00:00');
     d.setDate(d.getDate() - days);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
@@ -129,7 +130,7 @@ const filteredRows = computed(() => {
     return rows.value.filter((row) => JSON.stringify(row).toLowerCase().includes(term));
 });
 
-const totalAmount = computed(() => filteredRows.value.reduce((pr, cu) => pr + parseFloat(cu.amount || 0), 0).toFixed(2));
+const totalAmount = computed(() => filteredRows.value.reduce((pr, cu) => pr + parseFloat(cu.amount || 0), 0).toFixed(moneyDecimals()));
 const partyTypeLabel = computed(() => ({ customer: 'Customer', provider: 'Provider', employee: 'Employee' }[form.type] || 'Supplier'));
 
 function getBanks() {

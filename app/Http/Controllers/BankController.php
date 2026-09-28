@@ -408,7 +408,8 @@ class BankController extends Controller
                 " . (empty($bankId) ? "" : " and emp.bank_id = '$bankId'") . "
                 " . ($branchId == null ? "" : " and emp.branch_id = '$branchId'") . "
 
-                order by created_at asc";
+                -- the running balance follows the business date, so a back-dated entry lands where it belongs
+                order by date asc, created_at asc, sequence asc, id asc";
 
         return collect(DB::select($query));
     }
@@ -436,7 +437,7 @@ class BankController extends Controller
         $previousLedger = collect($ledgers)->filter(function ($ledger) use ($request) {
             return $ledger->date < $request->dateFrom;
         });
-        $previousBalance = count($previousLedger) > 0 ? $previousLedger[count($previousLedger) - 1]->balance : $previousBalance;
+        $previousBalance = $previousLedger->isNotEmpty() ? $previousLedger->last()->balance : $previousBalance;
 
         if (!empty($request->dateFrom) && !empty($request->dateTo)) {
             $ledgers = $ledgers->filter(function ($ledger) use ($request) {

@@ -19,7 +19,7 @@ trait Audited
         static::updated(function ($model) {
             $changes = $model->auditValues($model->getChanges());
             if ($changes) {
-                $model->audit('updated', array_intersect_key($model->getOriginal(), $changes), $changes);
+                $model->audit('updated', $model->auditValues(array_intersect_key($model->getOriginal(), $changes)), $changes);
             }
         });
         static::deleted(fn ($model) => $model->audit('deleted', $model->auditValues($model->getAttributes()), null));
@@ -28,9 +28,16 @@ trait Audited
         }
     }
 
+    // hidden and encrypted columns (API keys, secrets) show only that they were set or changed, never the value
     private function auditValues(array $values): array
     {
-        return array_diff_key($values, array_flip(array_merge(self::$auditSkip, $this->getHidden())));
+        $values = array_diff_key($values, array_flip(self::$auditSkip));
+        foreach ($values as $key => $value) {
+            if (in_array($key, $this->getHidden(), true) || str_starts_with((string) ($this->getCasts()[$key] ?? ''), 'encrypted')) {
+                $values[$key] = ($value === null || $value === '') ? null : '[secret]';
+            }
+        }
+        return $values;
     }
 
     private function audit(string $event, ?array $old, ?array $new): void
