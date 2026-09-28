@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Branch extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Concerns\Audited;
 
     public $timestamps = false;
 

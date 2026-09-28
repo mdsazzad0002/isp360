@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Receive extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Concerns\Audited;
 
     // amounts in the company currency's decimals (the columns hold 3)
     protected $casts = [
