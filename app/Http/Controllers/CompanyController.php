@@ -10,6 +10,11 @@ use Illuminate\Validation\Rule;
 
 class CompanyController extends Controller
 {
+    use Concerns\BranchScoped;
+
+    // fields a request may set (audit C2: never every request field)
+    private const FIELDS = ['name', 'details'];
+
     protected $userId;
     protected $branchId;
     public function __construct()
@@ -56,7 +61,7 @@ class CompanyController extends Controller
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
-            $check = Company::where('name', $request->name)->withTrashed()->first();
+            $check = Company::where('name', $request->name)->where('branch_id', $this->branchId)->withTrashed()->first();
             if (!empty($check) && $check->deleted_at != NULL) {
                 $check->status = 'a';
                 $check->deleted_by = NULL;
@@ -64,10 +69,9 @@ class CompanyController extends Controller
                 $check->update();
             } else {
                 $data = new Company();
-                $dataKey = $request->except('id');
-                foreach ($dataKey as $key => $value) {
-                    $data[$key] = $value;
-                }
+                [$fields, $error] = $this->branchFields($request, self::FIELDS);
+                if ($error) return $error;
+                $data->forceFill($fields);
                 $data->created_by = $this->userId;
                 $data->branch_id  = $this->branchId;
                 $data->ipAddress  = request()->ip();
@@ -96,11 +100,11 @@ class CompanyController extends Controller
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
-            $data = Company::find($request->id);
-            $dataKey = $request->except('id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            $data = $this->findInBranch(Company::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             $data->updated_at = Carbon::now();
             $data->updated_by = $this->userId;
             $data->ipAddress = request()->ip();
@@ -116,7 +120,8 @@ class CompanyController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $data = Company::find($request->id);
+            $data = $this->findInBranch(Company::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
             $data->deleted_by = $this->userId;
             $data->status = 'd';
             $data->ipAddress = request()->ip();
@@ -142,7 +147,7 @@ class CompanyController extends Controller
 
     public function getDeleted(Request $request)
     {
-        $companies = Company::onlyTrashed()->with('deUser')->latest('deleted_at')->get()->map(function ($company) {
+        $companies = Company::onlyTrashed()->with('deUser')->where('branch_id', $this->branchId)->latest('deleted_at')->get()->map(function ($company) {
             $company->deleted_by_name = $company->deUser->name ?? 'NA';
             return $company;
         });
@@ -154,7 +159,7 @@ class CompanyController extends Controller
         if (!checkAccess('companyRestore')) {
             return send_error('You are not authorized to restore company', null, 403);
         }
-        $company = Company::onlyTrashed()->find($request->id);
+        $company = Company::onlyTrashed()->where('branch_id', $this->branchId)->find($request->id);
         if (empty($company)) {
             return send_error('Deleted company not found', null, 404);
         }

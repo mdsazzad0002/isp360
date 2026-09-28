@@ -9,6 +9,11 @@ use App\Http\Requests\BankTransactionRequest;
 
 class BankTransactionController extends Controller
 {
+    use Concerns\BranchScoped;
+
+    // fields a request may set (audit C2: never every request field)
+    private const FIELDS = ['bank_id', 'date', 'type', 'amount', 'previous_balance', 'note'];
+
     protected $userId;
     protected $branchId;
     public function __construct()
@@ -55,16 +60,16 @@ class BankTransactionController extends Controller
     {
         if (!$request->validated()) return send_error("Validation Error", $request->validated(), 422);
         try {
-            $invoice = BankTransaction::where('invoice', $request->invoice)->first();
-            if (empty($invoice)) {
+            // the form's number unless someone took it meanwhile
+            $invoice = $request->invoice;
+            if (empty($invoice) || BankTransaction::where('invoice', $invoice)->exists()) {
                 $invoice = invoiceGenerate('Bank_Transaction', 'T', $this->branchId);
             }
             $data = new BankTransaction();
             $data->invoice = $invoice;
-            $dataKey = $request->except('id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             $data->created_by = $this->userId;
             $data->ipAddress = request()->ip();
             $data->branch_id = $this->branchId;
@@ -81,11 +86,11 @@ class BankTransactionController extends Controller
     {
         if (!$request->validated()) return send_error("Validation Error", $request->validated(), 422);
         try {
-            $data = BankTransaction::find($request->id);
-            $dataKey = $request->except('id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            $data = $this->findInBranch(BankTransaction::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             $data->updated_by = $this->userId;
             $data->updated_at = Carbon::now();
             $data->ipAddress = request()->ip();
@@ -102,7 +107,8 @@ class BankTransactionController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $data = BankTransaction::find($request->id);
+            $data = $this->findInBranch(BankTransaction::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
             $data->deleted_by = $this->userId;
             $data->status = 'd';
             $data->ipAddress = request()->ip();

@@ -18,6 +18,11 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class CustomerController extends Controller
 {
+    use Concerns\BranchScoped;
+
+    // fields a request may set (audit C2: never every request field)
+    private const FIELDS = ['name', 'owner', 'phone', 'nid', 'date_of_birth', 'type', 'email', 'username', 'address', 'city', 'state', 'postcode', 'language', 'billing_address', 'notes', 'account_status', 'area_id', 'zone_id', 'box_id', 'reseller_id', 'previous_due', 'credit_limit', 'is_membership', 'amount', 'point', 'referred_by_id', 'notify_channels', 'status'];
+
     protected $userId;
     protected $branchId;
     public function __construct()
@@ -107,7 +112,7 @@ class CustomerController extends Controller
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
-            $check = Customer::where('phone', $request->phone)->withTrashed()->first();
+            $check = Customer::where('phone', $request->phone)->where('branch_id', $this->branchId)->withTrashed()->first();
             if (!empty($check) && $check->deleted_at != NULL) {
                 $check->status = 'a';
                 $check->deleted_at = NULL;
@@ -115,10 +120,9 @@ class CustomerController extends Controller
             } else {
                 $data = new Customer();
                 $data->code = generateCode('Customer', 'CI');
-                $dataKey = $request->except('id', 'image', 'password', 'ledger_balance');
-                foreach ($dataKey as $key => $value) {
-                    $data[$key] = $value;
-                }
+                [$fields, $error] = $this->branchFields($request, self::FIELDS);
+                if ($error) return $error;
+                $data->forceFill($fields);
                 if (!empty($request->password)) {
                     $data->password = Hash::make($request->password);
                 }
@@ -170,11 +174,11 @@ class CustomerController extends Controller
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
-            $data = Customer::find($request->id);
-            $dataKey = $request->except('id', 'image', 'password', 'ledger_balance');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            $data = $this->findInBranch(Customer::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             if (!empty($request->password)) {
                 $data->password = Hash::make($request->password);
             }
@@ -197,7 +201,8 @@ class CustomerController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $data = Customer::find($request->id);
+            $data = $this->findInBranch(Customer::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
             deleteUploadedFile($data->image);
             $data->status = 'd';
             $data->deleted_by = $this->userId;

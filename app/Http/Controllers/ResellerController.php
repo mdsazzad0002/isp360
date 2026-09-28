@@ -19,6 +19,11 @@ use Illuminate\Support\Facades\Validator;
 
 class ResellerController extends Controller
 {
+    use Concerns\BranchScoped;
+
+    // fields a request may set (audit C2: never every request field)
+    private const FIELDS = ['name', 'phone', 'email', 'username', 'address', 'area_id', 'status'];
+
     protected $userId;
     protected $branchId;
     public function __construct()
@@ -86,10 +91,9 @@ class ResellerController extends Controller
         try {
             $data = new Reseller();
             $data->code = generateCode('Reseller', 'RS');
-            $dataKey = $request->except('id', 'image', 'password');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             $data->password = Hash::make($request->password);
             if ($request->hasFile('image')) {
                 $data->image = imageUpload($request, 'image', 'uploads/reseller', $data->code . '_' . $this->branchId);
@@ -118,11 +122,11 @@ class ResellerController extends Controller
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
-            $data = Reseller::find($request->id);
-            $dataKey = $request->except('id', 'image', 'password');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            $data = $this->findInBranch(Reseller::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             if (!empty($request->password)) {
                 $data->password = Hash::make($request->password);
             }
@@ -144,7 +148,8 @@ class ResellerController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $data = Reseller::find($request->id);
+            $data = $this->findInBranch(Reseller::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
             deleteUploadedFile($data->image);
             $data->status = 'd';
             $data->deleted_by = $this->userId;

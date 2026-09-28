@@ -11,6 +11,11 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class TransactionController extends Controller
 {
+    use Concerns\BranchScoped;
+
+    // fields a request may set (audit C2: never every request field)
+    private const FIELDS = ['account_id', 'date', 'type', 'amount', 'note'];
+
     protected $userId;
     protected $branchId;
     public function __construct()
@@ -136,16 +141,16 @@ class TransactionController extends Controller
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
-            $invoice = Transaction::where('invoice', $request->invoice)->first();
-            if (empty($invoice)) {
+            // the form's number unless someone took it meanwhile
+            $invoice = $request->invoice;
+            if (empty($invoice) || Transaction::where('invoice', $invoice)->exists()) {
                 $invoice = transactionInvoice('Transaction', 'T', $this->branchId, $request->type);
             }
             $data = new Transaction();
             $data->invoice = $invoice;
-            $dataKey = $request->except('id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             $data->created_by = $this->userId;
             $data->ipAddress = request()->ip();
             $data->branch_id = $this->branchId;
@@ -173,11 +178,11 @@ class TransactionController extends Controller
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
-            $data = Transaction::find($request->id);
-            $dataKey = $request->except('id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            $data = $this->findInBranch(Transaction::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             $data->updated_by = $this->userId;
             $data->updated_at = Carbon::now();
             $data->ipAddress = request()->ip();
@@ -198,7 +203,8 @@ class TransactionController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $data = Transaction::find($request->id);
+            $data = $this->findInBranch(Transaction::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
             $data->deleted_by = $this->userId;
             $data->status = 'd';
             $data->ipAddress = request()->ip();

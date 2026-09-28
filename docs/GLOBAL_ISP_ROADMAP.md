@@ -234,7 +234,7 @@ Phase 0 of the audit comes first (permission middleware, branch scoping, safe up
 
 ### 4.15 Testing and quality — P0, M
 - [ ] Tests for the older modules (users, roles, branches, customers, accounts, banks, payments, POS reports).
-- [ ] Branch isolation tests: a branch user can never read or change another branch's data (every controller).
+- [ ] Branch isolation tests for the remaining controllers (customer, bank, receive and branch writes are covered by `BranchIsolationTest`).
 - [ ] Gateway driver contract tests with recorded sandbox responses.
 - [ ] RADIUS driver tests against a FreeRADIUS container in CI.
 - [ ] `isp:ledger-check` in CI and as a nightly job with an alert.

@@ -13,6 +13,11 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class AccountHeadController extends Controller
 {
+    use Concerns\BranchScoped;
+
+    // fields a request may set (audit C2: never every request field)
+    private const FIELDS = ['name', 'type'];
+
     protected $userId;
     protected $branchId;
     public function __construct()
@@ -187,7 +192,7 @@ class AccountHeadController extends Controller
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
-            $check = AccountHead::where('name', $request->name)->withTrashed()->first();
+            $check = AccountHead::where('name', $request->name)->where('branch_id', $this->branchId)->withTrashed()->first();
             if (!empty($check) && $check->deleted_at != NULL) {
                 $check->status = 'a';
                 $check->deleted_by = NULL;
@@ -196,10 +201,9 @@ class AccountHeadController extends Controller
                 $data = $check;
             } else {
                 $data = new AccountHead();
-                $dataKey = $request->except('id');
-                foreach ($dataKey as $key => $value) {
-                    $data[$key] = $value;
-                }
+                [$fields, $error] = $this->branchFields($request, self::FIELDS);
+                if ($error) return $error;
+                $data->forceFill($fields);
                 $data->created_by = $this->userId;
                 $data->branch_id  = $this->branchId;
                 $data->ipAddress  = request()->ip();
@@ -228,11 +232,11 @@ class AccountHeadController extends Controller
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
-            $data = AccountHead::find($request->id);
-            $dataKey = $request->except('id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            $data = $this->findInBranch(AccountHead::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             $data->updated_at = Carbon::now();
             $data->updated_by = $this->userId;
             $data->ipAddress = request()->ip();
@@ -248,7 +252,8 @@ class AccountHeadController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $data = AccountHead::find($request->id);
+            $data = $this->findInBranch(AccountHead::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
             $data->deleted_by = $this->userId;
             $data->status = 'd';
             $data->ipAddress = request()->ip();

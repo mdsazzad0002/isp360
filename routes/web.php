@@ -188,8 +188,8 @@ Route::post('/company', [CompanyController::class, 'store'])->middleware('access
 Route::post('/update-company', [CompanyController::class, 'update'])->middleware('access:company')->name('company.update');
 Route::post('/delete-company', [CompanyController::class, 'destroy'])->middleware('access:company')->name('company.delete');
 Route::get('/deleted-company-record', [CompanyController::class, 'deletedRecord'])->name('company.record.deleted');
-Route::post('/get-deleted-company', [CompanyController::class, 'getDeleted'])->middleware('access:company')->name('get.deleted.company');
-Route::post('/restore-company', [CompanyController::class, 'restore'])->middleware('access:company')->name('company.restore');
+Route::post('/get-deleted-company', [CompanyController::class, 'getDeleted'])->middleware('access:companyRestore')->name('get.deleted.company');
+Route::post('/restore-company', [CompanyController::class, 'restore'])->middleware('access:companyRestore')->name('company.restore');
 
 // area route
 Route::get('/area', [AreaController::class, 'create'])->name('area.create');
@@ -198,8 +198,8 @@ Route::post('/area', [AreaController::class, 'store'])->middleware('access:area'
 Route::post('/update-area', [AreaController::class, 'update'])->middleware('access:area')->name('area.update');
 Route::post('/delete-area', [AreaController::class, 'destroy'])->middleware('access:area')->name('area.delete');
 Route::get('/deleted-area-record', [AreaController::class, 'deletedRecord'])->name('area.record.deleted');
-Route::post('/get-deleted-area', [AreaController::class, 'getDeleted'])->middleware('access:area')->name('get.deleted.area');
-Route::post('/restore-area', [AreaController::class, 'restore'])->middleware('access:area')->name('area.restore');
+Route::post('/get-deleted-area', [AreaController::class, 'getDeleted'])->middleware('access:areaRestore')->name('get.deleted.area');
+Route::post('/restore-area', [AreaController::class, 'restore'])->middleware('access:areaRestore')->name('area.restore');
 
 // customer route
 Route::get('/customer', [CustomerController::class, 'create'])->name('customer.create');

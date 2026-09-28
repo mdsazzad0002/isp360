@@ -5,6 +5,7 @@ export const accessGroups = [
         items: [
             { value: 'zone', label: 'Zone' },
             { value: 'area', label: 'Area' },
+            { value: 'areaRestore', label: 'Deleted Area Record (Restore)' },
             { value: 'box', label: 'Box' },
             { value: 'package', label: 'Packages' },
             { value: 'router', label: 'Routers (MikroTik) & live sessions' },
@@ -128,6 +129,7 @@ export const accessGroups = [
             { value: 'brand', label: 'Brand Entry' },
             { value: 'generic', label: 'Generic Entry' },
             { value: 'company', label: 'Company Entry' },
+            { value: 'companyRestore', label: 'Deleted Company Record (Restore)' },
             { value: 'businessInfo', label: 'Business Info' },
         ],
     },

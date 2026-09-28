@@ -10,7 +10,7 @@ Audit date: 2026-09-30 · Branch audited: `claude/global-isp-roadmap-arxkcu` · 
 | Global blockers, Phases A and B | Finished. Small leftovers are in GLOBAL_ISP_ROADMAP §2. |
 | Phase C (higher-level management) | Reseller tree, staff roles, approvals, settings split open. |
 | Phases D, E | Not started. |
-| Security audit (§2) | C1 fixed 2026-09-28 (route permission middleware, privilege rules for users / roles). C2, C3, H1–H5 still open. |
+| Security audit (§2) | C1 and C2 fixed 2026-09-28 (route permissions, user/role privilege rules, branch-scoped lookups, field lists). C3, H1–H5 still open. |
 | Automated tests | 118 feature tests, 1,774 assertions, all passing — but they cover the new ISP modules only (see §2, H3). |
 
 The new ISP modules (`app/Http/Controllers/Isp/*`, `app/Services/Isp/*`) are in good shape: permission-checked,
@@ -24,15 +24,6 @@ worst cases with a throw-away feature test inside a rolled-back transaction (not
 config checks as noted.
 
 ### Critical — fix before any real customer uses a multi-user install
-
-**C2. Cross-branch record access and mass assignment.**
-- Several older controllers load records with `Model::find($request->id)` without `where('branch_id', …)`, and then
-  copy every request field onto the model (`foreach ($request->except('id') …)`).
-- **Proven:** a low-permission staff user in branch 1 edited a customer of branch 32 → HTTP 200, the
-  customer was renamed **and moved into branch 1** (`CustomerController::update` forces the current branch).
-- Deletes (`destroy`) in 12 controllers have no branch check (the permission check is now on the route).
-- Fix: a `BelongsToBranch` scope / `findForBranch()` helper used everywhere; replace the generic loops with
-  explicit `$request->validated()` field lists (`$fillable` on the models).
 
 **C3. File uploads can place executable files in `public/`.**
 - `imageUpload()` (`app/Helpers/Functions.php`) keeps the client's file extension and writes into
@@ -67,10 +58,9 @@ Estimates assume one developer. Every step keeps the rules in GLOBAL_ISP_ROADMAP
 money only through the ledger, per-branch scoping, audit log for money and permissions).
 
 ### Phase 0 — Security hardening (P0, ~1–2 weeks) — **do this next**
-1. Branch scoping helper and explicit field lists replacing the generic assignment loops (C2).
-2. Safe uploads: allow-listed extensions, random names, private storage, validation on every upload (C3).
-3. Audit log for branches, company profile and accounting entries (users and roles are logged).
-4. Upgrade `@tiptap/core`; run `composer audit`.
+1. Safe uploads: allow-listed extensions, random names, private storage, validation on every upload (C3).
+2. Audit log for branches, company profile and accounting entries (users and roles are logged).
+3. Upgrade `@tiptap/core`; run `composer audit`.
 
 ### Phase 1 — Quality foundation (P0, ~1–2 weeks)
 1. CI pipeline (H1) with fresh-migration smoke test of every page route (H4).

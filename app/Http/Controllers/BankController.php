@@ -12,6 +12,11 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class BankController extends Controller
 {
+    use Concerns\BranchScoped;
+
+    // fields a request may set (audit C2: never every request field)
+    private const FIELDS = ['name', 'number', 'type', 'branch_name', 'bank_name', 'balance'];
+
     protected $userId;
     protected $branchId;
     public function __construct()
@@ -60,7 +65,7 @@ class BankController extends Controller
             return send_error("Bank already exists", null, 422);
         }
         try {
-            $check = Bank::where('name', $request->name)->withTrashed()->first();
+            $check = Bank::where('name', $request->name)->where('branch_id', $this->branchId)->withTrashed()->first();
             if (!empty($check) && $check->deleted_at != NULL) {
                 $check->status = 'a';
                 $check->deleted_by = NULL;
@@ -68,10 +73,9 @@ class BankController extends Controller
                 $check->update();
             } else {
                 $data = new Bank();
-                $dataKey = $request->except('id');
-                foreach ($dataKey as $key => $value) {
-                    $data[$key] = $value;
-                }
+                [$fields, $error] = $this->branchFields($request, self::FIELDS);
+                if ($error) return $error;
+                $data->forceFill($fields);
                 $data->created_by = $this->userId;
                 $data->branch_id  = $this->branchId;
                 $data->ipAddress  = request()->ip();
@@ -98,11 +102,11 @@ class BankController extends Controller
             return send_error("Bank already exists", null, 422);
         }
         try {
-            $data = Bank::find($request->id);
-            $dataKey = $request->except('id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            $data = $this->findInBranch(Bank::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             $data->updated_at = Carbon::now();
             $data->updated_by = $this->userId;
             $data->ipAddress = request()->ip();
@@ -118,7 +122,8 @@ class BankController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $data = Bank::find($request->id);
+            $data = $this->findInBranch(Bank::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
             $data->deleted_by = $this->userId;
             $data->status = 'd';
             $data->ipAddress = request()->ip();

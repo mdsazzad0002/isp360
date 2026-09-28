@@ -12,6 +12,11 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class PaymentController extends Controller
 {
+    use Concerns\BranchScoped;
+
+    // fields a request may set (audit C2: never every request field)
+    private const FIELDS = ['customer_id', 'supplier_id', 'provider_id', 'employee_id', 'reseller_id', 'date', 'type', 'payment_method', 'bank_id', 'amount', 'previous_due', 'note'];
+
     use ChecksAccountBalance;
 
     protected $userId;
@@ -166,10 +171,9 @@ class PaymentController extends Controller
             }
             $data = new Payment();
             $data->invoice = $invoice;
-            $dataKey = $request->except('id', 'refund_id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             $data->created_by = $this->userId;
             $data->ipAddress = request()->ip();
             $data->branch_id = $this->branchId;
@@ -186,7 +190,8 @@ class PaymentController extends Controller
     {
         if (!$request->validated()) return send_error("Validation Error", $request->validated(), 422);
         try {
-            $data = Payment::find($request->id);
+            $data = $this->findInBranch(Payment::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
             if ($data && $data->refund_id) {
                 return send_error('This entry is an ISP refund and cannot be changed here.', null, 422);
             }
@@ -201,10 +206,9 @@ class PaymentController extends Controller
                     return send_error($balanceError, $balanceError, 422);
                 }
             }
-            $dataKey = $request->except('id', 'refund_id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             if ($request->payment_method == 'cash') {
                 $data->bank_id = NULL;
             }
@@ -224,7 +228,8 @@ class PaymentController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $data = Payment::find($request->id);
+            $data = $this->findInBranch(Payment::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
             if ($data && $data->refund_id) {
                 return send_error('This entry is an ISP refund and cannot be changed here.', null, 422);
             }

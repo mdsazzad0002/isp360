@@ -10,6 +10,11 @@ use Illuminate\Validation\Rule;
 
 class BranchController extends Controller
 {
+    use Concerns\BranchScoped;
+
+    // fields a request may set (audit C2: never every request field)
+    private const FIELDS = ['code', 'name', 'title', 'address', 'phone'];
+
     protected $userId;
     protected $branchId;
     public function __construct()
@@ -53,6 +58,7 @@ class BranchController extends Controller
 
     public function store(Request $request)
     {
+        if ($r = $this->headOfficeOnly()) return $r;
         $validator = Validator::make($request->all(), [
             'name'     => [
                 'required',
@@ -70,10 +76,9 @@ class BranchController extends Controller
                 $check->update();
             } else {
                 $data = new Branch();
-                $dataKey = $request->except('id');
-                foreach ($dataKey as $key => $value) {
-                    $data[$key] = $value;
-                }
+                [$fields, $error] = $this->branchFields($request, self::FIELDS);
+                if ($error) return $error;
+                $data->forceFill($fields);
                 $data->created_by = $this->userId;
                 $data->ipAddress  = request()->ip();
                 $data->save();
@@ -87,6 +92,7 @@ class BranchController extends Controller
 
     public function update(Request $request)
     {
+        if ($r = $this->headOfficeOnly()) return $r;
         $validator = Validator::make($request->all(), [
             'name'     => [
                 'required',
@@ -96,10 +102,9 @@ class BranchController extends Controller
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
             $data = Branch::find($request->id);
-            $dataKey = $request->except('id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             $data->updated_at = Carbon::now();
             $data->updated_by = $this->userId;
             $data->ipAddress = request()->ip();
@@ -111,8 +116,15 @@ class BranchController extends Controller
         }
     }
 
+    // branches belong to the whole company: a branch or regional user can't add, rename or remove them
+    private function headOfficeOnly()
+    {
+        return auth()->user()->isHeadOffice() ? null : send_error('Only head-office users can manage branches', null, 403);
+    }
+
     public function destroy(Request $request)
     {
+        if ($r = $this->headOfficeOnly()) return $r;
         try {
             $data = Branch::find($request->id);
             if (!$data) {

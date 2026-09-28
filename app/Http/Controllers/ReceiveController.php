@@ -11,6 +11,11 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ReceiveController extends Controller
 {
+    use Concerns\BranchScoped;
+
+    // fields a request may set (audit C2: never every request field)
+    private const FIELDS = ['customer_id', 'supplier_id', 'provider_id', 'reseller_id', 'date', 'type', 'payment_method', 'bank_id', 'amount', 'previous_due', 'note'];
+
     protected $userId;
     protected $branchId;
     public function __construct()
@@ -148,10 +153,9 @@ class ReceiveController extends Controller
             }
             $data = new Receive();
             $data->invoice = $invoice;
-            $dataKey = $request->except('id', 'customer_payment_id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             $data->created_by = $this->userId;
             $data->ipAddress = request()->ip();
             $data->branch_id = $this->branchId;
@@ -168,14 +172,14 @@ class ReceiveController extends Controller
     {
         if (!$request->validated()) return send_error("Validation Error", $request->validated(), 422);
         try {
-            $data = Receive::find($request->id);
+            $data = $this->findInBranch(Receive::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
             if ($data && $data->customer_payment_id) {
                 return send_error('This entry is an ISP bill collection. Reverse it from ISP Billing > Payments instead.', null, 422);
             }
-            $dataKey = $request->except('id', 'customer_payment_id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             if ($request->payment_method == 'cash') {
                 $data->bank_id = NULL;
             }
@@ -195,7 +199,8 @@ class ReceiveController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $data = Receive::find($request->id);
+            $data = $this->findInBranch(Receive::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
             if ($data && $data->customer_payment_id) {
                 return send_error('This entry is an ISP bill collection. Reverse it from ISP Billing > Payments instead.', null, 422);
             }

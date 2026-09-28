@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\Validator;
 
 class AreaController extends Controller
 {
+    use Concerns\BranchScoped;
+
+    // fields a request may set (audit C2: never every request field)
+    private const FIELDS = ['zone_id', 'name', 'code', 'description'];
+
     protected $userId;
     protected $branchId;
     public function __construct()
@@ -72,10 +77,9 @@ class AreaController extends Controller
                 $data = $check;
             } else {
                 $data = new Area();
-                $dataKey = $request->except('id');
-                foreach ($dataKey as $key => $value) {
-                    $data[$key] = $value;
-                }
+                [$fields, $error] = $this->branchFields($request, self::FIELDS);
+                if ($error) return $error;
+                $data->forceFill($fields);
                 $data->created_by = $this->userId;
                 $data->branch_id  = $this->branchId;
                 $data->ipAddress  = request()->ip();
@@ -107,11 +111,11 @@ class AreaController extends Controller
         ]);
         if ($validator->fails()) return send_error("Validation Error", $validator->errors(), 422);
         try {
-            $data = Area::find($request->id);
-            $dataKey = $request->except('id');
-            foreach ($dataKey as $key => $value) {
-                $data[$key] = $value;
-            }
+            $data = $this->findInBranch(Area::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
+            [$fields, $error] = $this->branchFields($request, self::FIELDS);
+            if ($error) return $error;
+            $data->forceFill($fields);
             $data->updated_at = Carbon::now();
             $data->updated_by = $this->userId;
             $data->ipAddress = request()->ip();
@@ -130,7 +134,8 @@ class AreaController extends Controller
             return send_error('You are not authorized for this action', null, 403);
         }
         try {
-            $data = Area::find($request->id);
+            $data = $this->findInBranch(Area::class, $request->id);
+            if (!$data) return send_error('Record not found', null, 404);
             if ($data && ($data->boxes()->exists() || \App\Models\Customer::where('area_id', $data->id)->exists())) {
                 return send_error('This area still has boxes or customers. Move them first.', null, 422);
             }
@@ -159,7 +164,7 @@ class AreaController extends Controller
 
     public function getDeleted(Request $request)
     {
-        $areas = Area::onlyTrashed()->with('deUser')->latest('deleted_at')->get()->map(function ($area) {
+        $areas = Area::onlyTrashed()->with('deUser')->where('branch_id', $this->branchId)->latest('deleted_at')->get()->map(function ($area) {
             $area->deleted_by_name = $area->deUser->name ?? 'NA';
             return $area;
         });
@@ -171,7 +176,7 @@ class AreaController extends Controller
         if (!checkAccess('areaRestore')) {
             return send_error('You are not authorized to restore area', null, 403);
         }
-        $area = Area::onlyTrashed()->find($request->id);
+        $area = Area::onlyTrashed()->where('branch_id', $this->branchId)->find($request->id);
         if (empty($area)) {
             return send_error('Deleted area not found', null, 404);
         }
