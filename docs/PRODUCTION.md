@@ -80,9 +80,18 @@ location ^~ /uploads/ {
 
 ## 7. Backups
 
-- Keep `.env` (above all `APP_KEY`) somewhere other than the server.
-- Database, `public/uploads/` and `storage/app/` together make a complete backup. Test a restore on
-  another machine before you rely on it.
+- `php artisan isp:backup` writes one archive to `storage/app/backups`: the database (and a separate
+  FreeRADIUS database), `public/uploads/` and `storage/app/`. The scheduler runs it daily at
+  `ISP_BACKUP_AT` (02:30) and keeps the newest `ISP_BACKUP_KEEP` (14). It needs `mysqldump` /
+  `mariadb-dump` on the server.
+- ISP → Backups (permission `backup`) takes one now and downloads them; every download is audited.
+- **Copy the archives off the server** (another machine, cloud storage). A backup on the same disk
+  dies with the disk.
+- Keep `.env` (above all `APP_KEY`) somewhere other than the server: without it, the encrypted
+  secrets in a restored database can't be read.
+- Restore: `php artisan isp:restore <file>` (asks first; `--database-only`, `--files-only`), then
+  `php artisan migrate --force` if the backup is from an older version. Rehearse it on another
+  machine before you rely on it.
 
 ## 8. Before go-live
 

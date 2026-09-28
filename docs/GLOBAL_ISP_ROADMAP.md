@@ -87,7 +87,6 @@ differences are data in `config/nas_vendors.php` (`NasVendor`); how a router is 
 
 ### 3.1 Company level — P1, M
 - [ ] Company-wide settings (country, currency, timezone, tax, country pack) vs branch settings (prefixes, SMS, billing rules) kept clearly apart.
-- [ ] Installation backups and restore; full data export.
 - [ ] If one owner runs ISPs in two countries: two installations and a group report on top, not one mixed database.
 
 ### 3.2 Region level — P1, M
@@ -227,7 +226,7 @@ Phase 0 of the audit comes first (permission middleware, branch scoping, safe up
 - [ ] Idempotency for every new job.
 - [ ] Docker images, deploy pipeline (CD), zero-downtime deploys, migrations tested on big tables. (CI runs on every push: `.github/workflows/ci.yml`.)
 - [ ] Error tracking (Sentry), metrics, uptime monitoring, structured logs.
-- [ ] Automated offsite backups with restore tests; point-in-time recovery.
+- [ ] Copy backups off the server automatically (S3 / SFTP) and point-in-time recovery (binlogs). Local daily backups, restore and download exist (`isp:backup`, `isp:restore`, ISP → Backups).
 - [ ] Read replica for reports; long reports as queued exports.
 - [ ] Load test: 100k connections per installation, month-end payment spikes.
 

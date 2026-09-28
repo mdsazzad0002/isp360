@@ -37,6 +37,7 @@ export const accessGroups = [
             { value: 'customerDataRights', label: 'Customer data export & erasure' },
             { value: 'sessionLog', label: 'Session Log search & lawful export' },
             { value: 'queueMonitor', label: 'Background Jobs (router pushes, SMS) and Horizon' },
+            { value: 'backup', label: 'Backups: take and download full backups (all customer data)' },
         ],
     },
     {

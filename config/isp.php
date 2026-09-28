@@ -24,4 +24,12 @@ return [
     //    for shared hosting with only the cron entry; jobs start within a minute.
     //  - QUEUE_CONNECTION=sync: everything runs inside the web request, as before (small installations).
     'queue_in_scheduler' => (bool) env('ISP_QUEUE_IN_SCHEDULER', false),
+
+    // isp:backup (database + public/uploads + storage/app) runs daily at `at` when enabled and keeps
+    // the newest `keep` archives in storage/app/backups. Copy them off the server too.
+    'backup' => [
+        'enabled' => (bool) env('ISP_BACKUP_ENABLED', true),
+        'at' => env('ISP_BACKUP_AT', '02:30'),
+        'keep' => (int) env('ISP_BACKUP_KEEP', 14),
+    ],
 ];

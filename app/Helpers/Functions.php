@@ -198,6 +198,7 @@ function appMenuGroups()
                 ['access' => 'auditLog', 'uri' => '/isp/audit-log', 'match' => 'isp/audit-log', 'icon' => 'bi-shield-check', 'label' => 'Audit Log'],
                 ['access' => 'sessionLog', 'uri' => '/isp/session-log', 'match' => 'isp/session-log', 'icon' => 'bi-person-bounding-box', 'label' => 'Session Log (who had which IP)'],
                 ['access' => 'queueMonitor', 'uri' => '/isp/queue', 'match' => 'isp/queue', 'icon' => 'bi-hourglass-split', 'label' => 'Background Jobs'],
+                ['access' => 'backup', 'uri' => '/isp/backups', 'match' => 'isp/backups', 'icon' => 'bi-cloud-arrow-down', 'label' => 'Backups'],
                 ['access' => null, 'uri' => '/notifications', 'match' => 'notifications', 'icon' => 'bi-bell', 'label' => 'Notifications'],
             ],
         ],

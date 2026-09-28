@@ -34,6 +34,11 @@ class Kernel extends ConsoleKernel
         // lawful session log: who had which IP when (RADIUS accounting, MikroTik polling), then retention
         $schedule->command('isp:session-logs')->everyFiveMinutes()->withoutOverlapping(15);
         $schedule->command('isp:session-logs --prune')->dailyAt('03:10');
+
+        // full backup: database + uploaded and private files
+        if (config('isp.backup.enabled')) {
+            $schedule->command('isp:backup')->dailyAt(config('isp.backup.at'))->withoutOverlapping(120);
+        }
     }
 
     /**

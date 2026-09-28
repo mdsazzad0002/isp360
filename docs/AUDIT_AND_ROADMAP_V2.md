@@ -36,7 +36,6 @@ All three critical findings (C1 permissions, C2 branch isolation, C3 uploads) we
 
 ### Medium / low
 
-- No backup / restore or full data export (roadmap 3.1) — an operational risk for any paying customer.
 - Legacy balance sheet (`ReportController::getBalanceSheet`) is a reduced sheet with retained earnings as the plug figure; it cannot be trusted until the general ledger (4.10) exists.
 
 ## 3. New roadmap (priority order)
@@ -49,7 +48,6 @@ Phase 0 (security hardening) finished 2026-09-28.
 ### Phase 1 — Quality foundation (P0, ~1–2 weeks) — **do this next**
 CI (H1, H4) is in place. Still open:
 1. Tests for the older modules beyond permissions and branch isolation (H3): POS reports, balance sheet, cash / bank ledgers.
-2. Backups: scheduled DB + uploads backup, restore command, full data export (3.1).
 
 ### Phase 2 — Finish Phase C, higher-level management (P1, ~5–6 weeks)
 1. Multi-level reseller tree, per-level commission, credit limit (3.3).
