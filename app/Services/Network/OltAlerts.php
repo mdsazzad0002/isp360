@@ -60,6 +60,39 @@ class OltAlerts
             ->whereNotIn('onu_id', $onus->pluck('id'))->update(['resolved_at' => now()]);
     }
 
+    // The open outage (OLT unreachable or PON port down) a customer's line sits behind, if any.
+    public static function forCustomer(int $customerId): ?NetworkAlert
+    {
+        $onus = Onu::whereIn('connection_id', Connection::where('customer_id', $customerId)->pluck('id'))->get(['olt_id', 'pon_port']);
+        foreach ($onus as $onu) {
+            $alert = NetworkAlert::where('olt_id', $onu->olt_id)->whereNull('resolved_at')
+                ->where(fn ($q) => $q->where('kind', 'olt_down')->orWhere(fn ($w) => $w->where('kind', 'pon_down')->where('subject', $onu->pon_port)))
+                ->first();
+            if ($alert) {
+                return $alert;
+            }
+        }
+        return null;
+    }
+
+    // An outage is over: a note on the tickets it caused, and "service restored" to the customers
+    // who were told about it.
+    private static function recovered(NetworkAlert $alert): void
+    {
+        foreach (\App\Models\Ticket::where('network_alert_id', $alert->id)->whereNotIn('status', ['resolved', 'closed'])->get() as $ticket) {
+            \App\Services\Isp\TicketService::systemNote($ticket, 'The network outage behind this ticket recovered at ' . now()->format('d M Y h:i A') . '. Check with the customer and resolve.');
+        }
+        if ($alert->notified_at && ! $alert->restored_notified_at) {
+            $place = $alert->kind === 'pon_down' ? "{$alert->olt?->name} {$alert->subject}" : (string) $alert->olt?->name;
+            foreach (self::affectedConnections($alert)->groupBy('customer_id') as $list) {
+                if ($customer = $list->first()->customer) {
+                    IspNotifier::send($alert->branch_id, $customer, 'outage_restored', ['connection' => $list->pluck('code')->implode(', '), 'place' => $place]);
+                }
+            }
+            $alert->update(['restored_notified_at' => now()]);
+        }
+    }
+
     // Customers on the ONUs behind an alert (an OLT outage: every ONU of that OLT)
     public static function affectedConnections(NetworkAlert $alert): Collection
     {
@@ -112,6 +145,9 @@ class OltAlerts
             ->when($onuId, fn ($q) => $q->where('onu_id', $onuId), fn ($q) => $q->where('subject', $subject))->get();
         foreach ($open as $alert) {
             $alert->update(['resolved_at' => now()]);
+            if ($kind !== 'onu_weak') {
+                self::recovered($alert);
+            }
         }
         if ($open->isNotEmpty() && $kind !== 'onu_weak') {
             SystemAlerts::clear(self::bannerKey($olt, $kind, $subject));

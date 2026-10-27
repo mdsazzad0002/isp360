@@ -27,6 +27,7 @@ class CustomerProfileController extends IspController
                 'connectionSecret' => checkAccess('connectionSecret'),
                 'connectionCredit' => checkAccess('connectionCredit'),
                 'workOrder' => checkAccess('workOrder'),
+                'promiseToPay' => checkAccess('promiseToPay'),
                 'invoiceCreate' => checkAccess('invoiceCreate'),
                 'invoiceVoid' => checkAccess('invoiceVoid'),
                 'billingNote' => checkAccess('billingNote'),

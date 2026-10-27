@@ -49,7 +49,7 @@ class TicketController extends IspController
     public function show(Request $request)
     {
         if ($r = $this->deny('ticket')) return $r;
-        $ticket = Ticket::with(['customer', 'reseller', 'connection', 'assignee'])->where('branch_id', $this->branchId)->findOrFail($request->id);
+        $ticket = Ticket::with(['customer', 'reseller', 'connection', 'assignee', 'networkAlert'])->where('branch_id', $this->branchId)->findOrFail($request->id);
         return response()->json(['ticket' => $ticket, 'replies' => TicketService::thread($ticket, true)]);
     }
 

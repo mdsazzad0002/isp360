@@ -24,6 +24,7 @@ class ConnectionController extends IspController
             'canCredit' => checkAccess('connectionCredit'),
             'canWorkOrder' => checkAccess('workOrder'),
             'canBulkSms' => checkAccess('bulkSms'),
+            'canPromise' => checkAccess('promiseToPay'),
         ]);
     }
 
@@ -153,6 +154,8 @@ class ConnectionController extends IspController
         return response()->json($connection->toArray() + [
             'needs_payment' => ConnectionService::needsPayment($connection),
             'onu' => Onu::with('olt')->where('connection_id', $connection->id)->first(),
+            'promise' => \App\Models\PaymentPromise::where('connection_id', $connection->id)->where('status', 'open')->first(),
+            'promises_broken' => \App\Models\PaymentPromise::where('connection_id', $connection->id)->where('status', 'broken')->where('created_at', '>=', now()->subDays(180))->count(),
         ]);
     }
 

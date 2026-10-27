@@ -262,6 +262,61 @@ class OltTest extends TestCase
         $this->assertSame([], \App\Support\SystemAlerts::all());
     }
 
+    public function test_tickets_during_an_outage_are_linked_and_told_when_it_recovers(): void
+    {
+        config(['mail.default' => 'array']);
+        \Illuminate\Support\Facades\Bus::fake([\App\Jobs\SendSms::class]);
+        $this->huaweiMib();
+        $p = self::PON_IF;
+        FakeSnmpAgent::$mib[self::HW . ".46.1.15.{$p}.2"] = 1;
+        $olt = $this->olt();
+        OltService::poll($olt);
+        $connection = $this->connection();
+        $connection->update(['status' => 'active']);
+        Onu::where('olt_id', $olt->id)->where('onu_id', 1)->update(['connection_id' => $connection->id]);
+
+        FakeSnmpAgent::$mib[self::HW . ".46.1.15.{$p}.1"] = 2;
+        FakeSnmpAgent::$mib[self::HW . ".46.1.15.{$p}.2"] = 2;
+        OltService::poll($olt->fresh());
+        $alert = \App\Models\NetworkAlert::where('olt_id', $olt->id)->where('kind', 'pon_down')->sole();
+        $this->api('/isp/network-alert-notify', ['id' => $alert->id])->assertOk();
+
+        $ticketId = $this->api('/isp/ticket', ['customer_id' => $connection->customer_id, 'subject' => 'No internet', 'message' => 'Red light on the ONU'])->assertOk()->json('id');
+        $ticket = $this->api('/isp/get-ticket', ['id' => $ticketId])->json('ticket');
+        $this->assertSame($alert->id, $ticket['network_alert_id']);
+        $this->assertNull($ticket['network_alert']['resolved_at']);
+
+        FakeSnmpAgent::$mib[self::HW . ".46.1.15.{$p}.1"] = 1;
+        OltService::poll($olt->fresh());
+        $notes = \App\Models\TicketReply::where('ticket_id', $ticketId)->where('author_type', 'system')->pluck('message')->all();
+        $this->assertCount(2, $notes);
+        $this->assertStringContainsString('recovered', $notes[1]);
+        \Illuminate\Support\Facades\Bus::assertDispatched(\App\Jobs\SendSms::class, fn ($job) => str_contains($job->message, 'is fixed'));
+        $this->assertNotNull($alert->fresh()->restored_notified_at);
+
+        // a ticket from a customer not behind any outage stays unlinked
+        Onu::where('olt_id', $olt->id)->update(['connection_id' => null]);
+        $other = $this->api('/isp/ticket', ['customer_id' => $connection->customer_id, 'subject' => 'Bill', 'message' => 'Question'])->json('id');
+        $this->assertNull(\App\Models\Ticket::find($other)->network_alert_id);
+    }
+
+    public function test_topology_groups_onus_by_port_and_box(): void
+    {
+        $this->huaweiMib();
+        $olt = $this->olt();
+        OltService::poll($olt);
+        $connection = $this->connection();
+        Onu::where('olt_id', $olt->id)->where('onu_id', 1)->update(['connection_id' => $connection->id]);
+
+        $summary = collect($this->api('/isp/get-topology')->assertOk()->json())->firstWhere('id', $olt->id);
+        $this->assertSame([2, 1, 1], [$summary['total'], $summary['online'], $summary['ports']]);
+        $tree = $this->api('/isp/get-topology', ['olt_id' => $olt->id])->assertOk()->json();
+        $port = $tree['ports'][0];
+        $this->assertSame(['GPON 0/1/0', 2, 1, false], [$port['name'], $port['total'], $port['online'], $port['down']]);
+        $linked = collect($port['boxes'])->flatMap(fn ($b) => $b['onus'])->firstWhere('onu_id', 1);
+        $this->assertSame($connection->customer_id, $linked['customer']['id']);
+    }
+
     private function connection(): Connection
     {
         $area = $this->api('/area', ['name' => 'OLT Area ' . random_int(1000, 9999)])->json('id');

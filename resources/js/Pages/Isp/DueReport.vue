@@ -48,6 +48,14 @@ function sort(col) {
     filter.sortBy = col;
     reload();
 }
+// promises to pay: open ones first, broken ones to follow up
+const promises = ref({ data: [], counts: {} });
+const promiseStatus = ref('open');
+function loadPromises() {
+    axios.post('/isp/get-promises', { status: promiseStatus.value, per_page: 100 }).then((r) => (promises.value = { data: r.data.page.data, counts: r.data.counts }));
+}
+const PROMISE_CLASS = { open: 'bg-amber-100 text-amber-800', kept: 'bg-emerald-100 text-emerald-700', broken: 'bg-red-100 text-red-700', cancelled: 'bg-slate-100 text-slate-500' };
+
 // aging: open dues by how long past due
 const aging = ref({ rows: [], totals: {} });
 const agingGroup = ref('area');
@@ -93,7 +101,7 @@ onMounted(() => {
 
         <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
             <div class="flex gap-1 border-b border-slate-200 px-2">
-                <button v-for="t in [['customers', 'Customer-wise'], ['summary', 'Zone / Area / Box summary'], ['aging', 'Aging']]" :key="t[0]" type="button" class="border-b-2 px-3 py-2.5 text-sm" :class="tab === t[0] ? 'border-brand-500 font-medium text-brand-600' : 'border-transparent text-slate-500'" @click="tab = t[0]; if (t[0] === 'aging') loadAging();">{{ t[1] }}</button>
+                <button v-for="t in [['customers', 'Customer-wise'], ['summary', 'Zone / Area / Box summary'], ['aging', 'Aging'], ['promises', 'Promises to pay']]" :key="t[0]" type="button" class="border-b-2 px-3 py-2.5 text-sm" :class="tab === t[0] ? 'border-brand-500 font-medium text-brand-600' : 'border-transparent text-slate-500'" @click="tab = t[0]; if (t[0] === 'aging') loadAging(); if (t[0] === 'promises') loadPromises();">{{ t[1] }}</button>
             </div>
 
             <div v-if="tab === 'customers'" class="p-3">
@@ -148,6 +156,36 @@ onMounted(() => {
                 <Pagination v-if="lastPage > 1" :page="page" :total-pages="lastPage" @change="(p) => { page = p; load(); }" />
             </div>
 
+            <div v-else-if="tab === 'promises'" class="p-3">
+                <div class="mb-3 flex flex-wrap items-center gap-2">
+                    <button v-for="st in ['open', 'broken', 'kept', 'cancelled']" :key="st" type="button" class="rounded-full border px-3 py-0.5 text-xs" :class="promiseStatus === st ? 'border-brand-500 bg-brand-500 text-white' : 'border-slate-300'" @click="promiseStatus = st; loadPromises()">
+                        {{ label(st) }}<span v-if="promises.counts[st]"> ({{ promises.counts[st] }})</span>
+                    </button>
+                    <span class="ms-auto text-xs text-slate-500">Counts: last 90 days. Recorded from a connection (Promise to pay); followed up automatically.</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
+                                <th class="px-2 py-2 font-medium">Customer</th><th class="px-2 py-2 font-medium">Connection</th><th class="px-2 py-2 font-medium">Pays by</th>
+                                <th class="px-2 py-2 text-end font-medium">Amount</th><th class="px-2 py-2 font-medium">Note</th><th class="px-2 py-2 font-medium">By</th><th class="px-2 py-2 font-medium">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="p in promises.data" :key="p.id" class="border-b border-slate-100">
+                                <td class="px-2 py-1.5"><Link :href="`/isp/customer/${p.customer_id}`" class="text-brand-600 hover:underline">{{ p.customer?.name }}</Link> <span class="text-xs text-slate-400">{{ p.customer?.phone }}</span></td>
+                                <td class="px-2 py-1.5">{{ p.connection?.code }}</td>
+                                <td class="px-2 py-1.5">{{ fmtDate(p.promised_date) }}</td>
+                                <td class="px-2 py-1.5 text-end">{{ p.amount ? money(p.amount) : '—' }}</td>
+                                <td class="px-2 py-1.5 text-xs text-slate-500">{{ p.note }}</td>
+                                <td class="px-2 py-1.5 text-xs">{{ p.created_by?.name }}</td>
+                                <td class="px-2 py-1.5"><span class="rounded px-1.5 py-0.5 text-xs" :class="PROMISE_CLASS[p.status]">{{ label(p.status) }}</span></td>
+                            </tr>
+                            <tr v-if="!promises.data.length"><td colspan="7" class="px-2 py-6 text-center text-slate-400">None</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
             <div v-else-if="tab === 'aging'" class="p-3">
                 <div class="mb-3 flex flex-wrap items-center gap-2">
                     <span class="text-sm text-slate-600">By</span>

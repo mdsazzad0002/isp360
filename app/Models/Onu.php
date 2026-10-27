@@ -24,7 +24,7 @@ class Onu extends Model
 
     public function connection()
     {
-        return $this->belongsTo(Connection::class)->select('id', 'code', 'customer_id', 'pppoe_username', 'status');
+        return $this->belongsTo(Connection::class)->select('id', 'code', 'customer_id', 'pppoe_username', 'status', 'box_id');
     }
 
     // RX power below the alert threshold (config isp.olt.weak_rx_dbm)

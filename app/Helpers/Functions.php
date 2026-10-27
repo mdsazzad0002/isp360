@@ -56,6 +56,8 @@ function appMenuGroups()
             'items' => [
                 ['access' => 'invoice', 'uri' => '/isp/invoices', 'match' => 'isp/invoices', 'icon' => 'bi-receipt', 'label' => 'Invoices'],
                 ['access' => 'ispPayment', 'uri' => '/isp/payments', 'match' => 'isp/payments', 'icon' => 'bi-wallet2', 'label' => 'Bill Collection'],
+                ['access' => 'collector', 'uri' => '/isp/collect', 'match' => 'isp/collect', 'icon' => 'bi-cash-coin', 'label' => 'Collect (door to door)'],
+                ['access' => 'collectorManage', 'uri' => '/isp/collectors', 'match' => 'isp/collectors', 'icon' => 'bi-people', 'label' => 'Collectors & Cash Handover'],
                 ['access' => 'onlinePayment', 'uri' => '/isp/online-payments', 'match' => 'isp/online-payments', 'icon' => 'bi-phone', 'label' => 'Online Payments'],
             ],
         ],
@@ -84,6 +86,7 @@ function appMenuGroups()
                 ['access' => 'router', 'uri' => '/isp/routers', 'match' => 'isp/routers', 'icon' => 'bi-router', 'label' => 'Routers (MikroTik / RADIUS)'],
                 ['access' => 'router', 'uri' => '/isp/radius-setup', 'match' => 'isp/radius-setup', 'icon' => 'bi-shield-lock', 'label' => 'RADIUS Setup'],
                 ['access' => 'olt', 'uri' => '/isp/olts', 'match' => 'isp/olts', 'icon' => 'bi-hdd-rack', 'label' => 'OLT & ONU'],
+                ['access' => 'olt', 'uri' => '/isp/topology', 'match' => 'isp/topology', 'icon' => 'bi-diagram-3', 'label' => 'Network Topology'],
                 ['access' => 'ipPool', 'uri' => '/isp/ip-pools', 'match' => 'isp/ip-pools', 'icon' => 'bi-diagram-2', 'label' => 'IP Pools (IPAM / CGNAT)'],
                 ['access' => 'networkBlock', 'uri' => '/isp/blocks', 'match' => 'isp/blocks', 'icon' => 'bi-shield-x', 'label' => 'Site / IP Block'],
                 ['access' => 'package', 'uri' => '/isp/packages', 'match' => 'isp/packages', 'icon' => 'bi-speedometer2', 'label' => 'Packages'],

@@ -38,6 +38,11 @@ class Ticket extends Model
         return $this->belongsTo(User::class, 'assigned_to')->select('id', 'name', 'username')->withTrashed();
     }
 
+    public function networkAlert()
+    {
+        return $this->belongsTo(NetworkAlert::class)->select('id', 'kind', 'message', 'started_at', 'resolved_at');
+    }
+
     public function replies()
     {
         return $this->hasMany(TicketReply::class)->orderBy('id');

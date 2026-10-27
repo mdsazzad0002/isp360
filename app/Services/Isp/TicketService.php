@@ -67,6 +67,11 @@ class TicketService
                 'branch_id' => $branchId,
             ]);
             self::addReply($ticket, $authorType, $authorId, $data['message'], $data['attachment'] ?? null, false);
+            // a customer behind a known outage: support sees the cause at once
+            if ($customer && ($alert = \App\Services\Network\OltAlerts::forCustomer($customer->id))) {
+                $ticket->update(['network_alert_id' => $alert->id]);
+                self::addReply($ticket, 'system', 0, 'Known network outage: ' . $alert->message . ' (since ' . $alert->started_at->format('d M h:i A') . ').', null, true);
+            }
             AuditLogger::log('ticket.opened', $ticket, null, $ticket->only(['ticket_no', 'subject', 'customer_id', 'reseller_id', 'priority']), null, $branchId);
             return $ticket;
         });
@@ -146,6 +151,14 @@ class TicketService
             'admin' => (string) (DB::table('users')->where('id', $id)->value('name') ?? 'Support'),
             default => 'System',
         };
+    }
+
+    // An internal note written by the system (outage recovered, …); never on a closed ticket.
+    public static function systemNote(Ticket $ticket, string $message): void
+    {
+        if ($ticket->status !== 'closed') {
+            self::addReply($ticket, 'system', 0, $message, null, true);
+        }
     }
 
     // Thread for one viewer: internal notes only for the company, author names resolved.

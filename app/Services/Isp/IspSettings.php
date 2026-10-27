@@ -67,6 +67,11 @@ class IspSettings
         'sms_outage' => true,
         // a new connection gets an installation work order for the technicians (Work Orders)
         'auto_install_work_order' => true,
+        // promise to pay: how far ahead, how many per connection in 30 days, reminder the day before
+        'promise_max_days' => 7,
+        'promise_max_per_30' => 2,
+        'sms_promise' => true,
+        'sms_outage_restored' => true,
         'sms_tpl_invoice' => 'Dear {name}, your internet bill {invoice} of {currency} {amount} is due on {due_date}. Total due: {currency} {balance}.',
         'sms_tpl_payment' => 'Dear {name}, we received {currency} {amount} (receipt {receipt}). Current due: {currency} {balance}. Thank you.',
         'sms_tpl_suspend' => 'Dear {name}, your internet connection {connection} is suspended for unpaid bills. Due: {currency} {balance}.',
@@ -75,6 +80,8 @@ class IspSettings
         'sms_tpl_translations' => '',
         'sms_tpl_reminder' => 'Dear {name}, your internet {connection} expires on {expire_date}. Renew now to stay connected. Due: {currency} {balance}.',
         'sms_tpl_notice' => 'Dear {name}, your internet connection {connection} will be suspended on {suspend_date} unless paid. Due: {currency} {balance}.',
+        'sms_tpl_outage_restored' => 'Dear {name}, the network problem in your area ({place}) is fixed and your internet is back. Thank you for your patience.',
+        'sms_tpl_promise' => 'Dear {name}, a reminder: you promised to pay {currency} {amount} for {connection} by {promise_date}. Total due: {currency} {balance}.',
         'sms_tpl_outage' => 'Dear {name}, there is a network problem in your area ({place}). Our team is working on it. Sorry for the trouble.',
     ];
 

@@ -10,7 +10,8 @@ use Symfony\Component\HttpFoundation\Response;
 // Browser security headers on every web response (roadmap 4.12):
 //  - Content-Security-Policy: scripts only from this site (the one inline script in app.blade.php
 //    carries a per-request nonce), no plugins, no framing by other sites
-//  - HSTS on HTTPS, nosniff, same-origin framing, a strict referrer policy, no camera/mic/geolocation
+//  - HSTS on HTTPS, nosniff, same-origin framing, a strict referrer policy, no camera/mic; location
+//    only for this site's own pages (the collector's visit stamp)
 // The CSP is left off where a page brings its own inline scripts (Horizon, the license pages) and
 // while the Vite dev server runs. config('isp.csp'): enforce (default) | report | off.
 class SecurityHeaders
@@ -31,7 +32,7 @@ class SecurityHeaders
         $headers->set('X-Content-Type-Options', 'nosniff');
         $headers->set('X-Frame-Options', 'SAMEORIGIN');
         $headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+        $headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self), payment=()');
         if ($request->isSecure()) {
             $headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }

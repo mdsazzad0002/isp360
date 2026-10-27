@@ -37,6 +37,35 @@ const online = ref(null);
 const pkg = reactive({ open: false, options: [], selected: null, reason: '', quote: null, quoting: false });
 
 const showPay = ref(false);
+
+// promise to pay: keep the line on until a date the customer names
+const promiseForm = reactive({ open: false, date: '', amount: '', note: '' });
+const canPromise = computed(() => props.can.promiseToPay && conn.value && !conn.value.promise
+    && (conn.value.needs_payment || (conn.value.status === 'suspended' && ['Expired', 'Overdue'].includes(conn.value.suspension_reason))));
+async function savePromise() {
+    busy.value = true;
+    try {
+        toast.success((await axios.post('/isp/promise', { connection_id: conn.value.id, promised_date: promiseForm.date, amount: promiseForm.amount || null, note: promiseForm.note })).data.message);
+        promiseForm.open = false;
+        emit('changed');
+        load();
+    } catch (err) {
+        showError(err);
+    } finally {
+        busy.value = false;
+    }
+}
+async function cancelPromise() {
+    const reason = await promptReason('Cancel this promise? The line follows the normal rules again at once.');
+    if (!reason) return;
+    try {
+        toast.success((await axios.post('/isp/promise-cancel', { id: conn.value.promise.id, reason })).data.message);
+        emit('changed');
+        load();
+    } catch (err) {
+        showError(err);
+    }
+}
 const moreOpen = ref(false);
 const actions = computed(() => {
     const s = conn.value?.status;
@@ -213,6 +242,24 @@ function describe(h) {
                 <div><span class="text-slate-400">Box</span><br />{{ conn.box ? `${conn.box.name}${conn.box.code ? ' (' + conn.box.code + ')' : ''}` : '—' }}</div>
                 <div><span class="text-slate-400">Installed / Activated</span><br />{{ fmtDate(conn.installation_date) || '—' }} / {{ fmtDate(conn.activation_date) || '—' }}</div>
                 <div><span class="text-slate-400">Expire date</span><br /><span :class="expiryClass(conn.expire_at)">{{ fmtDateTime(conn.expire_at) || 'Unpaid' }}</span></div>
+            </div>
+            <div v-if="conn.promise" class="flex flex-wrap items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-900">
+                <i class="bi bi-hand-thumbs-up"></i>
+                <span>Promised to pay <b>{{ conn.promise.amount ? money(conn.promise.amount) + ' ' : '' }}</b>by <b>{{ fmtDate(conn.promise.promised_date) }}</b>: the line stays on until then<span v-if="conn.promise.note"> · {{ conn.promise.note }}</span></span>
+                <button v-if="can.promiseToPay" type="button" class="ms-auto text-xs text-amber-800 underline" @click="cancelPromise">Cancel promise</button>
+            </div>
+            <div v-else-if="canPromise" class="rounded-md border border-slate-200 p-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-slate-600"><i class="bi bi-hand-thumbs-up"></i> Customer can't pay now?</span>
+                    <span v-if="conn.promises_broken" class="rounded bg-red-100 px-1.5 text-xs text-red-700">{{ conn.promises_broken }} broken promise(s) lately</span>
+                    <button v-if="!promiseForm.open" type="button" class="ms-auto rounded-md border border-slate-300 px-2 py-1 text-xs" @click="promiseForm.open = true">Promise to pay</button>
+                </div>
+                <form v-if="promiseForm.open" class="mt-2 flex flex-wrap items-end gap-2" @submit.prevent="savePromise">
+                    <label class="text-xs">Pays by <input v-model="promiseForm.date" required type="date" :min="today()" class="block rounded-md border border-slate-300 px-2 py-1 text-sm" /></label>
+                    <label class="text-xs">Amount <input v-model="promiseForm.amount" type="number" min="0" step="0.01" class="block w-28 rounded-md border border-slate-300 px-2 py-1 text-sm" /></label>
+                    <label class="flex-1 text-xs">Note <input v-model="promiseForm.note" class="block w-full rounded-md border border-slate-300 px-2 py-1 text-sm" /></label>
+                    <button type="submit" :disabled="busy" class="rounded-md bg-brand-500 px-3 py-1 text-sm text-white">Save</button>
+                </form>
             </div>
             <div v-if="conn.onu" class="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-slate-200 p-2">
                 <span><i class="bi bi-hdd-rack"></i> ONU {{ conn.onu.olt?.name }} · <span class="font-mono">{{ conn.onu.pon_port }}<span v-if="conn.onu.onu_id !== null">:{{ conn.onu.onu_id }}</span></span></span>

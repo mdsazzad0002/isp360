@@ -117,6 +117,11 @@ watch(() => props.ticketId, load, { immediate: true });
                 <button type="button" class="text-slate-400 hover:text-slate-600" title="Close" @click="emit('close')"><i class="bi bi-x-lg"></i></button>
             </div>
 
+            <div v-if="isAdmin && ticket.network_alert" class="mt-3 rounded-md border px-3 py-2 text-sm" :class="ticket.network_alert.resolved_at ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-800'">
+                <i class="bi" :class="ticket.network_alert.resolved_at ? 'bi-check-circle' : 'bi-exclamation-triangle'"></i>
+                {{ ticket.network_alert.resolved_at ? 'Outage recovered' : 'Known network outage' }}: {{ ticket.network_alert.message }}
+                <a href="/isp/olts" class="ms-1 underline">OLT page</a>
+            </div>
             <div v-if="isAdmin" class="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
                 <select :value="ticket.status" class="rounded-md border border-slate-300 px-2 py-1 text-xs" @change="setStatus($event.target.value)">
                     <option v-for="s in statusChoices" :key="s" :value="s">{{ label(s) }}</option>

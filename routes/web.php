@@ -388,6 +388,9 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/get-connection-secret', [Isp\ConnectionController::class, 'secret'])->name('isp.connection.secret');
     Route::post('/connection', [Isp\ConnectionController::class, 'store'])->name('isp.connection.store');
     Route::post('/connection-action', [Isp\ConnectionController::class, 'action'])->name('isp.connection.action');
+    Route::post('/get-promises', [Isp\PromiseController::class, 'index'])->name('isp.promises.index');
+    Route::post('/promise', [Isp\PromiseController::class, 'store'])->name('isp.promise.store');
+    Route::post('/promise-cancel', [Isp\PromiseController::class, 'cancel'])->name('isp.promise.cancel');
     Route::post('/connection-bulk', [Isp\ConnectionController::class, 'bulk'])->middleware('throttle:20,1')->name('isp.connection.bulk');
     Route::post('/get-compliance', [Isp\ComplianceController::class, 'data'])->name('isp.compliance.data');
     Route::post('/kyc-document', [Isp\ComplianceController::class, 'upload'])->name('isp.kyc.upload');
@@ -429,6 +432,18 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/router-interface-traffic', [Isp\RouterMonitorController::class, 'traffic'])->middleware('throttle:90,1')->name('isp.router.monitor.traffic');
     Route::post('/router-monitor-pins', [Isp\RouterMonitorController::class, 'pins'])->name('isp.router.monitor.pins');
 
+    Route::get('/collect', [Isp\CollectorController::class, 'create'])->name('isp.collect');
+    Route::post('/get-collect-route', [Isp\CollectorController::class, 'route'])->name('isp.collect.route');
+    Route::post('/collect-pay', [Isp\CollectorController::class, 'pay'])->middleware('throttle:60,1')->name('isp.collect.pay');
+    Route::post('/collect-visit', [Isp\CollectorController::class, 'visit'])->name('isp.collect.visit');
+    Route::post('/collect-handover', [Isp\CollectorController::class, 'handover'])->middleware('throttle:20,1')->name('isp.collect.handover');
+    Route::get('/collectors', [Isp\CollectorController::class, 'manage'])->name('isp.collectors');
+    Route::post('/get-collectors', [Isp\CollectorController::class, 'collectors'])->name('isp.collectors.index');
+    Route::post('/collector-areas', [Isp\CollectorController::class, 'setAreas'])->name('isp.collectors.areas');
+    Route::post('/get-cash-handovers', [Isp\CollectorController::class, 'handovers'])->name('isp.handovers.index');
+    Route::post('/cash-handover-decide', [Isp\CollectorController::class, 'decide'])->name('isp.handover.decide');
+    Route::post('/get-collection-visits', [Isp\CollectorController::class, 'visits'])->name('isp.visits.index');
+
     Route::get('/inventory', [Isp\InventoryController::class, 'create'])->name('isp.inventory');
     Route::post('/get-inventory', [Isp\InventoryController::class, 'index'])->name('isp.inventory.index');
     Route::post('/inventory-item', [Isp\InventoryController::class, 'store'])->name('isp.inventory.item');
@@ -465,6 +480,8 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/system-run', [Isp\SystemController::class, 'run'])->middleware('throttle:20,1')->name('isp.system.run');
 
     Route::get('/olts', [Isp\OltController::class, 'create'])->name('isp.olts');
+    Route::get('/topology', [Isp\OltController::class, 'topologyPage'])->name('isp.topology');
+    Route::post('/get-topology', [Isp\OltController::class, 'topology'])->name('isp.topology.data');
     Route::post('/get-olts', [Isp\OltController::class, 'index'])->name('isp.olts.index');
     Route::post('/olt', [Isp\OltController::class, 'store'])->name('isp.olt.store');
     Route::post('/olt-test', [Isp\OltController::class, 'test'])->middleware('throttle:30,1')->name('isp.olt.test');

@@ -75,6 +75,10 @@ class OverdueService
     // bill overdue past the grace days (postpaid).
     public static function isDueForSuspension(Connection $connection, ?array $settings = null): bool
     {
+        // a promise to pay holds it until the promised date
+        if (PromiseService::holds($connection)) {
+            return false;
+        }
         if (self::isPostpaid($connection)) {
             return self::overdueBill($connection, $settings) !== null;
         }

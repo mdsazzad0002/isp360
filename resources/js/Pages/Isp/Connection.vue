@@ -16,8 +16,8 @@ import { money, fmtDate, label, useApiError, expiryClass, fmtDateTime, fmtMoney 
 import { useToast } from '../../lib/toast';
 
 defineOptions({ layout: AppLayout });
-const props = defineProps({ canAct: Boolean, canSecret: Boolean, canPay: Boolean, canCredit: Boolean, canWorkOrder: Boolean, canBulkSms: Boolean });
-const can = { connection: true, connectionAction: props.canAct, connectionSecret: props.canSecret, payment: props.canPay, connectionCredit: props.canCredit, workOrder: props.canWorkOrder, bulkSms: props.canBulkSms };
+const props = defineProps({ canAct: Boolean, canSecret: Boolean, canPay: Boolean, canCredit: Boolean, canWorkOrder: Boolean, canBulkSms: Boolean, canPromise: Boolean });
+const can = { connection: true, connectionAction: props.canAct, connectionSecret: props.canSecret, payment: props.canPay, connectionCredit: props.canCredit, workOrder: props.canWorkOrder, bulkSms: props.canBulkSms, promiseToPay: props.canPromise };
 
 const rows = ref([]);
 const total = ref(0);

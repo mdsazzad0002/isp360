@@ -356,6 +356,49 @@ class OltController extends IspController
         return $this->ok("Outage notice sent to {$sent} customer(s)");
     }
 
+    public function topologyPage()
+    {
+        return $this->page('olt', 'Isp/Topology', ['weakRx' => (float) config('isp.olt.weak_rx_dbm', -27)]);
+    }
+
+    // OLT → PON port → box → ONU → customer, for one OLT (or a summary of all when none is given).
+    public function topology(Request $request)
+    {
+        if ($r = $this->deny('olt')) return $r;
+        $alerts = NetworkAlert::where('branch_id', $this->branchId)->whereNull('resolved_at')->whereIn('kind', ['olt_down', 'pon_down'])->get();
+        $olts = Olt::where('branch_id', $this->branchId)->orderBy('name')->get(['id', 'name', 'host', 'vendor', 'location', 'last_polled_at', 'is_active']);
+        if (! $request->olt_id) {
+            $counts = Onu::where('branch_id', $this->branchId)->groupBy('olt_id')
+                ->selectRaw("olt_id, count(*) as total, sum(status = 'online') as online, count(distinct pon_port) as ports")->get()->keyBy('olt_id');
+            return response()->json($olts->map(fn ($o) => $o->toArray() + [
+                'total' => (int) ($counts[$o->id]->total ?? 0), 'online' => (int) ($counts[$o->id]->online ?? 0), 'ports' => (int) ($counts[$o->id]->ports ?? 0),
+                'down' => $alerts->where('olt_id', $o->id)->where('kind', 'olt_down')->isNotEmpty(),
+                'ports_down' => $alerts->where('olt_id', $o->id)->where('kind', 'pon_down')->count(),
+            ]));
+        }
+        $olt = $olts->firstWhere('id', (int) $request->olt_id) ?? abort(404);
+        $onus = Onu::with(['connection.customer:id,code,name,phone', 'connection.box:id,name,code'])->where('olt_id', $olt->id)
+            ->orderBy('pon_port')->orderBy('onu_id')->get();
+        $ports = $onus->groupBy('pon_port')->map(function ($list, $port) use ($alerts, $olt) {
+            return [
+                'name' => $port,
+                'total' => $list->count(),
+                'online' => $list->where('status', 'online')->count(),
+                'down' => $alerts->where('olt_id', $olt->id)->where('kind', 'pon_down')->where('subject', $port)->isNotEmpty(),
+                'boxes' => $list->groupBy(fn ($o) => $o->connection?->box?->id ?? 0)->map(fn ($group, $boxId) => [
+                    'id' => $boxId ?: null,
+                    'name' => $group->first()->connection?->box ? trim($group->first()->connection->box->name . ' ' . ($group->first()->connection->box->code ?? '')) : 'No box',
+                    'onus' => $group->map(fn ($o) => [
+                        'id' => $o->id, 'onu_id' => $o->onu_id, 'serial' => $o->serial ?: $o->mac, 'name' => $o->name, 'status' => $o->status, 'rx_power' => $o->rx_power,
+                        'connection' => $o->connection ? ['code' => $o->connection->code, 'status' => $o->connection->status] : null,
+                        'customer' => $o->connection?->customer?->only(['id', 'code', 'name', 'phone']),
+                    ])->values(),
+                ])->sortBy('name')->values(),
+            ];
+        })->values();
+        return response()->json(['olt' => $olt, 'down' => $alerts->where('olt_id', $olt->id)->where('kind', 'olt_down')->isNotEmpty(), 'ports' => $ports]);
+    }
+
     // an ONU from stock now on a customer's line leaves the store / technician (Inventory)
     private function toCustomer(Onu $onu): void
     {

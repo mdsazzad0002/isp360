@@ -20,6 +20,7 @@ class IspNotifier
     public const SUBJECTS = [
         'invoice' => 'Your internet bill', 'payment' => 'Payment received', 'suspend' => 'Your connection is suspended',
         'reactivate' => 'Your connection is active again', 'notice' => 'Your connection will be suspended', 'reminder' => 'Your internet expires soon',
+        'outage' => 'Network problem in your area', 'outage_restored' => 'Your internet is back', 'promise' => 'Payment reminder',
     ];
 
     /**
