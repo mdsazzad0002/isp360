@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Isp;
 use App\Support\Money;
 use App\Models\Connection;
 use App\Models\Invoice;
+use App\Models\Onu;
 use App\Services\Isp\AuditLogger;
 use App\Services\Isp\BillingService;
 use App\Services\Isp\ConnectionService;
@@ -62,7 +63,10 @@ class ConnectionController extends IspController
         $connection = Connection::with(['customer:id,code,name,phone,reseller_id', 'package', 'box:id,name,code', 'router', 'histories.createdBy', 'packageHistories.oldPackage', 'packageHistories.newPackage', 'packageHistories.changedBy'])
             ->where('branch_id', $this->branchId)->findOrFail($request->id);
         // the panel hides Activate / Reactivate and offers Pay instead
-        return response()->json($connection->toArray() + ['needs_payment' => ConnectionService::needsPayment($connection)]);
+        return response()->json($connection->toArray() + [
+            'needs_payment' => ConnectionService::needsPayment($connection),
+            'onu' => Onu::with('olt')->where('connection_id', $connection->id)->first(),
+        ]);
     }
 
     // PPPoE password is hidden everywhere; revealing it is a separate, audited permission.

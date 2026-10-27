@@ -35,6 +35,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('isp:session-logs')->everyFiveMinutes()->withoutOverlapping(15);
         $schedule->command('isp:session-logs --prune')->dailyAt('03:10');
 
+        // ONU status and optical power from the OLTs (Network → OLT & ONU)
+        if (config('isp.olt.poll_enabled')) {
+            $schedule->command('isp:olt-poll')->everyFiveMinutes()->withoutOverlapping(15);
+        }
+
         // sign-in history older than 60 days
         $schedule->call(fn () => \App\Support\LoginSessions::prune())->dailyAt('03:20')->name('login-sessions-prune');
 

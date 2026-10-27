@@ -14,6 +14,7 @@
         "laravel/horizon": "^5.50",
         "laravel/tinker": "^2.9",
         "phpoffice/phpspreadsheet": "^5.9",
+        "phpseclib/phpseclib": "^3.0",
         "subandl/subandl": "^1.0"
     },
     "require-dev": {

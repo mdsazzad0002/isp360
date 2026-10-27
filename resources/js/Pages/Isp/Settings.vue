@@ -13,7 +13,7 @@ const s = ref(null);
 const saving = ref(false);
 
 // SMS templates in other languages, for customers who have one set: { bn: { invoice: '...' } }
-const smsEvents = [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension'], ['reminder', 'Renewal reminder']];
+const smsEvents = [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension'], ['reminder', 'Renewal reminder'], ['outage', 'Network outage (sent from OLT alerts)']];
 // e-mail / WhatsApp channels of the branch (same templates as SMS)
 const channels = ref([]);
 const loadChannels = () => axios.post('/isp/get-messaging').then((r) => (channels.value = r.data));
@@ -407,9 +407,9 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
 
             <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <h2 class="mb-1 text-sm font-semibold text-slate-700">Customer SMS</h2>
-                <p class="mb-3 text-xs text-slate-500">Sent through the active SMS gateway. Placeholders: {name} {code} {currency} {balance} {invoice} {amount} {due_date} {receipt} {connection} {expire_date} {suspend_date}</p>
+                <p class="mb-3 text-xs text-slate-500">Sent through the active SMS gateway. Placeholders: {name} {code} {currency} {balance} {invoice} {amount} {due_date} {receipt} {connection} {expire_date} {suspend_date} {place}</p>
                 <div class="space-y-3">
-                    <div v-for="k in [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension'], ['reminder', 'Renewal reminder']]" :key="k[0]" class="grid grid-cols-1 gap-2 md:grid-cols-5">
+                    <div v-for="k in [['invoice', 'Invoice generated'], ['payment', 'Payment received'], ['suspend', 'Connection suspended'], ['reactivate', 'Connection reactivated'], ['notice', 'Notice before suspension'], ['reminder', 'Renewal reminder'], ['outage', 'Network outage (sent from OLT alerts)']]" :key="k[0]" class="grid grid-cols-1 gap-2 md:grid-cols-5">
                         <label class="flex items-center gap-2 text-sm"><input v-model="s['sms_' + k[0]]" type="checkbox" /> {{ k[1] }}</label>
                         <textarea v-model="s['sms_tpl_' + k[0]]" rows="2" maxlength="320" class="md:col-span-4" :class="input"></textarea>
                     </div>

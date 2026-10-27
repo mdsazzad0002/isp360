@@ -428,6 +428,22 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/router-interface-traffic', [Isp\RouterMonitorController::class, 'traffic'])->middleware('throttle:90,1')->name('isp.router.monitor.traffic');
     Route::post('/router-monitor-pins', [Isp\RouterMonitorController::class, 'pins'])->name('isp.router.monitor.pins');
 
+    Route::get('/olts', [Isp\OltController::class, 'create'])->name('isp.olts');
+    Route::post('/get-olts', [Isp\OltController::class, 'index'])->name('isp.olts.index');
+    Route::post('/olt', [Isp\OltController::class, 'store'])->name('isp.olt.store');
+    Route::post('/olt-test', [Isp\OltController::class, 'test'])->middleware('throttle:30,1')->name('isp.olt.test');
+    Route::post('/olt-poll', [Isp\OltController::class, 'poll'])->middleware('throttle:20,1')->name('isp.olt.poll');
+    Route::post('/delete-olt', [Isp\OltController::class, 'destroy'])->name('isp.olt.delete');
+    Route::post('/get-onus', [Isp\OltController::class, 'onus'])->name('isp.onus.index');
+    Route::post('/onu', [Isp\OltController::class, 'storeOnu'])->name('isp.onu.store');
+    Route::post('/onu-link', [Isp\OltController::class, 'link'])->name('isp.onu.link');
+    Route::post('/delete-onu', [Isp\OltController::class, 'destroyOnu'])->name('isp.onu.delete');
+    Route::post('/onu-action', [Isp\OltController::class, 'action'])->middleware('throttle:30,1')->name('isp.onu.action');
+    Route::post('/get-olt-unregistered', [Isp\OltController::class, 'unregistered'])->middleware('throttle:20,1')->name('isp.olt.unregistered');
+    Route::post('/onu-authorize', [Isp\OltController::class, 'authorizeOnu'])->middleware('throttle:30,1')->name('isp.onu.authorize');
+    Route::post('/get-network-alerts', [Isp\OltController::class, 'alerts'])->name('isp.networkAlerts.index');
+    Route::post('/network-alert-notify', [Isp\OltController::class, 'notifyAlert'])->name('isp.networkAlert.notify');
+
     Route::get('/blocks', [Isp\NetworkBlockController::class, 'create'])->name('isp.blocks');
     Route::post('/get-blocks', [Isp\NetworkBlockController::class, 'index'])->name('isp.blocks.index');
     Route::post('/block', [Isp\NetworkBlockController::class, 'store'])->name('isp.block.store');

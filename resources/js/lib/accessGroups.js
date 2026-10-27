@@ -32,6 +32,8 @@ export const accessGroups = [
             { value: 'ispSettings', label: 'ISP Billing Settings' },
             { value: 'ticket', label: 'Support Tickets (view / reply / assign)' },
             { value: 'auditLog', label: 'Audit Log' },
+            { value: 'olt', label: 'OLT & ONU (OLTs, SNMP polling, link ONUs to connections)' },
+            { value: 'oltConfigure', label: 'OLT changes: authorise, reboot, rename, delete ONUs on the OLT' },
             { value: 'ipPool', label: 'IP Pools (IPAM, IPv6, CGNAT)' },
             { value: 'kycVerify', label: 'Verify / reject KYC documents' },
             { value: 'customerDataRights', label: 'Customer data export & erasure' },

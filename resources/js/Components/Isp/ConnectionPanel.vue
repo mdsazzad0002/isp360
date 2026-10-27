@@ -214,6 +214,14 @@ function describe(h) {
                 <div><span class="text-slate-400">Installed / Activated</span><br />{{ fmtDate(conn.installation_date) || '—' }} / {{ fmtDate(conn.activation_date) || '—' }}</div>
                 <div><span class="text-slate-400">Expire date</span><br /><span :class="expiryClass(conn.expire_at)">{{ fmtDateTime(conn.expire_at) || 'Unpaid' }}</span></div>
             </div>
+            <div v-if="conn.onu" class="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-slate-200 p-2">
+                <span><i class="bi bi-hdd-rack"></i> ONU {{ conn.onu.olt?.name }} · <span class="font-mono">{{ conn.onu.pon_port }}<span v-if="conn.onu.onu_id !== null">:{{ conn.onu.onu_id }}</span></span></span>
+                <span class="font-mono text-xs">{{ conn.onu.serial || conn.onu.mac }}</span>
+                <span :class="conn.onu.status === 'online' ? 'font-medium text-emerald-700' : ['los', 'dying_gasp'].includes(conn.onu.status) ? 'text-red-600' : 'text-slate-500'">{{ label(conn.onu.status) }}</span>
+                <span v-if="conn.onu.rx_power !== null">RX <b class="font-mono">{{ conn.onu.rx_power }} dBm</b></span>
+                <span v-if="conn.onu.distance_m !== null" class="text-slate-500">{{ conn.onu.distance_m }} m</span>
+                <span v-if="conn.onu.last_polled_at" class="text-xs text-slate-400">read {{ fmtDateTime(conn.onu.last_polled_at) }}</span>
+            </div>
             <div v-if="online && online.managed" class="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 p-2">
                 <div>
                     <!-- two separate facts: can we reach the router, and is the customer connected to it -->

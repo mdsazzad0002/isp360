@@ -37,6 +37,17 @@ return [
         'keep' => (int) env('ISP_BACKUP_KEEP', 14),
     ],
 
+    // OLTs (vendors in config/olt_vendors.php): isp:olt-poll reads every active OLT every few minutes;
+    // an ONU receiving less than weak_rx_dbm is listed as weak signal; ONU changes go over the CLI
+    'olt' => [
+        'poll_enabled' => (bool) env('ISP_OLT_POLL', true),
+        'weak_rx_dbm' => (float) env('ISP_OLT_WEAK_RX_DBM', -27),
+        'snmp_timeout' => (float) env('ISP_OLT_SNMP_TIMEOUT', 3),
+        'cli_timeout' => (float) env('ISP_OLT_CLI_TIMEOUT', 15),
+        // a PON port counts as down when all its ONUs (at least this many) drop at once
+        'pon_down_min_onus' => (int) env('ISP_OLT_PON_DOWN_MIN_ONUS', 2),
+    ],
+
     // where scheduled checks (nightly ledger check) send an alert e-mail; the admin banner shows either way
     'alert_email' => env('ISP_ALERT_EMAIL'),
 ];
