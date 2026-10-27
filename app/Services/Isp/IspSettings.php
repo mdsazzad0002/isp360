@@ -65,6 +65,8 @@ class IspSettings
         'sms_reminder' => true,
         // network outage notice, sent from Network → OLT & ONU → Alerts when staff choose to
         'sms_outage' => true,
+        // a new connection gets an installation work order for the technicians (Work Orders)
+        'auto_install_work_order' => true,
         'sms_tpl_invoice' => 'Dear {name}, your internet bill {invoice} of {currency} {amount} is due on {due_date}. Total due: {currency} {balance}.',
         'sms_tpl_payment' => 'Dear {name}, we received {currency} {amount} (receipt {receipt}). Current due: {currency} {balance}. Thank you.',
         'sms_tpl_suspend' => 'Dear {name}, your internet connection {connection} is suspended for unpaid bills. Due: {currency} {balance}.',

@@ -48,6 +48,10 @@ return [
         'pon_down_min_onus' => (int) env('ISP_OLT_PON_DOWN_MIN_ONUS', 2),
     ],
 
+    // waiting database updates (after a code update) are applied by the scheduler on their own, after a
+    // backup; false = an admin applies them from Admin → System & Automation
+    'auto_migrate' => (bool) env('ISP_AUTO_MIGRATE', true),
+
     // where scheduled checks (nightly ledger check) send an alert e-mail; the admin banner shows either way
     'alert_email' => env('ISP_ALERT_EMAIL'),
 ];

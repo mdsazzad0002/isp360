@@ -7,6 +7,7 @@ import Pagination from '../../Components/Pagination.vue';
 import SearchSelect from '../../Components/SearchSelect.vue';
 import StatusBadge from '../../Components/Isp/StatusBadge.vue';
 import ConnectionPanel from '../../Components/Isp/ConnectionPanel.vue';
+import BulkConnectionBar from '../../Components/Isp/BulkConnectionBar.vue';
 import ConnectionFormModal from '../../Components/Isp/ConnectionFormModal.vue';
 import SyncBadge from '../../Components/Isp/SyncBadge.vue';
 import TerminalOffcanvas from '../../Components/Isp/TerminalOffcanvas.vue';
@@ -15,8 +16,8 @@ import { money, fmtDate, label, useApiError, expiryClass, fmtDateTime, fmtMoney 
 import { useToast } from '../../lib/toast';
 
 defineOptions({ layout: AppLayout });
-const props = defineProps({ canAct: Boolean, canSecret: Boolean, canPay: Boolean, canCredit: Boolean });
-const can = { connection: true, connectionAction: props.canAct, connectionSecret: props.canSecret, payment: props.canPay, connectionCredit: props.canCredit };
+const props = defineProps({ canAct: Boolean, canSecret: Boolean, canPay: Boolean, canCredit: Boolean, canWorkOrder: Boolean, canBulkSms: Boolean });
+const can = { connection: true, connectionAction: props.canAct, connectionSecret: props.canSecret, payment: props.canPay, connectionCredit: props.canCredit, workOrder: props.canWorkOrder, bulkSms: props.canBulkSms };
 
 const rows = ref([]);
 const total = ref(0);
@@ -73,7 +74,22 @@ function load() {
 }
 function reload() {
     page.value = 1;
+    clearSelection();
     load();
+}
+
+// ticked rows, or "all matching the filter" for the bulk bar
+const selected = ref([]);
+const allMatching = ref(false);
+const listFilters = () => ({ search: filter.search, status: filter.status, syncStatus: filter.syncStatus, packageId: filter.package?.id, areaId: filter.area?.id });
+const pageTicked = () => rows.value.length > 0 && rows.value.every((r) => selected.value.includes(r.id));
+function tickPage(on) {
+    allMatching.value = false;
+    selected.value = on ? [...new Set([...selected.value, ...rows.value.map((r) => r.id)])] : selected.value.filter((id) => !rows.value.some((r) => r.id === id));
+}
+function clearSelection() {
+    selected.value = [];
+    allMatching.value = false;
 }
 function onSearch() {
     clearTimeout(timer);
@@ -146,10 +162,13 @@ onMounted(() => {
                     {{ syncCounts[k] }} {{ text }}
                 </button>
             </div>
+            <BulkConnectionBar v-if="selected.length || allMatching" :ids="selected" :all-matching="allMatching" :filters="listFilters()" :total="total" :page-count="rows.length"
+                :packages="packages" :can="can" @done="load" @clear="clearSelection" @all="allMatching = true" />
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
+                            <th class="w-6 px-2 py-2"><input type="checkbox" :checked="allMatching || pageTicked()" title="Tick this page" @change="tickPage($event.target.checked)" /></th>
                             <th class="px-2 py-2 font-medium">Code</th>
                             <th class="px-2 py-2 font-medium">Customer</th>
                             <th class="px-2 py-2 font-medium">Area / Box</th>
@@ -163,7 +182,8 @@ onMounted(() => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in rows" :key="row.id" class="border-b border-slate-100 hover:bg-slate-50">
+                        <tr v-for="row in rows" :key="row.id" class="border-b border-slate-100 hover:bg-slate-50" :class="{ 'bg-brand-50/40': allMatching || selected.includes(row.id) }">
+                            <td class="px-2 py-2"><input v-model="selected" type="checkbox" :value="row.id" :disabled="allMatching" /></td>
                             <td class="px-2 py-2 font-medium text-brand-600">{{ row.code }}</td>
                             <td class="px-2 py-2">
                                 <Link :href="`/isp/customer/${row.customer_id}`" class="hover:underline">{{ row.customer?.name }}</Link>
@@ -190,7 +210,7 @@ onMounted(() => {
                                 </div>
                             </td>
                         </tr>
-                        <tr v-if="!rows.length"><td colspan="10" class="px-2 py-6 text-center text-slate-400">No connections found</td></tr>
+                        <tr v-if="!rows.length"><td colspan="11" class="px-2 py-6 text-center text-slate-400">No connections found</td></tr>
                     </tbody>
                 </table>
             </div>

@@ -198,6 +198,7 @@ class OltController extends IspController
         ]);
         $onu->save();
         AuditLogger::log($request->id ? 'onu.updated' : 'onu.created', $onu, null, $onu->only(['olt_id', 'pon_port', 'onu_id', 'serial', 'mac', 'connection_id']));
+        $this->toCustomer($onu);
         return $this->ok('ONU saved', ['id' => $onu->id]);
     }
 
@@ -210,6 +211,7 @@ class OltController extends IspController
         $old = $onu->connection_id;
         $onu->update(['connection_id' => $request->connection_id ?: null]);
         AuditLogger::log($onu->connection_id ? 'onu.linked' : 'onu.unlinked', $onu, ['connection_id' => $old], ['connection_id' => $onu->connection_id]);
+        $this->toCustomer($onu);
         return $this->ok($onu->connection_id ? 'ONU linked to the connection' : 'ONU unlinked');
     }
 
@@ -313,6 +315,7 @@ class OltController extends IspController
         $onu->fill(['pon_port' => $request->pon_port, 'onu_id' => $values['onu_id'], 'serial' => $serial, 'mac' => $mac, 'name' => $request->name,
             'connection_id' => $request->connection_id ?: $onu->connection_id])->save();
         AuditLogger::log('onu.authorized', $onu, null, ['commands' => $lines, 'connection_id' => $onu->connection_id]);
+        $this->toCustomer($onu);
         if ($olt->canPoll()) {
             try {
                 OltService::poll($olt); // status and power right away
@@ -351,6 +354,16 @@ class OltController extends IspController
             return $this->fail($th);
         }
         return $this->ok("Outage notice sent to {$sent} customer(s)");
+    }
+
+    // an ONU from stock now on a customer's line leaves the store / technician (Inventory)
+    private function toCustomer(Onu $onu): void
+    {
+        try {
+            \App\Services\Isp\InventoryService::onuInstalled($onu, $this->userId);
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\Log::warning('ONU stock not moved', ['onu' => $onu->id, 'error' => $th->getMessage()]);
+        }
     }
 
     // The connection must be this branch's, and not already on another ONU.

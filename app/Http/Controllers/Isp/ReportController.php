@@ -136,6 +136,58 @@ class ReportController extends IspController
         return response()->json($rows);
     }
 
+    // Aging: open invoice dues by how long past their due date (not yet due, 0-30, 31-60, 61-90, 90+ days),
+    // grouped by area, zone, box, reseller, package or customer.
+    public function dueAging(Request $request)
+    {
+        if ($r = $this->deny('ispReport')) return $r;
+        $group = in_array($request->group, ['area', 'zone', 'box', 'reseller', 'package', 'customer'], true) ? $request->group : 'area';
+        $today = now()->toDateString();
+        [$key, $name] = match ($group) {
+            'area' => ['customers.area_id', "coalesce(areas.name, '— Not set —')"],
+            'zone' => ['customers.zone_id', "coalesce(zones.name, '— Not set —')"],
+            'box' => ['customers.box_id', "coalesce(boxes.name, '— Not set —')"],
+            'reseller' => ['customers.reseller_id', "coalesce(resellers.name, 'Company (direct)')"],
+            'package' => ['connections.package_id', "coalesce(packages.name, 'Not for a connection')"],
+            'customer' => ['customers.id', "concat(customers.name, ' (', customers.code, ')')"],
+        };
+        $age = 'datediff(?, invoices.due_date)';
+        $query = DB::table('invoices')
+            ->join('customers', 'customers.id', '=', 'invoices.customer_id')
+            ->leftJoin('areas', 'areas.id', '=', 'customers.area_id')
+            ->leftJoin('zones', 'zones.id', '=', 'customers.zone_id')
+            ->leftJoin('boxes', 'boxes.id', '=', 'customers.box_id')
+            ->leftJoin('resellers', 'resellers.id', '=', 'customers.reseller_id')
+            ->leftJoin('connections', 'connections.id', '=', 'invoices.connection_id')
+            ->leftJoin('packages', 'packages.id', '=', 'connections.package_id')
+            ->where('invoices.branch_id', $this->branchId)
+            ->whereIn('invoices.status', \App\Models\Invoice::OPEN_STATUSES)
+            ->where('invoices.due', '>', 0)
+            ->when($request->zoneId, fn ($q, $id) => $q->where('customers.zone_id', $id))
+            ->when($request->areaId, fn ($q, $id) => $q->where('customers.area_id', $id))
+            ->selectRaw("{$key} as id, {$name} as name, count(distinct invoices.customer_id) as customers,
+                sum(case when {$age} < 0 then invoices.due else 0 end) as not_due,
+                sum(case when {$age} between 0 and 30 then invoices.due else 0 end) as d0_30,
+                sum(case when {$age} between 31 and 60 then invoices.due else 0 end) as d31_60,
+                sum(case when {$age} between 61 and 90 then invoices.due else 0 end) as d61_90,
+                sum(case when {$age} > 90 then invoices.due else 0 end) as d90,
+                sum(invoices.due) as total", array_fill(0, 5, $today))
+            ->groupBy(DB::raw($key), DB::raw($name))
+            ->orderByDesc('d90')->orderByDesc('total')
+            ->limit($group === 'customer' ? 300 : 1000);
+        $rows = $query->get()->map(function ($r) {
+            foreach (['not_due', 'd0_30', 'd31_60', 'd61_90', 'd90', 'total'] as $k) {
+                $r->{$k} = round((float) $r->{$k}, 2);
+            }
+            return $r;
+        });
+        $totals = [];
+        foreach (['customers', 'not_due', 'd0_30', 'd31_60', 'd61_90', 'd90', 'total'] as $k) {
+            $totals[$k] = round((float) $rows->sum($k), 2);
+        }
+        return response()->json(['group' => $group, 'rows' => $rows, 'totals' => $totals, 'as_of' => $today]);
+    }
+
     // Output tax for a period, for the whole company.
     public function taxReport()
     {

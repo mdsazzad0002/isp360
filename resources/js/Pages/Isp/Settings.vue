@@ -249,6 +249,7 @@ const input = 'w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm';
                     </div>
                     <label class="flex items-center gap-2 pt-5 text-sm"><input v-model="s.session_log_mikrotik" type="checkbox" /> Record sessions from this branch's MikroTik routers (polled every 5 min)</label>
                     <label class="flex items-center gap-2 pt-5 text-sm"><input v-model="s.kyc_required" type="checkbox" /> Verified ID (KYC) required before a connection is switched on</label>
+                    <label class="flex items-center gap-2 pt-5 text-sm"><input v-model="s.auto_install_work_order" type="checkbox" /> New connection opens an installation work order for the technicians</label>
                 </div>
                 <div class="mt-4 space-y-3 border-t border-slate-200 pt-3">
                     <div v-for="l in legal" :key="l.type">

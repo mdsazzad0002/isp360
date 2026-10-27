@@ -110,6 +110,8 @@ watch(() => props.ticketId, load, { immediate: true });
                         <span v-if="ticket.customer">· Customer: {{ ticket.customer.name }} ({{ ticket.customer.code }}, {{ ticket.customer.phone }})</span>
                         <span v-if="ticket.reseller && viewer !== 'reseller'">· Reseller: {{ ticket.reseller.name }}</span>
                         <span v-if="ticket.connection">· Connection {{ ticket.connection.code }}</span>
+                        <a v-if="isAdmin && ticket.customer_id && !['resolved', 'closed'].includes(ticket.status)" :href="`/isp/work-orders?open=1&ticket_id=${ticket.id}${ticket.connection_id ? '&connection_id=' + ticket.connection_id : ''}`"
+                            class="ms-1 text-brand-600 hover:underline"><i class="bi bi-clipboard-check"></i> Send a technician</a>
                     </div>
                 </div>
                 <button type="button" class="text-slate-400 hover:text-slate-600" title="Close" @click="emit('close')"><i class="bi bi-x-lg"></i></button>

@@ -268,6 +268,7 @@ function describe(h) {
                 <div class="flex gap-2 text-xs">
                     <button type="button" :disabled="busy" class="rounded-md border border-slate-300 px-2 py-1 hover:bg-slate-50" title="Compare the router with billing (read-only)" @click="verifyNow"><i class="bi bi-search"></i> Verify</button>
                     <button v-if="can.connectionAction" type="button" :disabled="busy" class="rounded-md border border-slate-300 px-2 py-1 hover:bg-slate-50" @click="syncNow"><i class="bi bi-arrow-repeat"></i> Sync now</button>
+                    <a v-if="can.workOrder" :href="`/isp/work-orders?open=1&connection_id=${conn.id}`" class="rounded-md border border-slate-300 px-2 py-1 hover:bg-slate-50"><i class="bi bi-clipboard-check"></i> Work order</a>
                 </div>
             </div>
             <div v-if="conn.status === 'suspended'" class="rounded-md border border-amber-200 bg-amber-50 p-2 text-amber-800">

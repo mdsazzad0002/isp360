@@ -16,6 +16,9 @@ class RadiusClient
     public const COA_REQUEST = 43;
     public const COA_ACK = 44;
     public const COA_NAK = 45;
+    public const ACCESS_REQUEST = 1;
+    public const ACCESS_ACCEPT = 2;
+    public const ACCESS_REJECT = 3;
 
     // attribute name => [type, encoding]
     public const ATTRIBUTES = [
@@ -23,6 +26,7 @@ class RadiusClient
         'NAS-IP-Address' => [4, 'ipv4'],
         'Framed-IP-Address' => [8, 'ipv4'],
         'Filter-Id' => [11, 'string'],
+        'Reply-Message' => [18, 'string'],
         'Acct-Session-Id' => [44, 'string'],
         'Error-Cause' => [101, 'integer'],
     ];
@@ -56,6 +60,47 @@ class RadiusClient
     public function coa(array $attributes): bool
     {
         return $this->request(self::COA_REQUEST, $attributes);
+    }
+
+    /**
+     * A login check against a RADIUS server (what `radtest` does), with this "NAS" being the billing
+     * server itself: the host is the RADIUS server, the secret the one it holds for us.
+     * ['accepted' => bool, 'code' => int, 'message' => Reply-Message]; throws when there is no answer.
+     */
+    public function authenticate(string $username, string $password, int $port = 1812, ?string $nasIp = null): array
+    {
+        $secret = (string) $this->nas->radius_secret;
+        $id = random_int(0, 255);
+        $requestAuth = random_bytes(16);
+        // RFC 2865 5.2: the password in 16-octet blocks, each XORed with MD5(secret + previous block)
+        $padded = str_pad($password, (int) max(16, ceil(strlen($password) / 16) * 16), "\0");
+        $hidden = '';
+        $previous = $requestAuth;
+        foreach (str_split($padded, 16) as $block) {
+            $previous = $block ^ md5($secret . $previous, true);
+            $hidden .= $previous;
+        }
+        $body = self::encodeAttributes(['User-Name' => $username] + ($nasIp ? ['NAS-IP-Address' => $nasIp] : []))
+            . pack('CC', 2, strlen($hidden) + 2) . $hidden;
+        // Message-Authenticator (RFC 3579): HMAC-MD5 of the packet with the attribute zeroed; FreeRADIUS 3.2+ wants it
+        $body .= pack('CC', 80, 18) . str_repeat("\0", 16);
+        $header = pack('CCn', self::ACCESS_REQUEST, $id, 20 + strlen($body));
+        $mac = hash_hmac('md5', $header . $requestAuth . $body, $secret, true);
+        $packet = $header . $requestAuth . substr($body, 0, -16) . $mac;
+
+        $response = null;
+        for ($try = 0; $try <= $this->retries && $response === null; $try++) {
+            $response = self::$transport ? (self::$transport)($this->nas->host, $port, $packet) : $this->udp($this->nas->host, $port, $packet);
+        }
+        if ($response === null) {
+            throw new RuntimeException("No answer from the RADIUS server {$this->nas->host}:{$port}.");
+        }
+        $reply = self::decodePacket($response);
+        $expected = md5(substr($response, 0, 4) . $requestAuth . substr($response, 20) . $secret, true);
+        if ($reply['id'] !== $id || ! hash_equals($expected, $reply['authenticator'])) {
+            throw new RuntimeException('The RADIUS server answered, but not with our secret (the secret differs).');
+        }
+        return ['accepted' => $reply['code'] === self::ACCESS_ACCEPT, 'code' => $reply['code'], 'message' => $reply['attributes']['Reply-Message'] ?? null];
     }
 
     private function request(int $code, array $attributes): bool

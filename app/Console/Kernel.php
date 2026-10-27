@@ -29,7 +29,17 @@ class Kernel extends ConsoleKernel
         if (config('queue.default') === 'redis') {
             $schedule->command('horizon:snapshot')->everyFiveMinutes();
         }
+        // no worker and no queue_in_scheduler, yet jobs wait over 3 minutes: the scheduler works them
+        if (! config('isp.queue_in_scheduler') && config('queue.default') === 'database') {
+            $schedule->command('queue:work --queue=network,sms,default --stop-when-empty --max-time=55 --tries=3')
+                ->everyMinute()->when(fn () => \App\Support\SystemTasks::queueStuck())->withoutOverlapping(5)->runInBackground();
+        }
         $schedule->command('queue:prune-failed --hours=720')->daily();
+
+        // System & Automation: the scheduler's pulse, database updates after a code update, run history
+        $schedule->call(fn () => \App\Support\SystemTasks::heartbeat())->everyMinute()->name('scheduler-heartbeat');
+        $schedule->call(fn () => \App\Support\SystemTasks::autoMigrate())->everyFiveMinutes()->name('auto-migrate')->withoutOverlapping(60);
+        $schedule->call(fn () => \App\Support\SystemTasks::prune())->dailyAt('03:25')->name('task-runs-prune');
 
         // lawful session log: who had which IP when (RADIUS accounting, MikroTik polling), then retention
         $schedule->command('isp:session-logs')->everyFiveMinutes()->withoutOverlapping(15);

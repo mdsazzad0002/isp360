@@ -110,7 +110,7 @@ class HandleInertiaRequests extends Middleware
             'canViewCustomerLedger' => fn () => $user && checkAccess('customerLedger'),
             'impersonating' => fn () => $request->session()->has('impersonator_id'),
             // problems the scheduled checks found (see App\Support\SystemAlerts), for admins only
-            'systemAlerts' => fn () => $user && in_array($user->role, ['Superadmin', 'admin']) ? \App\Support\SystemAlerts::all() : [],
+            'systemAlerts' => fn () => $user && in_array($user->role, ['Superadmin', 'admin']) ? array_merge(\App\Support\SystemAlerts::all(), \App\Support\SystemTasks::liveAlerts()) : [],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

@@ -22,19 +22,33 @@ class ConnectionController extends IspController
             'canSecret' => checkAccess('connectionSecret'),
             'canPay' => checkAccess('ispPayment'),
             'canCredit' => checkAccess('connectionCredit'),
+            'canWorkOrder' => checkAccess('workOrder'),
+            'canBulkSms' => checkAccess('bulkSms'),
         ]);
     }
 
     public function index(Request $request)
     {
-        $query = Connection::with(['customer:id,code,name,phone,area_id,zone_id', 'customer.area:id,name', 'package:id,name,price,download_mbps,network_profile', 'box:id,name,code'])
-            ->where('branch_id', $this->branchId)
+        $query = $this->filtered($request)->with(['customer:id,code,name,phone,area_id,zone_id', 'customer.area:id,name', 'package:id,name,price,download_mbps,network_profile', 'box:id,name,code'])
             // the connection's unpaid service bill, so it can be paid from the list
             ->addSelect(['connections.*',
                 'open_invoice_id' => Invoice::select('id')->whereColumn('connection_id', 'connections.id')->whereNotNull('service_months')->whereIn('status', Invoice::OPEN_STATUSES)->limit(1),
                 'open_due' => Invoice::selectRaw('coalesce(sum(due), 0)')->whereColumn('connection_id', 'connections.id')->whereIn('status', Invoice::OPEN_STATUSES),
                 'on_credit' => Invoice::selectRaw('count(*) > 0')->whereColumn('connection_id', 'connections.id')->whereIn('status', Invoice::OPEN_STATUSES)->whereNotNull('credit_at'),
             ])
+            ->latest('id');
+
+        $page = $query->paginate(min(100, (int) ($request->per_page ?: 20)));
+        // "active but not really on the router" is what staff need to spot
+        $page = $page->toArray() + ['syncCounts' => Connection::where('branch_id', $this->branchId)->where('status', 'active')
+            ->groupBy('network_sync_status')->selectRaw('network_sync_status, count(*) as total')->pluck('total', 'network_sync_status')];
+        return response()->json($page);
+    }
+
+    // The list's filters, shared by the list and its bulk actions ("all matching").
+    private function filtered(Request $request)
+    {
+        return Connection::where('connections.branch_id', $this->branchId)
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->when($request->syncStatus, fn ($q, $s) => $q->where('network_sync_status', $s))
             ->when($request->customerId, fn ($q, $id) => $q->where('customer_id', $id))
@@ -48,14 +62,87 @@ class ConnectionController extends IspController
                         ->orWhere('static_ip', 'like', "%{$term}%")
                         ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$term}%")->orWhere('phone', 'like', "%{$term}%")->orWhere('code', 'like', "%{$term}%"));
                 });
-            })
-            ->latest('id');
+            });
+    }
 
-        $page = $query->paginate(min(100, (int) ($request->per_page ?: 20)));
-        // "active but not really on the router" is what staff need to spot
-        $page = $page->toArray() + ['syncCounts' => Connection::where('branch_id', $this->branchId)->where('status', 'active')
-            ->groupBy('network_sync_status')->selectRaw('network_sync_status, count(*) as total')->pluck('total', 'network_sync_status')];
-        return response()->json($page);
+    /**
+     * One action on many connections: the ticked ones (ids) or every one matching the list's filters
+     * (all_matching). Without `run` it only counts them, for the confirmation. Each connection goes
+     * through the same service call as its own button; one failing doesn't stop the others.
+     */
+    public function bulk(Request $request)
+    {
+        if ($r = $this->validateOrFail($request->all(), [
+            'action' => 'required|in:suspend,reactivate,deactivate,change_package,sync,sms,work_order',
+            'ids' => 'required_without:all_matching|array|max:' . self::BULK_MAX,
+            'ids.*' => 'integer',
+            'reason' => 'required_if:action,suspend,reactivate,deactivate|nullable|max:255',
+            'package_id' => 'required_if:action,change_package|nullable|integer',
+            'message' => 'required_if:action,sms|nullable|max:640',
+            'sms_kind' => 'nullable|in:service,promotion',
+            'wo_type' => 'required_if:action,work_order|nullable|in:' . implode(',', array_keys(\App\Models\WorkOrder::TYPES)),
+            'assigned_to' => 'nullable|integer|exists:users,id',
+            'notes' => 'nullable|max:2000',
+        ])) return $r;
+        $need = ['sms' => 'bulkSms', 'work_order' => 'workOrder'][$request->action] ?? 'connectionAction';
+        if ($r = $this->deny($need)) return $r;
+
+        $query = $request->boolean('all_matching') ? $this->filtered($request) : Connection::where('branch_id', $this->branchId)->whereIn('id', (array) $request->ids);
+        $count = (clone $query)->count();
+        if ($count > self::BULK_MAX) {
+            return send_error("{$count} connections match: narrow the filter to at most " . self::BULK_MAX . ' at a time.', null, 422);
+        }
+        if (! $request->boolean('run')) {
+            return response()->json(['count' => $count, 'sample' => (clone $query)->with('customer:id,name')->limit(8)->get(['id', 'code', 'customer_id'])->map(fn ($c) => "{$c->code} {$c->customer?->name}")]);
+        }
+
+        @set_time_limit(600);
+        $done = 0;
+        $failed = [];
+        $smsSkipped = 0;
+        foreach ((clone $query)->with(['customer', 'package'])->orderBy('id')->get() as $connection) {
+            if ($request->action === 'sms') {
+                $this->bulkSms($connection, $request->message, $request->sms_kind ?: 'service') ? $done++ : $smsSkipped++;
+                continue;
+            }
+            try {
+                match ($request->action) {
+                    'suspend' => ConnectionService::suspend($connection, $request->reason),
+                    'reactivate' => ConnectionService::reactivate($connection, $request->reason),
+                    'deactivate' => ConnectionService::deactivate($connection, $request->reason),
+                    'change_package' => ConnectionService::changePackage($connection, (int) $request->package_id, $request->reason ?: 'Bulk package change', $summary),
+                    'sync' => \App\Jobs\SyncConnectionToNetwork::dispatch($connection->id),
+                    'work_order' => \App\Services\Isp\WorkOrderService::create(['type' => $request->wo_type, 'connection_id' => $connection->id,
+                        'assigned_to' => $request->assigned_to, 'notes' => $request->notes], $this->branchId, $this->userId),
+                };
+                $done++;
+            } catch (\Throwable $th) {
+                $failed[] = ['code' => $connection->code, 'error' => $th instanceof \RuntimeException ? $th->getMessage() : 'Something went wrong'];
+                if (! $th instanceof \RuntimeException) {
+                    \Illuminate\Support\Facades\Log::error($th);
+                }
+            }
+        }
+        AuditLogger::log('connection.bulk', null, null, ['action' => $request->action, 'matched' => $count, 'done' => $done, 'failed' => count($failed),
+            'package_id' => $request->package_id, 'reason' => $request->reason, 'message' => $request->action === 'sms' ? mb_substr((string) $request->message, 0, 200) : null]);
+        $verb = ['suspend' => 'suspended', 'reactivate' => 'reactivated', 'deactivate' => 'deactivated', 'change_package' => 'moved to the new package',
+            'sync' => 'queued for the router', 'sms' => 'SMS queued', 'work_order' => 'work orders created'][$request->action];
+        return $this->ok("{$done} of {$count} {$verb}" . ($smsSkipped ? ", {$smsSkipped} skipped (no phone, erased or opted out of promotions)" : '') . ($failed ? ', ' . count($failed) . ' failed' : ''), ['failed' => $failed]);
+    }
+
+    public const BULK_MAX = 2000;
+
+    // true when queued; false when this customer must not get it
+    private function bulkSms(Connection $connection, string $message, string $kind): bool
+    {
+        $c = $connection->customer;
+        if (! $c || ! $c->phone || $c->erased_at || ($kind === 'promotion' && $c->marketing_opt_out)) {
+            return false;
+        }
+        $text = strtr($message, ['{name}' => $c->name, '{code}' => $c->code, '{connection}' => $connection->code, '{package}' => $connection->package?->name ?? '',
+            '{balance}' => \App\Support\Money::number(max(0, \App\Services\Isp\LedgerService::balance($c->id)))]);
+        \App\Jobs\SendSms::dispatch($this->branchId, $c->phone, $text, $c->id, $kind === 'promotion' ? 'isp_promotion' : 'isp_notice', $this->userId, request()->ip());
+        return true;
     }
 
     public function show(Request $request)
@@ -96,6 +183,11 @@ class ConnectionController extends IspController
                 return send_error('You are not allowed to start a connection on due', null, 403);
             }
             $connection = ConnectionService::create($request->all(), $this->branchId);
+            try {
+                \App\Services\Isp\WorkOrderService::autoInstall($connection, $this->userId); // the installation job for the technicians
+            } catch (\Throwable $th) {
+                \Illuminate\Support\Facades\Log::warning('Installation work order not created', ['connection' => $connection->id, 'error' => $th->getMessage()]);
+            }
             $message = "Connection {$connection->code} created";
             if ($request->boolean('charge_installation') && $connection->package && ((float) $connection->package->installation_fee > 0 || (float) $connection->package->activation_fee > 0)) {
                 $items = [];

@@ -48,6 +48,16 @@ function sort(col) {
     filter.sortBy = col;
     reload();
 }
+// aging: open dues by how long past due
+const aging = ref({ rows: [], totals: {} });
+const agingGroup = ref('area');
+const AGING_GROUPS = { area: 'Area', zone: 'Zone', box: 'Box', reseller: 'Reseller', package: 'Package', customer: 'Customer' };
+const BUCKETS = [['not_due', 'Not due yet'], ['d0_30', '0–30 days'], ['d31_60', '31–60'], ['d61_90', '61–90'], ['d90', '90+ days']];
+function loadAging() {
+    axios.post('/isp/get-due-aging', { group: agingGroup.value, zoneId: filter.zone?.id, areaId: filter.area?.id }).then((r) => (aging.value = r.data));
+}
+const pct = (v) => (aging.value.totals.total ? Math.round((v / aging.value.totals.total) * 100) : 0);
+
 function loadSummary() {
     axios.post('/isp/get-due-summary', { group: summaryGroup.value }).then((r) => (summary.value = r.data));
 }
@@ -83,7 +93,7 @@ onMounted(() => {
 
         <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
             <div class="flex gap-1 border-b border-slate-200 px-2">
-                <button v-for="t in [['customers', 'Customer-wise'], ['summary', 'Zone / Area / Box summary']]" :key="t[0]" type="button" class="border-b-2 px-3 py-2.5 text-sm" :class="tab === t[0] ? 'border-brand-500 font-medium text-brand-600' : 'border-transparent text-slate-500'" @click="tab = t[0]">{{ t[1] }}</button>
+                <button v-for="t in [['customers', 'Customer-wise'], ['summary', 'Zone / Area / Box summary'], ['aging', 'Aging']]" :key="t[0]" type="button" class="border-b-2 px-3 py-2.5 text-sm" :class="tab === t[0] ? 'border-brand-500 font-medium text-brand-600' : 'border-transparent text-slate-500'" @click="tab = t[0]; if (t[0] === 'aging') loadAging();">{{ t[1] }}</button>
             </div>
 
             <div v-if="tab === 'customers'" class="p-3">
@@ -138,6 +148,41 @@ onMounted(() => {
                 <Pagination v-if="lastPage > 1" :page="page" :total-pages="lastPage" @change="(p) => { page = p; load(); }" />
             </div>
 
+            <div v-else-if="tab === 'aging'" class="p-3">
+                <div class="mb-3 flex flex-wrap items-center gap-2">
+                    <span class="text-sm text-slate-600">By</span>
+                    <button v-for="(l, k) in AGING_GROUPS" :key="k" type="button" class="rounded-full border px-3 py-0.5 text-xs" :class="agingGroup === k ? 'border-brand-500 bg-brand-500 text-white' : 'border-slate-300'" @click="agingGroup = k; loadAging()">{{ l }}</button>
+                    <span class="ms-auto text-xs text-slate-500">Open bills by days past their due date, as of {{ fmtDate(aging.as_of) }}<span v-if="filter.zone || filter.area"> · filtered by {{ filter.area?.name || filter.zone?.name }}</span></span>
+                </div>
+                <div v-if="aging.totals.total" class="mb-3 grid grid-cols-2 gap-2 md:grid-cols-5">
+                    <div v-for="[k, l] in BUCKETS" :key="k" class="rounded-md border border-slate-200 p-2" :class="k === 'd90' && aging.totals[k] ? 'border-red-300 bg-red-50' : ''">
+                        <div class="text-xs text-slate-500">{{ l }}</div>
+                        <div class="font-semibold" :class="k === 'd90' || k === 'd61_90' ? 'text-red-600' : ''">{{ money(aging.totals[k]) }}</div>
+                        <div class="text-xs text-slate-400">{{ pct(aging.totals[k]) }}%</div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
+                                <th class="px-2 py-2 font-medium">{{ AGING_GROUPS[agingGroup] }}</th>
+                                <th class="px-2 py-2 text-end font-medium">Customers</th>
+                                <th v-for="[k, l] in BUCKETS" :key="k" class="px-2 py-2 text-end font-medium">{{ l }}</th>
+                                <th class="px-2 py-2 text-end font-medium">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="r in aging.rows" :key="r.id ?? r.name" class="border-b border-slate-100">
+                                <td class="px-2 py-1.5"><Link v-if="agingGroup === 'customer' && r.id" :href="`/isp/customer/${r.id}`" class="text-brand-600 hover:underline">{{ r.name }}</Link><span v-else>{{ r.name }}</span></td>
+                                <td class="px-2 py-1.5 text-end">{{ r.customers }}</td>
+                                <td v-for="[k] in BUCKETS" :key="k" class="px-2 py-1.5 text-end" :class="{ 'font-medium text-red-600': (k === 'd90' || k === 'd61_90') && r[k] > 0, 'text-slate-300': !r[k] }">{{ r[k] ? money(r[k]) : '—' }}</td>
+                                <td class="px-2 py-1.5 text-end font-semibold">{{ money(r.total) }}</td>
+                            </tr>
+                            <tr v-if="!aging.rows.length"><td colspan="8" class="px-2 py-6 text-center text-slate-400">No open dues</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
             <div v-else class="p-3">
                 <div class="mb-3 flex gap-3 text-sm">
                     <label v-for="g in ['zone', 'area', 'box']" :key="g" class="flex items-center gap-1"><input type="radio" :value="g" v-model="summaryGroup" @change="loadSummary" /> {{ label(g) }}-wise</label>

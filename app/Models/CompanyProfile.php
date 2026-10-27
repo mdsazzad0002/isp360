@@ -13,7 +13,10 @@ class CompanyProfile extends Model
 
     protected $guarded = ['id'];
 
+    protected $hidden = ['radius_self_secret'];
+
     protected $casts = [
         'favicon_sizes' => 'array',
+        'radius_self_secret' => 'encrypted',
     ];
 }

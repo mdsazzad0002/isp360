@@ -388,6 +388,7 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/get-connection-secret', [Isp\ConnectionController::class, 'secret'])->name('isp.connection.secret');
     Route::post('/connection', [Isp\ConnectionController::class, 'store'])->name('isp.connection.store');
     Route::post('/connection-action', [Isp\ConnectionController::class, 'action'])->name('isp.connection.action');
+    Route::post('/connection-bulk', [Isp\ConnectionController::class, 'bulk'])->middleware('throttle:20,1')->name('isp.connection.bulk');
     Route::post('/get-compliance', [Isp\ComplianceController::class, 'data'])->name('isp.compliance.data');
     Route::post('/kyc-document', [Isp\ComplianceController::class, 'upload'])->name('isp.kyc.upload');
     Route::post('/kyc-review', [Isp\ComplianceController::class, 'review'])->name('isp.kyc.review');
@@ -427,6 +428,41 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/router-monitor', [Isp\RouterMonitorController::class, 'overview'])->middleware('throttle:40,1')->name('isp.router.monitor.overview');
     Route::post('/router-interface-traffic', [Isp\RouterMonitorController::class, 'traffic'])->middleware('throttle:90,1')->name('isp.router.monitor.traffic');
     Route::post('/router-monitor-pins', [Isp\RouterMonitorController::class, 'pins'])->name('isp.router.monitor.pins');
+
+    Route::get('/inventory', [Isp\InventoryController::class, 'create'])->name('isp.inventory');
+    Route::post('/get-inventory', [Isp\InventoryController::class, 'index'])->name('isp.inventory.index');
+    Route::post('/inventory-item', [Isp\InventoryController::class, 'store'])->name('isp.inventory.item');
+    Route::post('/inventory-receive', [Isp\InventoryController::class, 'receive'])->name('isp.inventory.receive');
+    Route::post('/inventory-move', [Isp\InventoryController::class, 'move'])->name('isp.inventory.move');
+    Route::post('/inventory-adjust', [Isp\InventoryController::class, 'adjust'])->name('isp.inventory.adjust');
+    Route::post('/get-inventory-serials', [Isp\InventoryController::class, 'serials'])->name('isp.inventory.serials');
+    Route::post('/get-inventory-movements', [Isp\InventoryController::class, 'movements'])->name('isp.inventory.movements');
+    Route::post('/get-inventory-held', [Isp\InventoryController::class, 'held'])->name('isp.inventory.held');
+
+    Route::get('/work-orders', [Isp\WorkOrderController::class, 'create'])->name('isp.workOrders');
+    Route::get('/my-jobs', [Isp\WorkOrderController::class, 'myJobs'])->name('isp.myJobs');
+    Route::post('/get-work-orders', [Isp\WorkOrderController::class, 'index'])->name('isp.workOrders.index');
+    Route::post('/get-work-order', [Isp\WorkOrderController::class, 'show'])->name('isp.workOrder.show');
+    Route::post('/work-order', [Isp\WorkOrderController::class, 'store'])->name('isp.workOrder.store');
+    Route::post('/work-order-assign', [Isp\WorkOrderController::class, 'assign'])->name('isp.workOrder.assign');
+    Route::post('/work-order-start', [Isp\WorkOrderController::class, 'start'])->name('isp.workOrder.start');
+    Route::post('/work-order-complete', [Isp\WorkOrderController::class, 'complete'])->name('isp.workOrder.complete');
+    Route::post('/work-order-cancel', [Isp\WorkOrderController::class, 'cancel'])->name('isp.workOrder.cancel');
+    Route::post('/work-order-photo', [Isp\WorkOrderController::class, 'photo'])->middleware('throttle:60,1')->name('isp.workOrder.photo');
+    Route::get('/work-order-file/{id}', [Isp\WorkOrderController::class, 'file'])->whereNumber('id')->name('isp.workOrder.file');
+
+    Route::get('/radius-setup', [Isp\RadiusSetupController::class, 'create'])->name('isp.radiusSetup');
+    Route::post('/get-radius-setup', [Isp\RadiusSetupController::class, 'index'])->name('isp.radiusSetup.index');
+    Route::post('/radius-server', [Isp\RadiusSetupController::class, 'server'])->name('isp.radiusSetup.server');
+    Route::post('/radius-create-tables', [Isp\RadiusSetupController::class, 'createTables'])->name('isp.radiusSetup.tables');
+    Route::post('/radius-test', [Isp\RadiusSetupController::class, 'test'])->middleware('throttle:20,1')->name('isp.radiusSetup.test');
+    Route::post('/radius-register-all', [Isp\RadiusSetupController::class, 'registerAll'])->name('isp.radiusSetup.register');
+    Route::post('/radius-reveal', [Isp\RadiusSetupController::class, 'reveal'])->middleware('throttle:20,1')->name('isp.radiusSetup.reveal');
+    Route::get('/radius-installer', [Isp\RadiusSetupController::class, 'installer'])->name('isp.radiusSetup.installer');
+
+    Route::get('/system', [Isp\SystemController::class, 'create'])->name('isp.system');
+    Route::post('/get-system', [Isp\SystemController::class, 'index'])->name('isp.system.index');
+    Route::post('/system-run', [Isp\SystemController::class, 'run'])->middleware('throttle:20,1')->name('isp.system.run');
 
     Route::get('/olts', [Isp\OltController::class, 'create'])->name('isp.olts');
     Route::post('/get-olts', [Isp\OltController::class, 'index'])->name('isp.olts.index');
@@ -484,6 +520,7 @@ Route::group(['prefix' => 'isp', 'middleware' => 'auth'], function () {
     Route::post('/get-bandwidth-profit', [Isp\BandwidthController::class, 'profit'])->name('isp.bandwidth.profit.data');
     Route::get('/due-report', [Isp\ReportController::class, 'dueReport'])->name('isp.due.report');
     Route::post('/get-due-report', [Isp\ReportController::class, 'getDueReport'])->name('isp.due.report.data');
+    Route::post('/get-due-aging', [Isp\ReportController::class, 'dueAging'])->name('isp.due.aging');
     Route::post('/get-due-summary', [Isp\ReportController::class, 'dueSummary'])->name('isp.due.summary');
     Route::get('/tax-report', [Isp\ReportController::class, 'taxReport'])->name('isp.tax.report');
     Route::post('/get-tax-report', [Isp\ReportController::class, 'getTaxReport'])->name('isp.tax.report.data');

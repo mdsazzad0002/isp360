@@ -60,6 +60,19 @@ function appMenuGroups()
             ],
         ],
 
+        [
+            'section' => 'customers',
+            'sectionLabel' => 'Customers',
+            'key' => 'ispField',
+            'label' => 'Field Work & Stock',
+            'icon' => 'bi-tools',
+            'items' => [
+                ['access' => 'workOrder', 'uri' => '/isp/work-orders', 'match' => 'isp/work-orders', 'icon' => 'bi-clipboard-check', 'label' => 'Work Orders'],
+                ['access' => 'workOrderTech', 'uri' => '/isp/my-jobs', 'match' => 'isp/my-jobs', 'icon' => 'bi-person-gear', 'label' => 'My Jobs'],
+                ['access' => 'inventory', 'uri' => '/isp/inventory', 'match' => 'isp/inventory', 'icon' => 'bi-box-seam', 'label' => 'Inventory'],
+            ],
+        ],
+
         // ── Network / MikroTik ──
         [
             'section' => 'network',
@@ -69,6 +82,7 @@ function appMenuGroups()
             'icon' => 'bi-router',
             'items' => [
                 ['access' => 'router', 'uri' => '/isp/routers', 'match' => 'isp/routers', 'icon' => 'bi-router', 'label' => 'Routers (MikroTik / RADIUS)'],
+                ['access' => 'router', 'uri' => '/isp/radius-setup', 'match' => 'isp/radius-setup', 'icon' => 'bi-shield-lock', 'label' => 'RADIUS Setup'],
                 ['access' => 'olt', 'uri' => '/isp/olts', 'match' => 'isp/olts', 'icon' => 'bi-hdd-rack', 'label' => 'OLT & ONU'],
                 ['access' => 'ipPool', 'uri' => '/isp/ip-pools', 'match' => 'isp/ip-pools', 'icon' => 'bi-diagram-2', 'label' => 'IP Pools (IPAM / CGNAT)'],
                 ['access' => 'networkBlock', 'uri' => '/isp/blocks', 'match' => 'isp/blocks', 'icon' => 'bi-shield-x', 'label' => 'Site / IP Block'],
@@ -198,6 +212,7 @@ function appMenuGroups()
             'items' => [
                 ['access' => 'auditLog', 'uri' => '/isp/audit-log', 'match' => 'isp/audit-log', 'icon' => 'bi-shield-check', 'label' => 'Audit Log'],
                 ['access' => 'sessionLog', 'uri' => '/isp/session-log', 'match' => 'isp/session-log', 'icon' => 'bi-person-bounding-box', 'label' => 'Session Log (who had which IP)'],
+                ['access' => 'system', 'uri' => '/isp/system', 'match' => 'isp/system', 'icon' => 'bi-cpu', 'label' => 'System & Automation'],
                 ['access' => 'queueMonitor', 'uri' => '/isp/queue', 'match' => 'isp/queue', 'icon' => 'bi-hourglass-split', 'label' => 'Background Jobs'],
                 ['access' => 'backup', 'uri' => '/isp/backups', 'match' => 'isp/backups', 'icon' => 'bi-cloud-arrow-down', 'label' => 'Backups'],
                 ['access' => null, 'uri' => '/notifications', 'match' => 'notifications', 'icon' => 'bi-bell', 'label' => 'Notifications'],
